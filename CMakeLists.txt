@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.23)
+project(SPAECIES)
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+find_package(NetCDF REQUIRED)
+add_subdirectory(libspaecies)
+add_subdirectory(rainshaft)
