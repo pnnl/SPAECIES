@@ -1,9 +1,10 @@
 // Consider dy/dt = f(y) = f1(y) + f2(y) + ...
+// where f(y) might depend on g(y)
 
-// a class to represent y(x,t)
+// a class to represent y(x,t), f(y), f1(y), f2(y), etc
 class State
 {
-  // some stuff here that stores values of y, spatial location information, etc.
+  // some stuff here that stores values, spatial location information, etc.
   
   // some stuff here that overloads addition and scalar multiplication
 };
