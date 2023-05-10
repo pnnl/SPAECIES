@@ -24,6 +24,12 @@ struct RainshaftConstants {
   double dr_min;
   // Maximum allowed mean rain diameter (m)
   double dr_max;
+  // rho at top of column (kg/m^3)
+  double rho_top;
+  // nr at top of column (#/kg)
+  double nr_top;
+  // qr at top of column (kg/kg)
+  double qr_top;
 };
 
 #endif // RAINSHAFT_CONSTANTS_HPP
