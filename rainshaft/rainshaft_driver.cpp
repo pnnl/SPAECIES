@@ -3,9 +3,11 @@
 #include "rainshaft_grid.hpp"
 #include "rainshaft_state.hpp"
 #include "rainshaft_tendency.hpp"
+#include "rainshaft_solution.hpp"
 #include "rainshaft_integrator.hpp"
 #include "rainshaft_ncio.hpp"
 #include "sedimentation.hpp"
+#include "sundials/sundials_context.h"
 #include <iostream>
 
 int main(int argc, char** argv)
@@ -25,10 +27,13 @@ int main(int argc, char** argv)
   double lapse_rate = 6.5e-3;
   // Time step size in seconds.
   double dt = 1.;
-  // Number of time steps.
-  int nt = 28800;
+  // Time of simulation start.
+  double initial_time = 0.;
+  // Final time to integrate to.
+  double final_time = 28800.;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
+  sundials::Context sun_ctxt = sundials::Context();
   // Set up initial condition.
   std::vector<double> t, q, nr, qr;
   for (std::size_t il = 0; il != grid.nlev; ++il) {
@@ -38,25 +43,18 @@ int main(int argc, char** argv)
     qr.push_back(0.);
   }
   RainshaftState initial_state(t, q, nr, qr);
-  // Vectors of states and derived variables at different time steps.
-  std::vector<RainshaftState> states;
-  std::vector<RainshaftDerivedVars> dvars;
-  states.push_back(initial_state);
-  dvars.push_back(RainshaftDerivedVars(constants, grid, initial_state));
-  // Evolve state forward.
-  RainshaftIntegrator intg(dt);
+  RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
+  // Sedimentation process.
   Sedimentation sed;
-  for (std::size_t it = 0; it != nt; ++it) {
-    RainshaftTendency sed_tend = sed.calc_tend(constants, grid, states[it], dvars[it]);
-    RainshaftState new_state = intg.apply_tend(states[it], sed_tend);
-    states.push_back(new_state);
-    dvars.push_back(RainshaftDerivedVars(constants, grid, new_state));
-  }
+  // Evolve state forward.
+  RainshaftIntegrator intg(&sun_ctxt, dt);
+  RainshaftSolution solution = intg.integrate(sed, initial_time, final_time, constants,
+                                              grid, initial_state, initial_dvars);
   // Write out grid and all states.
   NetcdfWriter writer("./rainshaft_1s.nc");
   writer.write_grid(grid);
-  writer.write_states(states);
-  writer.write_derived_vars(dvars);
+  writer.write_states(solution.states);
+  writer.write_derived_vars(solution.dvars);
   // Ensure that the library is linked and greet the user.
   spaecies::do_nothing();
   return 0;

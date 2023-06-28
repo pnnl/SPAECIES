@@ -16,7 +16,7 @@ public:
   virtual RainshaftTendency calc_tend(const RainshaftConstants& constants,
                                       const RainshaftGrid& grid,
                                       const RainshaftState& state,
-                                      const RainshaftDerivedVars& dvars) = 0;
+                                      const RainshaftDerivedVars& dvars) const = 0;
 };
 
 #endif // RAINSHAFT_PROCESS_HPP

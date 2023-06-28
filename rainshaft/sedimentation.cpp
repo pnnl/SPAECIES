@@ -8,7 +8,7 @@ using boost::math::tgamma, boost::math::tgamma_lower;
 RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants& constants,
                                            const RainshaftGrid& grid,
                                            const RainshaftState& state,
-                                           const RainshaftDerivedVars& dvars) {
+                                           const RainshaftDerivedVars& dvars) const {
   std::vector<double> t_tend, q_tend, nr_tend, qr_tend;
   double nr_tend_lev, qr_tend_lev;
   std::vector<double> vnr, vqr;
@@ -45,7 +45,7 @@ RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants& constants,
 }
 
 std::vector<double> Sedimentation::rain_fall_speeds(const RainshaftConstants& constants,
-                                                    double rho, double lambdar) {
+                                                    double rho, double lambdar) const {
   // Catches case where there is no rain present.
   if (lambdar == 0.) {
     std::vector<double> speeds = {0., 0.};

@@ -4,11 +4,12 @@ add_executable(rainshaft
   rainshaft_integrator.cpp
   rainshaft_grid.cpp
   rainshaft_ncio.cpp
+  rainshaft_solution.cpp
   rainshaft_state.cpp
   rainshaft_tendency.cpp
   sedimentation.cpp
 )
-target_link_libraries(rainshaft NetCDF::NetCDF spaecies)
+target_link_libraries(rainshaft NetCDF::NetCDF SUNDIALS::arkode spaecies)
 target_include_directories(spaecies PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
