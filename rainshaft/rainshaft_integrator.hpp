@@ -24,6 +24,14 @@ public:
                               const RainshaftState& initial_state,
                               const RainshaftDerivedVars& initial_dvars);
 
+  RainshaftSolution integrate_ark(const RainshaftProcess& process,
+                                  double initial_time,
+                                  double final_time,
+                                  const RainshaftConstants& constants,
+                                  const RainshaftGrid& grid,
+                                  const RainshaftState& initial_state,
+                                  const RainshaftDerivedVars& initial_dvars);
+
   RainshaftState apply_tend(const RainshaftState& state,
                             const RainshaftTendency& tend);
 

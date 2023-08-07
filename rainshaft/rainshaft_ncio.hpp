@@ -30,6 +30,9 @@ public:
   // Write a series of RainshaftDerivedVars to file.
   void write_derived_vars(const std::vector<RainshaftDerivedVars>& dvars);
 
+  // Write total number of RHS evaluations to file.
+  void write_num_rhs_evals(long int num_rhs_evals);
+
 protected:
 
   // NetCDF file id

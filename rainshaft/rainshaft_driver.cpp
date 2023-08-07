@@ -17,7 +17,7 @@ int main(int argc, char** argv)
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
                                0.62197, 1.e-14, 9.80616, 1.e-5, 5.e-3,
-                               0.988919555598356, 1.e6, 3.e-3};
+                               0.988919555598356, 1.e3, 1.e-4};
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
   double model_top = 2.e3;
@@ -26,11 +26,11 @@ int main(int argc, char** argv)
   // Lapse rate of initial condition in K/m.
   double lapse_rate = 6.5e-3;
   // Time step size in seconds.
-  double dt = 1.;
+  double dt = 1;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
-  double final_time = 28800.;
+  double final_time = 300.;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
   sundials::Context sun_ctxt = sundials::Context();
@@ -48,13 +48,14 @@ int main(int argc, char** argv)
   Sedimentation sed;
   // Evolve state forward.
   RainshaftIntegrator intg(&sun_ctxt, dt);
-  RainshaftSolution solution = intg.integrate(sed, initial_time, final_time, constants,
-                                              grid, initial_state, initial_dvars);
+  RainshaftSolution solution = intg.integrate_ark(sed, initial_time, final_time, constants,
+                                                  grid, initial_state, initial_dvars);
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_1s.nc");
+  NetcdfWriter writer("./rainshaft_ark2.nc");
   writer.write_grid(grid);
   writer.write_states(solution.states);
   writer.write_derived_vars(solution.dvars);
+  writer.write_num_rhs_evals(solution.num_rhs_evals);
   // Ensure that the library is linked and greet the user.
   spaecies::do_nothing();
   return 0;

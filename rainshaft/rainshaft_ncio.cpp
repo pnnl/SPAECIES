@@ -84,3 +84,14 @@ void NetcdfWriter::write_derived_vars(const std::vector<RainshaftDerivedVars>& d
     nc_put_vara_double(ncid, lambdarid, starts, counts, dvars[i].lambdar.data());
   }
 }
+
+void NetcdfWriter::write_num_rhs_evals(long int num_rhs_evals) {
+  int evalsid;
+  // SPS: Need to check errors from all these as well.
+  // SPS: Add variable metadata to all these too.
+  // Define derived variables.
+  nc_def_var(ncid, "num_rhs_evals", NC_INT, 0, NULL, &evalsid);
+
+  // Write variable.
+  nc_put_var(ncid, evalsid, &num_rhs_evals);
+}
