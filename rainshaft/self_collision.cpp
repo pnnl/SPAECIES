@@ -1,0 +1,29 @@
+#include "self_collision.hpp"
+#include <cstddef>
+#include <cmath>
+#include <boost/math/special_functions/gamma.hpp>
+using std::min, std::cbrt, std::exp;
+using boost::math::tgamma, boost::math::tgamma_lower;
+
+RainshaftTendency SelfCollision::calc_tend(const RainshaftConstants& constants,
+                                           const RainshaftGrid& grid,
+                                           const RainshaftState& state,
+                                           const RainshaftDerivedVars& dvars) const {
+  std::vector<double> t_tend(grid.nlev, 0.), q_tend(grid.nlev, 0.);
+  std::vector<double> nr_tend(grid.nlev, 0.), qr_tend(grid.nlev, 0.);
+  for (std::size_t il = 0; il != grid.nlev; ++il) {
+    double b = breakup_fac(constants, state.nr[il], state.qr[il]);
+    nr_tend[il] = -5.78 * b * state.nr[il] * state.qr[il] * dvars.rho[il];
+  }
+  return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
+}
+
+double SelfCollision::breakup_fac(const RainshaftConstants& constants,
+                                               double nr, double qr) const {
+  // SPS: Should put in an assert that nr is sufficiently large?
+  // Diameter of a particle of mean mass (m).
+  double mean_mass_diam = std::cbrt(qr / (constants.pi * constants.rhow * nr));
+  // Returned factor (dimensionless).
+  double b = min(1., 2. - std::exp(2300. * (2.8e-4 - mean_mass_diam)));
+  return b;
+}

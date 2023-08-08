@@ -6,8 +6,10 @@ add_executable(rainshaft
   rainshaft_ncio.cpp
   rainshaft_solution.cpp
   rainshaft_state.cpp
+  rainshaft_sum_process.cpp
   rainshaft_tendency.cpp
   sedimentation.cpp
+  self_collision.cpp
 )
 target_link_libraries(rainshaft
   NetCDF::NetCDF

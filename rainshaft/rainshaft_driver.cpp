@@ -6,7 +6,9 @@
 #include "rainshaft_solution.hpp"
 #include "rainshaft_integrator.hpp"
 #include "rainshaft_ncio.hpp"
+#include "rainshaft_sum_process.hpp"
 #include "sedimentation.hpp"
+#include "self_collision.hpp"
 #include "sundials/sundials_context.h"
 #include <iostream>
 
@@ -17,7 +19,7 @@ int main(int argc, char** argv)
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
                                0.62197, 1.e-14, 9.80616, 1.e-5, 5.e-3,
-                               0.988919555598356, 1.e3, 1.e-4};
+                               0.988919555598356, 1.e4, 1.e-3};
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
   double model_top = 2.e3;
@@ -46,9 +48,14 @@ int main(int argc, char** argv)
   RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
   // Sedimentation process.
   Sedimentation sed;
+  // Self-collision processes.
+  SelfCollision self_coll;
+  // Sum of all processes.
+  std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll};
+  SumProcess all_micro = SumProcess(micro_processes);
   // Evolve state forward.
   RainshaftIntegrator intg(&sun_ctxt, dt);
-  RainshaftSolution solution = intg.integrate_ark(sed, initial_time, final_time, constants,
+  RainshaftSolution solution = intg.integrate_ark(all_micro, initial_time, final_time, constants,
                                                   grid, initial_state, initial_dvars);
   // Write out grid and all states.
   NetcdfWriter writer("./rainshaft_ark2.nc");
