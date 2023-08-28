@@ -8,6 +8,7 @@ add_executable(rainshaft
   rainshaft_state.cpp
   rainshaft_sum_process.cpp
   rainshaft_tendency.cpp
+  saturation.cpp
   sedimentation.cpp
   self_collision.cpp
 )

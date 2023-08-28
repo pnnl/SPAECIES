@@ -7,6 +7,7 @@
 #include "rainshaft_integrator.hpp"
 #include "rainshaft_ncio.hpp"
 #include "rainshaft_sum_process.hpp"
+#include "saturation.hpp"
 #include "sedimentation.hpp"
 #include "self_collision.hpp"
 #include "sundials/sundials_context.h"
@@ -27,6 +28,8 @@ int main(int argc, char** argv)
   double srf_pres = 1.e5, srf_temp = 293.15;
   // Lapse rate of initial condition in K/m.
   double lapse_rate = 6.5e-3;
+  // Relative humidity of initial condition.
+  double rel_hum_init = 0.7;
   // Time step size in seconds.
   double dt = 1;
   // Time of simulation start.
@@ -37,10 +40,12 @@ int main(int argc, char** argv)
                                            srf_temp, lapse_rate);
   sundials::Context sun_ctxt = sundials::Context();
   // Set up initial condition.
+  SaturationFormulae sat_form(constants);
   std::vector<double> t, q, nr, qr;
   for (std::size_t il = 0; il != grid.nlev; ++il) {
-    t.push_back(srf_temp - lapse_rate * (grid.z_int[il] - 0.5*grid.dz[il]));
-    q.push_back(0.);
+    double t_lev = srf_temp - lapse_rate * (grid.z_int[il] - 0.5*grid.dz[il]);
+    t.push_back(t_lev);
+    q.push_back(rel_hum_init * sat_form.q_sat_dry(t_lev, grid.p_mid[il]));
     nr.push_back(0.);
     qr.push_back(0.);
   }
