@@ -3,14 +3,20 @@
 #include <cmath>
 #include <stdexcept>
 
-std::vector<double> calc_rho(const RainshaftConstants& constants,
+// Calculation of dry air density.
+// Note that because we are calculating *dry* air density from *total*
+// pressure, we use neither the plain temperature nor virtual temperature,
+// but instead temperature times (1 + q/epsilon).
+std::vector<double> calc_rho_dry(const RainshaftConstants& constants,
                              const RainshaftGrid& grid,
                              const RainshaftState& state) {
-  std::vector<double> rho;
+  std::vector<double> rho_dry;
   for (std::size_t i = 0; i != grid.nlev; ++i) {
-    rho.push_back(grid.p_mid[i] / (constants.rdry * state.t[i]));
+    rho_dry.push_back(grid.p_mid[i]
+                      / (constants.rdry * state.t[i] *
+                         (1 + state.q[i]/constants.epsilon_h2o)));
   }
-  return rho;
+  return rho_dry;
 }
 
 std::vector<double> calc_lambdar(const RainshaftConstants& constants,
@@ -33,7 +39,7 @@ std::vector<double> calc_lambdar(const RainshaftConstants& constants,
 RainshaftDerivedVars::RainshaftDerivedVars(const RainshaftConstants& constants,
                                            const RainshaftGrid& grid,
                                            const RainshaftState& state)
-  : rho(calc_rho(constants, grid, state)),
+  : rho_dry(calc_rho_dry(constants, grid, state)),
     lambdar(calc_lambdar(constants, grid, state)) {
   // Check vector sizes.
   // SPS: Should actually print out mismatched dimensions on failure.

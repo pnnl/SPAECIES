@@ -62,8 +62,8 @@ void NetcdfWriter::write_states(const std::vector<RainshaftState>& states) {
 }
 
 void NetcdfWriter::write_derived_vars(const std::vector<RainshaftDerivedVars>& dvars) {
-  int levid, timeid, rhoid, lambdarid;
-  std::size_t nlevs = dvars[0].rho.size();
+  int levid, timeid, rho_dryid, lambdarid;
+  std::size_t nlevs = dvars[0].rho_dry.size();
   std::size_t ntimes = dvars.size();
   // SPS: Need to check errors from all these as well.
   // SPS: Add variable metadata to all these too.
@@ -73,14 +73,14 @@ void NetcdfWriter::write_derived_vars(const std::vector<RainshaftDerivedVars>& d
   nc_inq_dimid(ncid, "time", &timeid);
   // Define derived variables.
   int dimids[2] = {timeid, levid};
-  nc_def_var(ncid, "rho", NC_DOUBLE, 2, dimids, &rhoid);
+  nc_def_var(ncid, "rho_dry", NC_DOUBLE, 2, dimids, &rho_dryid);
   nc_def_var(ncid, "lambdar", NC_DOUBLE, 2, dimids, &lambdarid);
 
   // Write variables.
   for (std::size_t i = 0; i != ntimes; ++i) {
     std::size_t starts[2] = {i, 0};
     std::size_t counts[2] = {1, nlevs};
-    nc_put_vara_double(ncid, rhoid, starts, counts, dvars[i].rho.data());
+    nc_put_vara_double(ncid, rho_dryid, starts, counts, dvars[i].rho_dry.data());
     nc_put_vara_double(ncid, lambdarid, starts, counts, dvars[i].lambdar.data());
   }
 }
