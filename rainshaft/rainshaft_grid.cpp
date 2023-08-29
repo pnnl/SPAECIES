@@ -1,34 +1,21 @@
 #include "rainshaft_grid.hpp"
+#include "rainshaft_state.hpp"
 #include <stdexcept>
 #include <cmath>
 
 std::vector<double> get_midpoints(const std::vector<double>& int_vec) {
   std::vector<double> mid_vec;
-  auto size = int_vec.size() - 1;
-  for (auto i = 0; i != size; ++i) {
+  int size = int_vec.size() - 1;
+  for (int i = 0; i != size; ++i) {
     mid_vec.push_back(0.5 * (int_vec[i] + int_vec[i+1]));
   }
   return mid_vec;
 }
 
-std::vector<double> get_deltas(const std::vector<double>& in_vec) {
-  std::vector<double> d_vec;
-  auto size = in_vec.size() - 1;
-  for (auto i = 0; i != size; ++i) {
-    d_vec.push_back(in_vec[i] - in_vec[i+1]);
-  }
-  return d_vec;
-}
-
-RainshaftGrid::RainshaftGrid(const std::vector<double>& p_int_vec,
-                             const std::vector<double>& z_int_vec)
-  : nlev(p_int_vec.size() - 1), p_int(p_int_vec), z_int(z_int_vec),
-    p_mid(get_midpoints(p_int)), dz(get_deltas(z_int))
+RainshaftGrid::RainshaftGrid(const std::vector<double>& p_int_vec)
+  : nlev(p_int_vec.size() - 1), p_int(p_int_vec), p_mid(get_midpoints(p_int))
 {
-  // Check number of interfaces.
-  if (nlev != z_int_vec.size() - 1) {
-    throw std::invalid_argument("p_int_vec and z_int_vec differ in size");
-  }
+  // Currently nothing to do.
 }
 
 // "ilev" copied from E3SM output; this is a set of interface pressure levels
@@ -56,6 +43,17 @@ const double e3sm_ilev[num_e3sm_levs+1] = {
   990.52103362492, 996.992878983524, 1000
 };
 
+std::vector<double> RainshaftGrid::calc_dz(RainshaftConstants constants,
+                                           std::vector<double> t_v) const {
+  std::vector<double> dz;
+  double rog = constants.rdry / constants.g;
+  for (std::size_t i = 0; i != nlev; ++i) {
+    double pdel = p_int[i+1] - p_int[i];
+    dz.push_back(rog * t_v[i] * pdel / p_mid[i]);
+  }
+  return dz;
+}
+
 RainshaftGrid make_e3sm_like_grid(RainshaftConstants constants,
                                   double model_top, double srf_pres,
                                   double srf_temp, double lapse_rate) {
@@ -77,12 +75,10 @@ RainshaftGrid make_e3sm_like_grid(RainshaftConstants constants,
       break;
     }
   }
-  std::size_t num_levels = num_e3sm_levs - top_level_idx;
-  // Calculate p_int and z_int so we can construct and return the grid object.
-  std::vector<double> p_int, z_int;
+  // Calculate p_int so we can construct and return the grid object.
+  std::vector<double> p_int;
   for (size_t i = top_level_idx; i != num_e3sm_levs+1; ++i) {
     p_int.push_back(100. * e3sm_ilev[i]);
-    z_int.push_back(e3sm_ilev_meters[i]);
   }
-  return RainshaftGrid(p_int, z_int);
+  return RainshaftGrid(p_int);
 }

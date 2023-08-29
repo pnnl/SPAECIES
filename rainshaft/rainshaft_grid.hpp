@@ -10,8 +10,12 @@ class RainshaftGrid {
 public:
 
   // Constructor from interface values
-  RainshaftGrid(const std::vector<double>& p_int_vec,
-                const std::vector<double>& z_int_vec);
+  RainshaftGrid(const std::vector<double>& p_int_vec);
+
+  // Calculate z level widths using virtual temperature.
+  std::vector<double> calc_dz(RainshaftConstants constants,
+                              std::vector<double> t_v) const;
+  
 
   // Number of cell interfaces
   const std::size_t nlev;
@@ -20,10 +24,6 @@ public:
   const std::vector<double> p_int;
   // Pressure at cell "midpoints" (Pa)
   const std::vector<double> p_mid;
-  // Altitude at cell interfaces (m)
-  const std::vector<double> z_int;
-  // Cell heights (m)
-  const std::vector<double> dz;
 
 };
 

@@ -23,9 +23,9 @@ RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants& constants,
   vnr.push_back(speeds[0]);
   vqr.push_back(speeds[1]);
   nr_tend_lev = vnr_top * constants.nr_top * constants.rho_top - vnr[0]*state.nr[0]*dvars.rho_dry[0];
-  nr_tend_lev /= grid.dz[0] * dvars.rho_dry[0];
+  nr_tend_lev /= dvars.dz[0] * dvars.rho_dry[0];
   qr_tend_lev = vqr_top * constants.qr_top * constants.rho_top - vqr[0]*state.qr[0]*dvars.rho_dry[0];
-  qr_tend_lev /= grid.dz[0] * dvars.rho_dry[0];
+  qr_tend_lev /= dvars.dz[0] * dvars.rho_dry[0];
   nr_tend.push_back(nr_tend_lev);
   qr_tend.push_back(qr_tend_lev);
   for (std::size_t il = 1; il != grid.nlev; ++il) {
@@ -35,9 +35,9 @@ RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants& constants,
     vnr.push_back(speeds[0]);
     vqr.push_back(speeds[1]);
     nr_tend_lev = vnr[il-1]*state.nr[il-1]*dvars.rho_dry[il-1] - vnr[il]*state.nr[il]*dvars.rho_dry[il];
-    nr_tend_lev /= grid.dz[il] * dvars.rho_dry[il];
+    nr_tend_lev /= dvars.dz[il] * dvars.rho_dry[il];
     qr_tend_lev = vqr[il-1]*state.qr[il-1]*dvars.rho_dry[il-1] - vqr[il]*state.qr[il]*dvars.rho_dry[il];
-    qr_tend_lev /= grid.dz[il] * dvars.rho_dry[il];
+    qr_tend_lev /= dvars.dz[il] * dvars.rho_dry[il];
     nr_tend.push_back(nr_tend_lev);
     qr_tend.push_back(qr_tend_lev);
   }

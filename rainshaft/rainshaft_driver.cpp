@@ -12,6 +12,7 @@
 #include "self_collision.hpp"
 #include "sundials/sundials_context.h"
 #include <iostream>
+#include <cmath>
 
 int main(int argc, char** argv)
 {
@@ -38,16 +39,50 @@ int main(int argc, char** argv)
   double final_time = 300.;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
+  auto nlev = grid.nlev;
   sundials::Context sun_ctxt = sundials::Context();
   // Set up initial condition.
   SaturationFormulae sat_form(constants);
-  std::vector<double> t, q, nr, qr;
-  for (std::size_t il = 0; il != grid.nlev; ++il) {
-    double t_lev = srf_temp - lapse_rate * (grid.z_int[il] - 0.5*grid.dz[il]);
-    t.push_back(t_lev);
-    q.push_back(rel_hum_init * sat_form.q_sat_dry(t_lev, grid.p_mid[il]));
-    nr.push_back(0.);
-    qr.push_back(0.);
+  // Initial condition for nr and qr is just 0, and allocate t and q as well.
+  std::vector<double> t(nlev, 0.), q(nlev, 0.), nr(nlev, 0.), qr(nlev, 0.);
+  // Coming up with an initial condition for t and q is slightly tricky, because
+  // we only have an implicit relationship between t, q, and dz. But since the
+  // effect of q on layer height is not large, start by ignoring it, in which
+  // case we do have an explicit relationship between t and dz.
+  double rog = constants.rdry / constants.g;
+  std::vector<double> z_int(nlev+1, 0.);
+  for (int il = nlev - 1; il != -1; --il) {
+    double pdel = grid.p_int[il+1]-grid.p_int[il];
+    t[il] = (srf_temp - lapse_rate*z_int[il+1])
+      / (1. + 0.5 * lapse_rate * rog * pdel/ grid.p_mid[il]);
+    z_int[il] = rog * t[il] * pdel / grid.p_mid[il];
+  }
+  // Now iterate until change in dz between successive iterations is small;
+  // ten iterations should do it.
+  bool converged = false;
+  double t_tolerance = 1.e-3; // Kelvin
+  for (int it = 0; it != 10 && !converged; ++it) {
+    std::vector<double> t_v(nlev, 0.);
+    for (std::size_t il = 0; il != nlev; ++il) {
+      q[il] = rel_hum_init * sat_form.q_sat_dry(t[il], grid.p_mid[il]);
+      // Virtual temperature factor.
+      double t_v_fac = 1. + ((1/constants.epsilon_h2o - 1.) * q[il]);
+      t_v[il] = t[il] * t_v_fac;
+    }
+    auto dz = grid.calc_dz(constants, t_v);
+    z_int = dz_to_z_int(dz);
+    converged = true;
+    for (std::size_t il = 0; il!= nlev; ++il) {
+      double new_temp = srf_temp - lapse_rate * (z_int[il] - 0.5 * dz[il]);
+      if (abs(new_temp - t[il]) > t_tolerance) {
+        converged = false;
+      }
+      t[il] = new_temp;
+    }
+  }
+  if (!converged) {
+    std::cerr << "Initial condition iteration failed to converge." << std::endl;
+    return 1;
   }
   RainshaftState initial_state(t, q, nr, qr);
   RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);

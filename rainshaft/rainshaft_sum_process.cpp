@@ -1,7 +1,8 @@
 #include "rainshaft_sum_process.hpp"
+#include <iostream>
 
 SumProcess::SumProcess(const std::vector<const RainshaftProcess *>& processes)
-  : sub_processes(processes), nsub(processes.size()) {
+  : nsub(processes.size()), sub_processes(processes) {
 }
 
 RainshaftTendency SumProcess::calc_tend(const RainshaftConstants& constants,
