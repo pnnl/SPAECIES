@@ -9,6 +9,10 @@ find_package(Catch2 2...<3 REQUIRED)
 include(CTest)
 include(Catch)
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(CMAKE_CXX_FLAGS_DEBUG "-Wall -fbounds-check")
+endif()
+
 add_subdirectory(libspaecies)
 add_subdirectory(rainshaft)
 add_subdirectory(tests)
