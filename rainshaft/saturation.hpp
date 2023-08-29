@@ -15,14 +15,14 @@ public:
   SaturationFormulae(const RainshaftConstants& constants);
 
   // Saturation vapor pressure over liquid at a given temperature.
-  double svp_liquid(double temperature);
+  double svp_liquid(double temperature) const;
 
   // Convert water vapor pressure to specific humidity over dry air.
-  double wv_pressure_to_q_dry(double pressure_wv, double pressure_dry);
+  double wv_pressure_to_q_dry(double pressure_wv, double pressure_dry) const;
 
   // Saturation specific humidity (over mass of dry air) as a function of
   // temperature and dry pressure.
-  double q_sat_dry(double temperature, double pressure_dry);
+  double q_sat_dry(double temperature, double pressure_dry) const;
 
 private:
 

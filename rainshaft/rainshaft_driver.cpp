@@ -1,4 +1,5 @@
 #include "spaecies.hpp"
+#include "evaporation.hpp"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_state.hpp"
@@ -90,8 +91,10 @@ int main(int argc, char** argv)
   Sedimentation sed;
   // Self-collision processes.
   SelfCollision self_coll;
+  // Evaporation process.
+  Evaporation evap(&sat_form);
   // Sum of all processes.
-  std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll};
+  std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll, &evap};
   SumProcess all_micro = SumProcess(micro_processes);
   // Evolve state forward.
   RainshaftIntegrator intg(&sun_ctxt, dt);

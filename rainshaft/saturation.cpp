@@ -4,7 +4,7 @@ SaturationFormulae::SaturationFormulae(const RainshaftConstants& constants)
   : epsilon_h2o(constants.epsilon_h2o) {
 }
 
-double SaturationFormulae::svp_liquid(double temperature) {
+double SaturationFormulae::svp_liquid(double temperature) const {
   double log_t = std::log(temperature);
   double recip_t = 1./temperature;
   double tanh_fac = std::tanh(0.0415 * (temperature - 218.8));
@@ -16,11 +16,11 @@ double SaturationFormulae::svp_liquid(double temperature) {
 }
 
 double SaturationFormulae::wv_pressure_to_q_dry(double pressure_wv,
-                                                double pressure_dry) {
+                                                double pressure_dry) const {
   return epsilon_h2o * pressure_wv / pressure_dry;
 }
 
-double SaturationFormulae::q_sat_dry(double temperature, double pressure_dry) {
+double SaturationFormulae::q_sat_dry(double temperature, double pressure_dry) const {
   double esl = svp_liquid(temperature);
   return wv_pressure_to_q_dry(esl, pressure_dry);
 }

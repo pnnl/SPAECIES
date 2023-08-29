@@ -1,4 +1,5 @@
 add_executable(rainshaft
+  evaporation.cpp
   rainshaft_driver.cpp
   rainshaft_derived_vars.cpp
   rainshaft_integrator.cpp
