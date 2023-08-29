@@ -1,5 +1,6 @@
 #include "spaecies.hpp"
 #include "evaporation.hpp"
+#include "nudging.hpp"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_state.hpp"
@@ -32,12 +33,14 @@ int main(int argc, char** argv)
   double lapse_rate = 6.5e-3;
   // Relative humidity of initial condition.
   double rel_hum_init = 0.7;
+  // Time scale over which to nudge t and q back to initial condition in seconds.
+  double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
   double dt = 1;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
-  double final_time = 300.;
+  double final_time = 7200.;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
   auto nlev = grid.nlev;
@@ -93,8 +96,10 @@ int main(int argc, char** argv)
   SelfCollision self_coll;
   // Evaporation process.
   Evaporation evap(&sat_form);
+  // Nudging to initial condition.
+  Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.
-  std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll, &evap};
+  std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll, &evap, &nudge};
   SumProcess all_micro = SumProcess(micro_processes);
   // Evolve state forward.
   RainshaftIntegrator intg(&sun_ctxt, dt);

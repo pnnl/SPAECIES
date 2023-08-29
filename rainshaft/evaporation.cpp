@@ -2,7 +2,6 @@
 #include "saturation.hpp"
 #include <cstddef>
 #include <cmath>
-#include <iostream>
 #include <boost/math/special_functions/gamma.hpp>
 using std::sqrt, std::pow;
 using boost::math::tgamma, boost::math::tgamma_lower;
