@@ -107,6 +107,8 @@ RainshaftSolution RainshaftIntegrator::integrate_ark(const RainshaftProcess& pro
   ERKStepSetOrder(arkode_mem, 2);
   // SPS: And this return value.
   ERKStepSetUserData(arkode_mem, (void*) &user_data);
+  // SPS: And this return value.
+  ERKStepSetMaxNumSteps(arkode_mem, 5000.);
   realtype reltol = 1.e-3;
   N_Vector abstol = N_VNew_Serial(num_variables, *sun_ctxt);
   realtype *tol_data = N_VGetArrayPointer_Serial(abstol);
