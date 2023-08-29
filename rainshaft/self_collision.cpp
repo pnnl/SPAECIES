@@ -1,9 +1,7 @@
 #include "self_collision.hpp"
 #include <cstddef>
 #include <cmath>
-#include <boost/math/special_functions/gamma.hpp>
 using std::min, std::cbrt, std::exp;
-using boost::math::tgamma, boost::math::tgamma_lower;
 
 RainshaftTendency SelfCollision::calc_tend(const RainshaftConstants& constants,
                                            const RainshaftGrid& grid,
