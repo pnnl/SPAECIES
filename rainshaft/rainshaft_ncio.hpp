@@ -33,6 +33,9 @@ public:
   // Write total number of RHS evaluations to file.
   void write_num_rhs_evals(long int num_rhs_evals);
 
+  // Write wallclock time for solution in ms to file.
+  void write_walltime_ms(double walltime_ms);
+
 protected:
 
   // NetCDF file id

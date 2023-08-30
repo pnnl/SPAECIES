@@ -98,3 +98,14 @@ void NetcdfWriter::write_num_rhs_evals(long int num_rhs_evals) {
   // Write variable.
   nc_put_var(ncid, evalsid, &num_rhs_evals);
 }
+
+void NetcdfWriter::write_walltime_ms(double walltime_ms) {
+  int walltime_msid;
+  // SPS: Need to check errors from all these as well.
+  // SPS: Add variable metadata to all these too.
+  // Define derived variables.
+  nc_def_var(ncid, "walltime_ms", NC_DOUBLE, 0, NULL, &walltime_msid);
+
+  // Write variable.
+  nc_put_var(ncid, walltime_msid, &walltime_ms);
+}

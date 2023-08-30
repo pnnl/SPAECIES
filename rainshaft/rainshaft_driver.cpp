@@ -15,9 +15,13 @@
 #include "sundials/sundials_context.h"
 #include <iostream>
 #include <cmath>
+#include <chrono>
 
 int main(int argc, char** argv)
 {
+  using std::chrono::high_resolution_clock;
+  using std::chrono::duration;
+
   // Set up model constants.
   // SPS: Choose rho_top in a more principled way?
   RainshaftConstants constants{3.14159265358979323846,
@@ -95,7 +99,7 @@ int main(int argc, char** argv)
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(constants, &sat_form, true);
+  Evaporation evap(constants, &sat_form, false);
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.
@@ -103,14 +107,19 @@ int main(int argc, char** argv)
   SumProcess all_micro = SumProcess(micro_processes);
   // Evolve state forward.
   RainshaftIntegrator intg(&sun_ctxt, dt);
+  auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate_ark(all_micro, initial_time, final_time, constants,
                                                   grid, initial_state, initial_dvars);
+  auto after_sol = high_resolution_clock::now();
+  // Time taken for solution.
+  duration<double, std::milli> walltime_ms = after_sol - before_sol;
   // Write out grid and all states.
   NetcdfWriter writer("./rainshaft_ark2.nc");
   writer.write_grid(grid);
   writer.write_states(solution.states);
   writer.write_derived_vars(solution.dvars);
   writer.write_num_rhs_evals(solution.num_rhs_evals);
+  writer.write_walltime_ms(walltime_ms.count());
   // Ensure that the library is linked and greet the user.
   spaecies::do_nothing();
   return 0;
