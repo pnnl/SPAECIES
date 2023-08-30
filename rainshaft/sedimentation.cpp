@@ -8,7 +8,7 @@ using boost::math::tgamma, boost::math::tgamma_lower;
 Sedimentation::Sedimentation(const RainshaftConstants& constants, bool use_v_table) {
   if (use_v_table) {
     std::vector<double> range_bounds = {5., 195., 8595.};
-    std::vector<double> spacings = {10., 30.};
+    std::vector<double> spacings = {1., 1.};
     std::vector<double> d_microns = LookupTable::calc_x_values(range_bounds,
                                                                spacings);
     std::vector<double> v0_values(d_microns.size(), 0.);
