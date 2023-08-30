@@ -1,5 +1,7 @@
 add_executable(rainshaft
   evaporation.cpp
+  lookup_linear.cpp
+  lookup_table.cpp
   nudging.cpp
   rainshaft_driver.cpp
   rainshaft_derived_vars.cpp

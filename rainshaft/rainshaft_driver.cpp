@@ -44,7 +44,7 @@ int main(int argc, char** argv)
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
-  double final_time = 7200.;
+  double final_time = 14400.;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
   auto nlev = grid.nlev;
@@ -95,11 +95,11 @@ int main(int argc, char** argv)
   RainshaftState initial_state(t, q, nr, qr);
   RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
   // Sedimentation process.
-  Sedimentation sed(constants, false);
+  Sedimentation sed(constants, true);
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(constants, &sat_form, false);
+  Evaporation evap(constants, &sat_form, true);
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.

@@ -48,17 +48,16 @@ Evaporation::Evaporation(const RainshaftConstants& constants,
                          bool use_v_table)
   : sat_form(sat_form_in) {
   if (use_v_table) {
-    v_table.resize(300);
-    for (std::size_t i = 0; i != 20; ++i) {
-      double d_micron = 5. + (10. * i);
-      double lambdar = 1.e6 / d_micron;
-      v_table[i] = calc_v_evap_gamma(constants, lambdar);
+    std::vector<double> range_bounds = {5., 195., 8595.};
+    std::vector<double> spacings = {10., 30.};
+    std::vector<double> d_microns = LookupTable::calc_x_values(range_bounds,
+                                                               spacings);
+    std::vector<double> v_values(d_microns.size(), 0.);
+    for (std::size_t i = 0; i != d_microns.size(); ++i) {
+      double lambdar = 1.e6 / d_microns[i];
+      v_values[i] = calc_v_evap_gamma(constants, lambdar);
     }
-    for (std::size_t i = 0; i != 280; ++i) {
-      double d_micron = 225. + (30. * i);
-      double lambdar = 1.e6 / d_micron;
-      v_table[20 + i] = calc_v_evap_gamma(constants, lambdar);
-    }
+    v_table.emplace(range_bounds, spacings, v_values);
   }
 }
 
@@ -97,23 +96,9 @@ RainshaftTendency Evaporation::calc_tend(const RainshaftConstants& constants,
 }
 
 double Evaporation::calc_v_evap(const RainshaftConstants& constants, double lambdar) const {
-  if (v_table.size() > 0) {
+  if (v_table.has_value()) {
     double d_micron = 1.e6 / lambdar;
-    if (d_micron < 5.) {
-      return v_table[0];
-    } else if (d_micron < 195.) {
-      std::size_t low_ind = (((std::size_t) d_micron) - 5) / 10;
-      double frac_part = d_micron - ((low_ind * 10) + 5);
-      return (1. - frac_part) * v_table[low_ind]
-        + frac_part * v_table[low_ind+1];
-    } else if (d_micron < 8595.) {
-      std::size_t low_ind = (((std::size_t) d_micron - 195)) / 30 + 19;
-      double frac_part = d_micron - (((low_ind - 19) * 30) + 195);
-      return (1. - frac_part) * v_table[low_ind]
-        + frac_part * v_table[low_ind+1];
-    } else {
-      return v_table[299];
-    }
+    return v_table->lookup_value(d_micron);
   } else {
     return calc_v_evap_gamma(constants, lambdar);
   }

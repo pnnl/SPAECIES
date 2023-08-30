@@ -1,7 +1,9 @@
 #ifndef SEDIMENTATION_HPP
 #define SEDIMENTATION_HPP
 #include <vector>
+#include <optional>
 
+#include "lookup_linear.hpp"
 #include "rainshaft_process.hpp"
 
 class Sedimentation : public RainshaftProcess {
@@ -43,7 +45,8 @@ private:
   // This is currently hard-coded to P3 settings, i.e. it contains 20 entries
   // for values every 10 microns between 5 and 195 micron, and 280 entries for
   // values every 30 microns between 195 and 8595 micron.
-  std::vector<double> v0_table, v3_table;
+  std::optional<LookupLinear> v0_table;
+  std::optional<LookupLinear> v3_table;
 
 };
 
