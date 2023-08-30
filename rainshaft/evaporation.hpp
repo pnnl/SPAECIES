@@ -11,7 +11,8 @@ public:
 
   // SPS: Should use a different pointer type to guarantee this
   // does not outlast the sat_form object.
-  Evaporation(const SaturationFormulae* sat_form_in);
+  Evaporation(const RainshaftConstants& constants,
+              const SaturationFormulae* sat_form_in, bool use_v_table);
 
   // Calculate tendency from current state.
   RainshaftTendency calc_tend(const RainshaftConstants& constants,
@@ -19,9 +20,24 @@ public:
                               const RainshaftState& state,
                               const RainshaftDerivedVars& dvars) const;
 
+  // Calculate characteristic velocity used for velocity calculation.
+  double calc_v_evap(const RainshaftConstants& constants, double lambdar) const;
+
+  // Calculate characteristic velocity used for velocity calculation.
+  // This version ignores the lookup table, if present, and always just
+  // calculates using incomplete gamma functions.
+  double calc_v_evap_gamma(const RainshaftConstants& constants, double lambdar) const;
+
 private:
 
+  // Water vapor saturation formulae.
   const SaturationFormulae *sat_form;
+
+  // Particle velocity lookup table.
+  // This is currently hard-coded to P3 settings, i.e. it contains 20 entries
+  // for values every 10 microns between 5 and 195 micron, and 280 entries for
+  // values every 30 microns between 195 and 8595 micron.
+  std::vector<double> v_table;
 
 };
 

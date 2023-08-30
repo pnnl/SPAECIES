@@ -6,10 +6,6 @@
 using std::sqrt, std::pow;
 using boost::math::tgamma, boost::math::tgamma_lower;
 
-Evaporation::Evaporation(const SaturationFormulae* sat_form_in)
-  : sat_form(sat_form_in) {
-}
-
 double calc_diffusivity(double t, double p) {
   return 8.794e-5 * pow(t, 1.81) / p;
 }
@@ -18,7 +14,8 @@ double calc_dynamic_viscosity(double t) {
   return 1.496e-6 * pow(t, 1.5) / (t + 120.);
 }
 
-double calc_v_evap(RainshaftConstants constants, double lambdar) {
+// Calculate v_evap using incomplete gamma functions.
+double Evaporation::calc_v_evap_gamma(const RainshaftConstants& constants, double lambdar) const {
   // Skip function when no rain present.
   if (lambdar == 0.) {
     return 0.;
@@ -44,6 +41,25 @@ double calc_v_evap(RainshaftConstants constants, double lambdar) {
   // Integral for 3477.84 micron < D.
   v_evap += sqrt(9.17) * tgamma(2.5, lambdar * 3.47784e-3) * pow(lambdar, -1.5);
   return v_evap;
+}
+
+Evaporation::Evaporation(const RainshaftConstants& constants,
+                         const SaturationFormulae* sat_form_in,
+                         bool use_v_table)
+  : sat_form(sat_form_in) {
+  if (use_v_table) {
+    v_table.resize(300);
+    for (std::size_t i = 0; i != 20; ++i) {
+      double d_micron = 5. + (10. * i);
+      double lambdar = 1.e6 / d_micron;
+      v_table[i] = calc_v_evap_gamma(constants, lambdar);
+    }
+    for (std::size_t i = 0; i != 280; ++i) {
+      double d_micron = 225. + (30. * i);
+      double lambdar = 1.e6 / d_micron;
+      v_table[20 + i] = calc_v_evap_gamma(constants, lambdar);
+    }
+  }
 }
 
 RainshaftTendency Evaporation::calc_tend(const RainshaftConstants& constants,
@@ -78,4 +94,27 @@ RainshaftTendency Evaporation::calc_tend(const RainshaftConstants& constants,
     nr_tend[il] = - q_tend[il] * (state.nr[il] / state.qr[il]);
   }
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
+}
+
+double Evaporation::calc_v_evap(const RainshaftConstants& constants, double lambdar) const {
+  if (v_table.size() > 0) {
+    double d_micron = 1.e6 / lambdar;
+    if (d_micron < 5.) {
+      return v_table[0];
+    } else if (d_micron < 195.) {
+      std::size_t low_ind = (((std::size_t) d_micron) - 5) / 10;
+      double frac_part = d_micron - ((low_ind * 10) + 5);
+      return (1. - frac_part) * v_table[low_ind]
+        + frac_part * v_table[low_ind+1];
+    } else if (d_micron < 8595.) {
+      std::size_t low_ind = (((std::size_t) d_micron - 195)) / 30 + 19;
+      double frac_part = d_micron - (((low_ind - 19) * 30) + 195);
+      return (1. - frac_part) * v_table[low_ind]
+        + frac_part * v_table[low_ind+1];
+    } else {
+      return v_table[299];
+    }
+  } else {
+    return calc_v_evap_gamma(constants, lambdar);
+  }
 }

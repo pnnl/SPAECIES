@@ -23,7 +23,7 @@ int main(int argc, char** argv)
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
                                0.62197, 1.e-14, 9.80616, 1.e-5, 5.e-3,
-                               0.988919555598356, 1.e4, 1.e-3};
+                               0.988919555598356, 1.e3, 1.e-4};
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
   double model_top = 2.e3;
@@ -91,11 +91,11 @@ int main(int argc, char** argv)
   RainshaftState initial_state(t, q, nr, qr);
   RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
   // Sedimentation process.
-  Sedimentation sed;
+  Sedimentation sed(constants, false);
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(&sat_form);
+  Evaporation evap(constants, &sat_form, true);
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.

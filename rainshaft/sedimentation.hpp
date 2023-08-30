@@ -8,6 +8,9 @@ class Sedimentation : public RainshaftProcess {
 
 public:
 
+  // Constructor allowing use of lookup table.
+  Sedimentation(const RainshaftConstants& constants, bool use_v_table);
+
   // Calculate tendency from current state.
   RainshaftTendency calc_tend(const RainshaftConstants& constants,
                               const RainshaftGrid& grid,
@@ -17,6 +20,30 @@ public:
   // For a given value of lambdar, what are the rain number and mass fall speeds?
   std::vector<double> rain_fall_speeds(const RainshaftConstants& constants,
                                        double rho, double lambdar) const;
+
+  // What would the speeds for a given lambdar be at standard temperature and
+  // pressure?
+  std::vector<double> rain_fall_speeds_stp(const RainshaftConstants& constants,
+                                           double lambdar) const;
+
+  // What would the speeds for a given lambdar be at standard temperature and
+  // pressure?
+  // This version ignores any lookup table, if present, and always returns fall
+  // speeds calculated with incomplete gamma functions.
+  std::vector<double> rain_fall_speeds_stp_gamma(const RainshaftConstants& constants,
+                                                 double lambdar) const;
+
+  // Conversion factor from STP fall speed to actual fall speed given air density.
+  double rho_fac(const RainshaftConstants& constants,
+                 double rho_dry) const;
+
+private:
+
+  // Particle velocity lookup tables.
+  // This is currently hard-coded to P3 settings, i.e. it contains 20 entries
+  // for values every 10 microns between 5 and 195 micron, and 280 entries for
+  // values every 30 microns between 195 and 8595 micron.
+  std::vector<double> v0_table, v3_table;
 
 };
 
