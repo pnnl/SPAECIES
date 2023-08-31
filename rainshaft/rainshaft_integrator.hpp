@@ -9,30 +9,38 @@
 #include "rainshaft_process.hpp"
 #include "rainshaft_solution.hpp"
 
-class RainshaftIntegrator {
-
-public:
-
-  // Constructor requires timestep.
-  RainshaftIntegrator(sundials::Context *sun_ctxt);
-
-  virtual RainshaftSolution integrate(const RainshaftProcess& process,
-                                      double initial_time,
-                                      double final_time,
-                                      const RainshaftConstants& constants,
-                                      const RainshaftGrid& grid,
-                                      const RainshaftState& initial_state,
-                                      const RainshaftDerivedVars& initial_dvars) = 0;
-
-  // SPS: Change pointer type to prevent use of a sun_ctxt that is destroyed.
-  sundials::Context *sun_ctxt;
-};
-
 // SPS: See if you can make use of this type safer with pointer changes...
 struct RainshaftUserData {
   const RainshaftConstants* constants;
   const RainshaftGrid* grid;
   const RainshaftProcess* process;
+};
+
+class RainshaftIntegrator {
+
+public:
+
+  // SPS: Need to consider wrapping pointer types to check that none of the
+  // pointers become invalid while this object exists.
+  RainshaftIntegrator(const RainshaftConstants* constants,
+                      const RainshaftGrid* grid,
+                      const RainshaftProcess* process,
+                      sundials::Context *sun_ctxt);
+
+  virtual RainshaftSolution integrate(double initial_time,
+                                      double final_time,
+                                      const RainshaftState& initial_state) = 0;
+
+  // SPS: Change pointer type to prevent use of a sun_ctxt that is destroyed.
+  sundials::Context *sun_ctxt;
+
+protected:
+
+  // SPS: Utility for calculating derived variables.
+  RainshaftDerivedVars calc_dvars(const RainshaftState& state);
+
+  const RainshaftUserData user_data;
+
 };
 
 N_Vector state_to_n_vector(sundials::Context *sun_ctxt, const RainshaftState& state);

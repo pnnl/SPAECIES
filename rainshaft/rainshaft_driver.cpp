@@ -107,11 +107,10 @@ int main(int argc, char** argv)
   std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll, &evap, &nudge};
   SumProcess all_micro = SumProcess(micro_processes);
   // Evolve state forward.
-  //ForwardEulerIntegrator intg(&sun_ctxt, dt);
-  ExplicitIntegrator intg(&sun_ctxt);
+  ForwardEulerIntegrator intg(&constants, &grid, &all_micro, &sun_ctxt, dt);
+  //ExplicitIntegrator intg(&constants, &grid, &all_micro, &sun_ctxt);
   auto before_sol = high_resolution_clock::now();
-  RainshaftSolution solution = intg.integrate(all_micro, initial_time, final_time, constants,
-                                              grid, initial_state, initial_dvars);
+  RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);
   auto after_sol = high_resolution_clock::now();
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;

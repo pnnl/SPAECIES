@@ -7,15 +7,14 @@ class ForwardEulerIntegrator : public RainshaftIntegrator {
 public:
 
   // Constructor requires timestep.
-  ForwardEulerIntegrator(sundials::Context *sun_ctxt, double dt_in);
+  ForwardEulerIntegrator(const RainshaftConstants* constants,
+                         const RainshaftGrid* grid,
+                         const RainshaftProcess* process,
+                         sundials::Context *sun_ctxt, double dt_in);
 
-  RainshaftSolution integrate(const RainshaftProcess& process,
-                              double initial_time,
+  RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const RainshaftConstants& constants,
-                              const RainshaftGrid& grid,
-                              const RainshaftState& initial_state,
-                              const RainshaftDerivedVars& initial_dvars);
+                              const RainshaftState& initial_state);
 
   const double dt;
 };

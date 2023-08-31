@@ -1,29 +1,27 @@
 #include "forward_euler_integrator.hpp"
 #include "arkode/arkode_erkstep.h"
 
-ForwardEulerIntegrator::ForwardEulerIntegrator(sundials::Context *sun_ctxt,
+ForwardEulerIntegrator::ForwardEulerIntegrator(const RainshaftConstants* constants,
+                                               const RainshaftGrid* grid,
+                                               const RainshaftProcess* process,
+                                               sundials::Context *sun_ctxt,
                                                double dt_in)
-  : RainshaftIntegrator(sun_ctxt), dt(dt_in) {
+  : RainshaftIntegrator(constants, grid, process, sun_ctxt), dt(dt_in) {
 }
 
 // SPS: Need to generalize this to get output states at arbitary times.
-RainshaftSolution ForwardEulerIntegrator::integrate(const RainshaftProcess& process,
-                                                    double initial_time,
+RainshaftSolution ForwardEulerIntegrator::integrate(double initial_time,
                                                     double final_time,
-                                                    const RainshaftConstants& constants,
-                                                    const RainshaftGrid& grid,
-                                                    const RainshaftState& initial_state,
-                                                    const RainshaftDerivedVars& initial_dvars) {
+                                                    const RainshaftState& initial_state) {
+  // SPS: Should check than num_steps * dt is approximately equal to final_time - initial_time,
+  // or should modify so that the last step can be a partial step to end at the correct time.
   std::size_t num_steps = (final_time - initial_time) / dt;
   std::vector<RainshaftState> states{initial_state};
-  std::vector<RainshaftDerivedVars> dvars{initial_dvars};
+  std::vector<RainshaftDerivedVars> dvars{calc_dvars(initial_state)};
   sunindextype nz = initial_state.t.size();
   // SPS: It should not assume 4 variables.
   sunindextype num_variables = nz * 4;
-  // SPS: initial_dvars unused, find a way to use it or remove it as an argument.
   N_Vector y0 = state_to_n_vector(sun_ctxt, initial_state);
-  // Make userdata object.
-  RainshaftUserData user_data = {&constants, &grid, &process};
   void* arkode_mem = ERKStepCreate(rainshaft_f, initial_time, y0, *sun_ctxt);
   // SPS: Check return value.
   ERKStepSetFixedStep(arkode_mem, dt);
@@ -42,7 +40,7 @@ RainshaftSolution ForwardEulerIntegrator::integrate(const RainshaftProcess& proc
     ERKStepEvolve(arkode_mem, dt * it, yout, &tret, ARK_ONE_STEP);
     RainshaftState new_state = n_vector_to_state(yout);
     states.push_back(new_state);
-    dvars.push_back(RainshaftDerivedVars(constants, grid, new_state));
+    dvars.push_back(calc_dvars(new_state));
   }
   long int num_rhs_evals = 0;
   // SPS: And this return value.

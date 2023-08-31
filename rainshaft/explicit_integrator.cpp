@@ -1,27 +1,23 @@
 #include "explicit_integrator.hpp"
 #include "arkode/arkode_erkstep.h"
 
-ExplicitIntegrator::ExplicitIntegrator(sundials::Context *sun_ctxt)
-  : RainshaftIntegrator(sun_ctxt) {
+ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants* constants,
+                                       const RainshaftGrid* grid,
+                                       const RainshaftProcess* process,
+                                       sundials::Context *sun_ctxt)
+  : RainshaftIntegrator(constants, grid, process, sun_ctxt) {
 }
 
 // SPS: Need to generalize this to get output states at arbitary times.
-RainshaftSolution ExplicitIntegrator::integrate(const RainshaftProcess& process,
-                                                 double initial_time,
-                                                 double final_time,
-                                                 const RainshaftConstants& constants,
-                                                 const RainshaftGrid& grid,
-                                                 const RainshaftState& initial_state,
-                                                 const RainshaftDerivedVars& initial_dvars) {
+RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
+                                                double final_time,
+                                                const RainshaftState& initial_state) {
   std::vector<RainshaftState> states{initial_state};
-  std::vector<RainshaftDerivedVars> dvars{initial_dvars};
+  std::vector<RainshaftDerivedVars> dvars{calc_dvars(initial_state)};
   sunindextype nz = initial_state.t.size();
   // SPS: It should not assume 4 variables.
   sunindextype num_variables = nz * 4;
-  // SPS: initial_dvars unused, find a way to use it or remove it as an argument.
   N_Vector y0 = state_to_n_vector(sun_ctxt, initial_state);
-  // Make userdata object.
-  RainshaftUserData user_data = {&constants, &grid, &process};
   //void* arkode_mem = ARKStepCreate(rainshaft_f, NULL, initial_time, y0, *sun_ctxt);
   void* arkode_mem = ERKStepCreate(rainshaft_f, initial_time, y0, *sun_ctxt);
   // SPS: And this return value.
@@ -53,7 +49,7 @@ RainshaftSolution ExplicitIntegrator::integrate(const RainshaftProcess& process,
   ERKStepEvolve(arkode_mem, final_time, yout, &tret, ARK_NORMAL);
   RainshaftState new_state = n_vector_to_state(yout);
   states.push_back(new_state);
-  dvars.push_back(RainshaftDerivedVars(constants, grid, new_state));
+  dvars.push_back(calc_dvars(new_state));
   long int num_rhs_evals = 0, num_implicit_evals = 0;
   // SPS: And this return value.
   //ARKStepGetNumRhsEvals(arkode_mem, &num_rhs_evals,
