@@ -1,8 +1,8 @@
 #ifndef FORWARD_EULER_INTEGRATOR_HPP
 #define FORWARD_EULER_INTEGRATOR_HPP
-#include "rainshaft_integrator.hpp"
+#include "sundials_integrator.hpp"
 
-class ForwardEulerIntegrator : public RainshaftIntegrator {
+class ForwardEulerIntegrator : public SundialsIntegrator {
 
 public:
 

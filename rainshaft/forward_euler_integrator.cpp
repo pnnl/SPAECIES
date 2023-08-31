@@ -6,7 +6,7 @@ ForwardEulerIntegrator::ForwardEulerIntegrator(const RainshaftConstants* constan
                                                const RainshaftProcess* process,
                                                sundials::Context *sun_ctxt,
                                                double dt_in)
-  : RainshaftIntegrator(constants, grid, process, sun_ctxt), dt(dt_in) {
+  : SundialsIntegrator(constants, grid, process, sun_ctxt), dt(dt_in) {
 }
 
 // SPS: Need to generalize this to get output states at arbitary times.

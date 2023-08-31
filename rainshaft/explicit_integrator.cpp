@@ -5,7 +5,7 @@ ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants* constants,
                                        const RainshaftGrid* grid,
                                        const RainshaftProcess* process,
                                        sundials::Context *sun_ctxt)
-  : RainshaftIntegrator(constants, grid, process, sun_ctxt) {
+  : SundialsIntegrator(constants, grid, process, sun_ctxt) {
 }
 
 // SPS: Need to generalize this to get output states at arbitary times.

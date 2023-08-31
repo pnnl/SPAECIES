@@ -7,7 +7,6 @@ add_executable(rainshaft
   nudging.cpp
   rainshaft_driver.cpp
   rainshaft_derived_vars.cpp
-  rainshaft_integrator.cpp
   rainshaft_grid.cpp
   rainshaft_ncio.cpp
   rainshaft_solution.cpp
@@ -17,6 +16,7 @@ add_executable(rainshaft
   saturation.cpp
   sedimentation.cpp
   self_collision.cpp
+  sundials_integrator.cpp
 )
 target_link_libraries(rainshaft
   NetCDF::NetCDF

@@ -1,8 +1,8 @@
 #ifndef EXPLICIT_INTEGRATOR_HPP
 #define EXPLICIT_INTEGRATOR_HPP
-#include "rainshaft_integrator.hpp"
+#include "sundials_integrator.hpp"
 
-class ExplicitIntegrator : public RainshaftIntegrator {
+class ExplicitIntegrator : public SundialsIntegrator {
 
 public:
 

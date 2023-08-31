@@ -1,16 +1,16 @@
-#include "rainshaft_integrator.hpp"
+#include "sundials_integrator.hpp"
 #include <cstddef>
 #include <vector>
 #include "arkode/arkode_erkstep.h"
 
-RainshaftIntegrator::RainshaftIntegrator(const RainshaftConstants* constants,
-                                         const RainshaftGrid* grid,
-                                         const RainshaftProcess* process,
-                                         sundials::Context *sun_ctxt)
+SundialsIntegrator::SundialsIntegrator(const RainshaftConstants* constants,
+                                       const RainshaftGrid* grid,
+                                       const RainshaftProcess* process,
+                                       sundials::Context *sun_ctxt)
   : sun_ctxt(sun_ctxt), user_data{constants, grid, process} {
 }
 
-RainshaftDerivedVars RainshaftIntegrator::calc_dvars(const RainshaftState& state) {
+RainshaftDerivedVars SundialsIntegrator::calc_dvars(const RainshaftState& state) {
   return RainshaftDerivedVars(*user_data.constants, *user_data.grid, state);
 }
 
