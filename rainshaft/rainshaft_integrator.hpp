@@ -14,31 +14,18 @@ class RainshaftIntegrator {
 public:
 
   // Constructor requires timestep.
-  RainshaftIntegrator(sundials::Context *sun_ctxt, double dt_in);
+  RainshaftIntegrator(sundials::Context *sun_ctxt);
 
-  RainshaftSolution integrate(const RainshaftProcess& process,
-                              double initial_time,
-                              double final_time,
-                              const RainshaftConstants& constants,
-                              const RainshaftGrid& grid,
-                              const RainshaftState& initial_state,
-                              const RainshaftDerivedVars& initial_dvars);
-
-  RainshaftSolution integrate_ark(const RainshaftProcess& process,
-                                  double initial_time,
-                                  double final_time,
-                                  const RainshaftConstants& constants,
-                                  const RainshaftGrid& grid,
-                                  const RainshaftState& initial_state,
-                                  const RainshaftDerivedVars& initial_dvars);
-
-  RainshaftState apply_tend(const RainshaftState& state,
-                            const RainshaftTendency& tend);
+  virtual RainshaftSolution integrate(const RainshaftProcess& process,
+                                      double initial_time,
+                                      double final_time,
+                                      const RainshaftConstants& constants,
+                                      const RainshaftGrid& grid,
+                                      const RainshaftState& initial_state,
+                                      const RainshaftDerivedVars& initial_dvars) = 0;
 
   // SPS: Change pointer type to prevent use of a sun_ctxt that is destroyed.
   sundials::Context *sun_ctxt;
-
-  const double dt;
 };
 
 // SPS: See if you can make use of this type safer with pointer changes...

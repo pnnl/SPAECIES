@@ -1,12 +1,13 @@
 #include "spaecies.hpp"
 #include "evaporation.hpp"
+#include "explicit_integrator.hpp"
+#include "forward_euler_integrator.hpp"
 #include "nudging.hpp"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_state.hpp"
 #include "rainshaft_tendency.hpp"
 #include "rainshaft_solution.hpp"
-#include "rainshaft_integrator.hpp"
 #include "rainshaft_ncio.hpp"
 #include "rainshaft_sum_process.hpp"
 #include "saturation.hpp"
@@ -44,7 +45,7 @@ int main(int argc, char** argv)
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
-  double final_time = 14400.;
+  double final_time = 86400.;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
   auto nlev = grid.nlev;
@@ -106,10 +107,11 @@ int main(int argc, char** argv)
   std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll, &evap, &nudge};
   SumProcess all_micro = SumProcess(micro_processes);
   // Evolve state forward.
-  RainshaftIntegrator intg(&sun_ctxt, dt);
+  //ForwardEulerIntegrator intg(&sun_ctxt, dt);
+  ExplicitIntegrator intg(&sun_ctxt);
   auto before_sol = high_resolution_clock::now();
-  RainshaftSolution solution = intg.integrate_ark(all_micro, initial_time, final_time, constants,
-                                                  grid, initial_state, initial_dvars);
+  RainshaftSolution solution = intg.integrate(all_micro, initial_time, final_time, constants,
+                                              grid, initial_state, initial_dvars);
   auto after_sol = high_resolution_clock::now();
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;

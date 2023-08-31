@@ -1,5 +1,7 @@
 add_executable(rainshaft
   evaporation.cpp
+  explicit_integrator.cpp
+  forward_euler_integrator.cpp
   lookup_linear.cpp
   lookup_table.cpp
   nudging.cpp
