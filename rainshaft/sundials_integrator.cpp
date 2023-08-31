@@ -10,7 +10,7 @@ SundialsIntegrator::SundialsIntegrator(const RainshaftConstants* constants,
   : sun_ctxt(sun_ctxt), user_data{constants, grid, process} {
 }
 
-RainshaftDerivedVars SundialsIntegrator::calc_dvars(const RainshaftState& state) {
+RainshaftDerivedVars SundialsIntegrator::calc_dvars(const RainshaftState& state) const {
   return RainshaftDerivedVars(*user_data.constants, *user_data.grid, state);
 }
 
@@ -38,8 +38,6 @@ N_Vector state_to_n_vector(sundials::Context *sun_ctxt, const RainshaftState& st
 // SPS: should reuse most of the equivalent state function here
 void tend_to_n_vector(const RainshaftTendency& tend, N_Vector ydot) {
   sunindextype nz = tend.t_tend.size();
-  // SPS: still bad to assume these 4 variables.
-  sunindextype num_variables = nz * 4;
   realtype *ydata = N_VGetArrayPointer_Serial(ydot);
   for (sunindextype j = 0; j != nz; ++j) {
     ydata[j] = tend.t_tend[j];

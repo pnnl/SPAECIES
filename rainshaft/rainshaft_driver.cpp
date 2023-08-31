@@ -1,6 +1,7 @@
 #include "spaecies.hpp"
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
+#include "fixed_substep_integrator.hpp"
 #include "forward_euler_integrator.hpp"
 #include "nudging.hpp"
 #include "rainshaft_constants.hpp"
@@ -107,7 +108,8 @@ int main(int argc, char** argv)
   std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll, &evap, &nudge};
   SumProcess all_micro = SumProcess(micro_processes);
   // Evolve state forward.
-  ForwardEulerIntegrator intg(&constants, &grid, &all_micro, &sun_ctxt, dt);
+  ForwardEulerIntegrator fe_int(&constants, &grid, &all_micro, &sun_ctxt);
+  FixedSubstepIntegrator intg(&fe_int, dt);
   //ExplicitIntegrator intg(&constants, &grid, &all_micro, &sun_ctxt);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);

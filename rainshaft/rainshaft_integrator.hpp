@@ -9,7 +9,7 @@ public:
 
   virtual RainshaftSolution integrate(double initial_time,
                                       double final_time,
-                                      const RainshaftState& initial_state) = 0;
+                                      const RainshaftState& initial_state) const = 0;
 
 };
 

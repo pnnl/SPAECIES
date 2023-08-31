@@ -34,7 +34,7 @@ public:
 protected:
 
   // SPS: Utility for calculating derived variables.
-  RainshaftDerivedVars calc_dvars(const RainshaftState& state);
+  RainshaftDerivedVars calc_dvars(const RainshaftState& state) const;
 
   const RainshaftUserData user_data;
 

@@ -13,7 +13,7 @@ public:
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const RainshaftState& initial_state);
+                              const RainshaftState& initial_state) const;
 
 };
 
