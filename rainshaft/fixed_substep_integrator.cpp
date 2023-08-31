@@ -1,5 +1,6 @@
 #include "fixed_substep_integrator.hpp"
 #include <cmath>
+#include <iostream>
 
 FixedSubstepIntegrator::FixedSubstepIntegrator(const RainshaftIntegrator *inner_integrator,
                                                double dt_in)

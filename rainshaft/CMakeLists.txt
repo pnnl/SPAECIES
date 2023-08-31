@@ -17,6 +17,7 @@ add_executable(rainshaft
   saturation.cpp
   sedimentation.cpp
   self_collision.cpp
+  sequential_split_integrator.cpp
   sundials_integrator.cpp
 )
 target_link_libraries(rainshaft

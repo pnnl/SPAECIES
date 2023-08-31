@@ -14,6 +14,7 @@
 #include "saturation.hpp"
 #include "sedimentation.hpp"
 #include "self_collision.hpp"
+#include "sequential_split_integrator.hpp"
 #include "sundials/sundials_context.h"
 #include <iostream>
 #include <cmath>
@@ -41,6 +42,8 @@ int main(int argc, char** argv)
   double rel_hum_init = 0.7;
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
+  // Sedimentation time step size in seconds.
+  double sed_dt = 1;
   // Time step size in seconds.
   double dt = 1;
   // Time of simulation start.
@@ -105,11 +108,18 @@ int main(int argc, char** argv)
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.
-  std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll, &evap, &nudge};
-  SumProcess all_micro = SumProcess(micro_processes);
+  //std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll, &evap, &nudge};
+  //SumProcess all_micro = SumProcess(micro_processes);
+  // Sum of local processes.
+  std::vector<const RainshaftProcess *> local_processes{&self_coll, &evap, &nudge};
+  SumProcess all_local = SumProcess(local_processes);
   // Evolve state forward.
-  ForwardEulerIntegrator fe_int(&constants, &grid, &all_micro, &sun_ctxt);
-  FixedSubstepIntegrator intg(&fe_int, dt);
+  ForwardEulerIntegrator sed_step(&constants, &grid, &sed, &sun_ctxt);
+  FixedSubstepIntegrator sed_loop(&sed_step, sed_dt);
+  ForwardEulerIntegrator local_step(&constants, &grid, &all_local, &sun_ctxt);
+  std::vector<const RainshaftIntegrator *> seq_ints{&local_step, &sed_loop};
+  SequentialSplitIntegrator seq_step(seq_ints);
+  FixedSubstepIntegrator intg(&seq_step, dt);
   //ExplicitIntegrator intg(&constants, &grid, &all_micro, &sun_ctxt);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);
