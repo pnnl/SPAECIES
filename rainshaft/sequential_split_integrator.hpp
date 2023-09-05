@@ -6,7 +6,6 @@ class SequentialSplitIntegrator : public RainshaftIntegrator {
 
 public:
 
-  // Constructor requires timestep.
   SequentialSplitIntegrator(const std::vector<const RainshaftIntegrator *>& sub_integrators);
 
   RainshaftSolution integrate(double initial_time,

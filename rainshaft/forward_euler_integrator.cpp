@@ -22,7 +22,7 @@ RainshaftSolution ForwardEulerIntegrator::integrate(double initial_time,
   N_VDestroy(y0);
   // Set step size.
   // SPS: Check return value.
-  std::size_t step_size = final_time - initial_time;
+  double step_size = final_time - initial_time;
   ERKStepSetFixedStep(arkode_mem, step_size);
   realtype c(0.), a(0.), b(1.);
   ARKodeButcherTable fe_butcher = ARKodeButcherTable_Create(1, 1, 0, &c, &a, &b, NULL);
