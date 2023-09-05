@@ -1,6 +1,5 @@
 #include "fixed_substep_integrator.hpp"
 #include <cmath>
-#include <iostream>
 
 FixedSubstepIntegrator::FixedSubstepIntegrator(const RainshaftIntegrator *inner_integrator,
                                                double dt_in)
@@ -33,7 +32,7 @@ RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
     double next_time = current_time + dt;
     RainshaftSolution solution = integrator->integrate(current_time,
                                                        next_time,
-                                                       states[it]);
+                                                       states.back());
     // This class currently doesn't store constants/grid, so we rely
     // on the integrator down a level to calculate the initial dvars
     // for us.
@@ -41,9 +40,13 @@ RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
     // zero total steps, for instance?
     if (it == 0) {
       dvars.push_back(solution.dvars[0]);
+    } else {
+      states.pop_back();
     }
     states.push_back(solution.states.back());
-    dvars.push_back(solution.dvars.back());
+    if ((it == num_full_steps - 1) && !need_partial_step) {
+      dvars.push_back(solution.dvars.back());
+    }
     num_rhs_evals += solution.num_rhs_evals;
     current_time = next_time;
   }
@@ -56,6 +59,8 @@ RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
     // *only* step.
     if (num_full_steps == 0) {
       dvars.push_back(solution.dvars[0]);
+    } else {
+      states.pop_back();
     }
     states.push_back(solution.states.back());
     dvars.push_back(solution.dvars.back());
