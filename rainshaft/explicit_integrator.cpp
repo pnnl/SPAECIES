@@ -27,20 +27,21 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   ERKStepSetUserData(arkode_mem, (void*) &user_data);
   // SPS: And this return value.
   ERKStepSetMaxNumSteps(arkode_mem, 20000000.);
-  realtype reltol = 1.e-2;
+  double fac = 1.;
+  realtype reltol = fac * 1.e-2;
   N_Vector abstol = N_VNew_Serial(num_variables, *sun_ctxt);
   realtype *tol_data = N_VGetArrayPointer_Serial(abstol);
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[j] = 1.e-1;
+    tol_data[j] = fac * 1.e-1;
   }
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[nz + j] = 1.e-6;
+    tol_data[nz + j] = fac * 1.e-5;
   }
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[2*nz + j] = 1.e-1;
+    tol_data[2*nz + j] = fac * 1.e-1;
   }
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[3*nz + j] = 1.e-8;
+    tol_data[3*nz + j] = fac * 1.e-8;
   }
   // SPS: And this return value.
   ERKStepSVtolerances(arkode_mem, reltol, abstol);
