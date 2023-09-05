@@ -11,6 +11,7 @@ include(Catch)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS_DEBUG "-Wall -fbounds-check")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 endif()
 
 add_subdirectory(libspaecies)
