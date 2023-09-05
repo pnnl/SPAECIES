@@ -12,6 +12,7 @@
 #include "rainshaft_ncio.hpp"
 #include "rainshaft_sum_process.hpp"
 #include "saturation.hpp"
+#include "sed_cfl_integrator.hpp"
 #include "sedimentation.hpp"
 #include "self_collision.hpp"
 #include "sequential_split_integrator.hpp"
@@ -42,14 +43,12 @@ int main(int argc, char** argv)
   double rel_hum_init = 0.7;
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
-  // Sedimentation time step size in seconds.
-  double sed_dt = 1;
   // Time step size in seconds.
-  double dt = 1;
+  double dt = 300;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
-  double final_time = 86400.;
+  double final_time = 1800.;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
   auto nlev = grid.nlev;
@@ -108,19 +107,25 @@ int main(int argc, char** argv)
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.
-  //std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll, &evap, &nudge};
-  //SumProcess all_micro = SumProcess(micro_processes);
+  std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll, &evap, &nudge};
+  SumProcess all_micro = SumProcess(micro_processes);
   // Sum of local processes.
   std::vector<const RainshaftProcess *> local_processes{&self_coll, &evap, &nudge};
   SumProcess all_local = SumProcess(local_processes);
   // Evolve state forward.
-  ForwardEulerIntegrator sed_step(&constants, &grid, &sed, &sun_ctxt);
-  FixedSubstepIntegrator sed_loop(&sed_step, sed_dt);
-  ForwardEulerIntegrator local_step(&constants, &grid, &all_local, &sun_ctxt);
-  std::vector<const RainshaftIntegrator *> seq_ints{&local_step, &sed_loop};
-  SequentialSplitIntegrator seq_step(seq_ints);
-  FixedSubstepIntegrator intg(&seq_step, dt);
-  //ExplicitIntegrator intg(&constants, &grid, &all_micro, &sun_ctxt);
+  // P3 Settings
+  // ForwardEulerIntegrator sed_step(&constants, &grid, &sed, &sun_ctxt);
+  // SedCflIntegrator sed_loop(&constants, &grid, &sed, &sed_step);
+  // ForwardEulerIntegrator local_step(&constants, &grid, &all_local, &sun_ctxt);
+  // std::vector<const RainshaftIntegrator *> seq_ints{&local_step, &sed_loop};
+  // SequentialSplitIntegrator seq_step(seq_ints);
+  // FixedSubstepIntegrator intg(&seq_step, dt);
+  // ARKODE Settings
+  ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
+  FixedSubstepIntegrator intg(&micro_step, dt);
+  // Pure Forward Euler Settings
+  //ForwardEulerIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
+  //FixedSubstepIntegrator intg(&micro_step, dt);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);
   auto after_sol = high_resolution_clock::now();

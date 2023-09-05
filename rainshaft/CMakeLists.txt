@@ -15,6 +15,7 @@ add_executable(rainshaft
   rainshaft_sum_process.cpp
   rainshaft_tendency.cpp
   saturation.cpp
+  sed_cfl_integrator.cpp
   sedimentation.cpp
   self_collision.cpp
   sequential_split_integrator.cpp
