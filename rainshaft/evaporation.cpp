@@ -29,15 +29,15 @@ double Evaporation::calc_v_evap_gamma(const RainshaftConstants& constants, doubl
   double d2g_1sixth = pow(d3_to_gram, 1./6.);
   // Integral for D <= 134.43 micron.
   v_evap = sqrt(4579.5 * d2g_2third)
-    * tgamma_lower(17./6., lambdar * 1.3443e-4) * pow(lambdar, -11./6.);
+    * tgamma_lower(3.5, lambdar * 1.3443e-4) * pow(lambdar, -2.5);
   // Integral for 134.43 micron < D <= 1511.64 micron.
   v_evap += sqrt(49.62 * d2g_1third)
-    * (tgamma(8./3., lambdar * 1.3443e-4) - tgamma(8./3., lambdar * 1.51164e-3))
-    * pow(lambdar, -5./3.);
+    * (tgamma(3., lambdar * 1.3443e-4) - tgamma(3., lambdar * 1.51164e-3))
+    / (lambdar * lambdar);
   // Integral for 1511.64 micron < D <= 3477.84 micron.
   v_evap += sqrt(17.32 * d2g_1sixth)
-    * (tgamma(31./12., lambdar * 1.51164e-3) - tgamma(31./12., lambdar * 3.47784e-3))
-    * pow(lambdar, -19./12.);
+    * (tgamma(2.75, lambdar * 1.51164e-3) - tgamma(2.75, lambdar * 3.47784e-3))
+    * pow(lambdar, -1.75);
   // Integral for 3477.84 micron < D.
   v_evap += sqrt(9.17) * tgamma(2.5, lambdar * 3.47784e-3) * pow(lambdar, -1.5);
   return v_evap;
