@@ -5,7 +5,9 @@
 using std::pow, std::sqrt, std::cbrt, std::exp;
 using boost::math::tgamma, boost::math::tgamma_lower;
 
-Sedimentation::Sedimentation(const RainshaftConstants& constants, bool use_v_table) {
+Sedimentation::Sedimentation(const RainshaftConstants& constants, bool use_v_table,
+                             bool use_numerical_integration)
+  : use_numerical_integration(use_numerical_integration) {
   if (use_v_table) {
     std::vector<double> range_bounds = {5., 195., 8595.};
     std::vector<double> spacings = {1., 1.};
@@ -15,7 +17,9 @@ Sedimentation::Sedimentation(const RainshaftConstants& constants, bool use_v_tab
     std::vector<double> v3_values(d_microns.size(), 0.);
     for (std::size_t i = 0; i != d_microns.size(); ++i) {
       double lambdar = 1.e6 / d_microns[i];
-      auto speeds = rain_fall_speeds_stp_gamma(constants, lambdar);
+      auto speeds = use_numerical_integration ?
+        rain_fall_speeds_stp_numerical(constants, lambdar)
+        :  rain_fall_speeds_stp_gamma(constants, lambdar);
       v0_values[i] = speeds[0];
       v3_values[i] = speeds[1];
     }
@@ -86,7 +90,11 @@ std::vector<double> Sedimentation::rain_fall_speeds_stp(const RainshaftConstants
     double v3 = v3_table->lookup_value(d_micron);
     return std::vector<double>{v0, v3};
   } else {
-    return rain_fall_speeds_stp_gamma(constants, lambdar);
+    if (use_numerical_integration) {
+      return rain_fall_speeds_stp_numerical(constants, lambdar);
+    } else {
+      return rain_fall_speeds_stp_gamma(constants, lambdar);
+    }
   }
 }
 
@@ -127,6 +135,56 @@ std::vector<double> Sedimentation::rain_fall_speeds_stp_gamma(const RainshaftCon
   v3 += 9.17 * tgamma(4, lambdar * 3.47784e-3);
   // Include the normalization gamma(3) for v3.
   v3 /= 6.;
+  std::vector<double> speeds = {v0, v3};
+  return speeds;
+}
+
+std::vector<double> Sedimentation::rain_fall_speeds_stp_numerical(const RainshaftConstants& constants,
+                                                                  double lambdar) const {
+  // Catches case where there is no rain present.
+  if (lambdar == 0.) {
+    std::vector<double> speeds = {0., 0.};
+    return speeds;
+  }
+  double dd = 2.; // micron
+  std::size_t low_k = 1;
+  std::size_t high_k = 10000;
+  double amg_fac = 1000. * constants.pi * constants.rhow / 6.;
+  double v0_numer = 0., v0_denom = 0.;
+  double v3_numer = 0., v3_denom = 0.;
+  for (std::size_t kk = low_k; kk != high_k + 1; ++kk) {
+    double real_kk = kk;
+    double dia_micron = (real_kk - 0.5) * dd;
+    double dia = dia_micron * 1.e-6;
+    double amg = amg_fac * pow(dia, 3);
+    double vt = 0;
+    if (dia_micron <= 134.43) {
+      vt = 4.5795e3 * pow(amg, 2./3.);
+    } else if (dia_micron <= 1511.64) {
+      vt = 4.962e1 * pow(amg, 1./3.);
+    } else if (dia_micron <= 3477.84) {
+      vt = 1.732e1 * pow(amg, 1./6.);
+    } else {
+      vt = 9.17;
+    }
+    v0_numer += vt * exp(-lambdar * dia);
+    v0_denom += exp(-lambdar * dia);
+    v3_numer += vt * pow(dia, 3.) * exp(-lambdar * dia);
+    v3_denom += pow(dia, 3.) * exp(-lambdar * dia);
+  }
+  v0_numer *= dd * 1.e-6;
+  v0_denom *= dd * 1.e-6;
+  v3_numer *= dd * 1.e-6;
+  v3_denom *= dd * 1.e-6;
+  if (v0_denom < 1.e-30) {
+    v0_denom = 1.e-30;
+  }
+  if (v3_denom < 1.e-30) {
+    v3_denom = 1.e-30;
+  }
+  // Number and mass fall speeds in m/s.
+  double v0 = v0_numer / v0_denom;
+  double v3 = v3_numer / v3_denom;
   std::vector<double> speeds = {v0, v3};
   return speeds;
 }

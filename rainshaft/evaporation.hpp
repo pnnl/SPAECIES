@@ -14,7 +14,8 @@ public:
   // SPS: Should use a different pointer type to guarantee this
   // does not outlast the sat_form object.
   Evaporation(const RainshaftConstants& constants,
-              const SaturationFormulae* sat_form_in, bool use_v_table);
+              const SaturationFormulae* sat_form_in, bool use_v_table,
+              bool use_numerical_integration);
 
   // Calculate tendency from current state.
   RainshaftTendency calc_tend(const RainshaftConstants& constants,
@@ -29,6 +30,11 @@ public:
   // This version ignores the lookup table, if present, and always just
   // calculates using incomplete gamma functions.
   double calc_v_evap_gamma(const RainshaftConstants& constants, double lambdar) const;
+
+  // Calculate characteristic velocity using numerical integration.
+  double calc_v_evap_numerical(const RainshaftConstants& constants, double lambdar) const;
+
+  const bool use_numerical_integration;
 
 private:
 

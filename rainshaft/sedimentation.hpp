@@ -11,7 +11,8 @@ class Sedimentation : public RainshaftProcess {
 public:
 
   // Constructor allowing use of lookup table.
-  Sedimentation(const RainshaftConstants& constants, bool use_v_table);
+  Sedimentation(const RainshaftConstants& constants, bool use_v_table,
+                bool use_numerical_integration);
 
   // Calculate tendency from current state.
   RainshaftTendency calc_tend(const RainshaftConstants& constants,
@@ -35,9 +36,18 @@ public:
   std::vector<double> rain_fall_speeds_stp_gamma(const RainshaftConstants& constants,
                                                  double lambdar) const;
 
+  // What would the speeds for a given lambdar be at standard temperature and
+  // pressure?
+  // This version ignores any lookup table, if present, and always returns fall
+  // speeds calculated with numerical integration.
+  std::vector<double> rain_fall_speeds_stp_numerical(const RainshaftConstants& constants,
+                                                     double lambdar) const;
+
   // Conversion factor from STP fall speed to actual fall speed given air density.
   double rho_fac(const RainshaftConstants& constants,
                  double rho_dry) const;
+
+  const bool use_numerical_integration;
 
 private:
 

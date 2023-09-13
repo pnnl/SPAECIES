@@ -44,7 +44,7 @@ int main(int argc, char** argv)
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
-  double dt = 300;
+  double dt = 1.e-3;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -99,11 +99,11 @@ int main(int argc, char** argv)
   RainshaftState initial_state(t, q, nr, qr);
   RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
   // Sedimentation process.
-  Sedimentation sed(constants, true);
+  Sedimentation sed(constants, false, false);
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(constants, &sat_form, true);
+  Evaporation evap(constants, &sat_form, false, false);
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.
@@ -121,18 +121,18 @@ int main(int argc, char** argv)
   // SequentialSplitIntegrator seq_step(seq_ints);
   // FixedSubstepIntegrator intg(&seq_step, dt);
   // ARKODE Settings
-  ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
-  FixedSubstepIntegrator intg(&micro_step, dt);
+  // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
+  // FixedSubstepIntegrator intg(&micro_step, dt);
   // Pure Forward Euler Settings
-  //ForwardEulerIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
-  //FixedSubstepIntegrator intg(&micro_step, dt);
+  ForwardEulerIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
+  FixedSubstepIntegrator intg(&micro_step, dt);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);
   auto after_sol = high_resolution_clock::now();
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_ark2.nc");
+  NetcdfWriter writer("./rainshaft_1ms_no_table.nc");
   writer.write_grid(grid);
   writer.write_states(solution.states);
   writer.write_derived_vars(solution.dvars);
