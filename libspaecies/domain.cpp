@@ -19,6 +19,14 @@ DimensionPtr Domain::get_dimension(const std::string& name) {
   return dim_ptr;
 }
 
+std::vector<DimensionPtr> Domain::get_dimensions(const std::vector<std::string>& names) {
+  std::vector<DimensionPtr> dim_ptrs(names.size());
+  std::transform(names.cbegin(), names.cend(),
+                 dim_ptrs.begin(),
+                 [&](const std::string name) { return get_dimension(name); });
+  return dim_ptrs;
+}
+
 VarDescPtr Domain::add_var_desc(const std::string name,
                                 VariableType type,
                                 const std::vector<DimensionPtr> dimensions,
@@ -41,6 +49,14 @@ VarDescPtr Domain::get_var_desc(const std::string& name) {
   VarDescPtr var_desc = *std::find_if(var_descs.begin(), var_descs.end(),
                                       matches_name);
   return var_desc;
+}
+
+std::vector<VarDescPtr> Domain::get_var_descs(const std::vector<std::string>& names) {
+  std::vector<VarDescPtr> var_desc_ptrs(names.size());
+  std::transform(names.cbegin(), names.cend(),
+                 var_desc_ptrs.begin(),
+                 [&](const std::string name) { return get_var_desc(name); });
+  return var_desc_ptrs;
 }
 
 }

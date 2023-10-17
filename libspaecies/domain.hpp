@@ -13,8 +13,10 @@ public:
   // Add a dimension to this domain, returning a pointer to the constructed
   // dimension.
   DimensionPtr add_dimension(const std::string& name, std::size_t size);
-  // Retrieve the dimension with a given size.
+  // Retrieve the dimension with a given name.
   DimensionPtr get_dimension(const std::string& name);
+  // Retrieve multiple dimensions with given names.
+  std::vector<DimensionPtr> get_dimensions(const std::vector<std::string>& names);
   // Add a variable to this domain, returning a pointer to the constructed
   // variable descriptor.
   VarDescPtr add_var_desc(const std::string name,
@@ -24,8 +26,10 @@ public:
                           VariableConstantStatus constant_status=IsNotConstant,
                           const std::optional<const std::string>& description=std::optional<const std::string>(),
                           const std::optional<const std::string>& standard_name=std::optional<const std::string>());
-  // Retrieve the dimension with a given size.
+  // Retrieve the variable descriptor with a given name.
   VarDescPtr get_var_desc(const std::string& name);
+  // Retrieve multiple variable descriptors with given names.
+  std::vector<VarDescPtr> get_var_descs(const std::vector<std::string>& names);
 
 private:
   // Array of all dimensions in the domain.

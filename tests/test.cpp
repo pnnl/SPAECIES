@@ -15,6 +15,17 @@ TEST_CASE( "constructing dimensions using a domain", "[domain]" ) {
     REQUIRE( domain.get_dimension("column") == col_dim );
   }
 
+  SECTION( "multiple dimensions can be queried in order" ) {
+    DimensionPtr col_dim = domain.add_dimension("column", 8);
+    DimensionPtr lev_dim = domain.add_dimension("level", 10);
+    // Deliberately requesting these out of order to ensure any future refactoring
+    // will cause the test to fail unless it respects the requested order.
+    std::vector<DimensionPtr> req_dims = domain.get_dimensions({"level", "column"});
+    REQUIRE( req_dims.size() == 2 );
+    REQUIRE( req_dims[0] == lev_dim );
+    REQUIRE( req_dims[1] == col_dim );
+  }
+
 }
 
 TEST_CASE( "constructing variables using a domain", "[domain]" ) {
@@ -26,6 +37,17 @@ TEST_CASE( "constructing variables using a domain", "[domain]" ) {
     // Note that this is checking for pointer equality, i.e. checking that
     // the returned pointer is to the same location in memory.
     REQUIRE( domain.get_var_desc("T") == temp_desc );
+  }
+
+  SECTION( "multiple variable descriptors can be queried in order" ) {
+    VarDescPtr temp_desc = domain.add_var_desc("T", Float64Type, {col_dim}, "K");
+    VarDescPtr q_desc = domain.add_var_desc("q", Float64Type, {col_dim}, "kg/kg");
+    // Deliberately requesting these out of order to ensure any future refactoring
+    // will cause the test to fail unless it respects the requested order.
+    std::vector<VarDescPtr> req_vars = domain.get_var_descs({"q", "T"});
+    REQUIRE( req_vars.size() == 2 );
+    REQUIRE( req_vars[0] == q_desc );
+    REQUIRE( req_vars[1] == temp_desc );
   }
 
 }
