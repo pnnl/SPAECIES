@@ -19,4 +19,28 @@ DimensionPtr Domain::get_dimension(const std::string& name) {
   return dim_ptr;
 }
 
+VarDescPtr Domain::add_var_desc(const std::string name,
+                                VariableType type,
+                                const std::vector<DimensionPtr> dimensions,
+                                const std::string units,
+                                VariableConstantStatus constant_status,
+                                const std::optional<const std::string>& description,
+                                const std::optional<const std::string>& standard_name) {
+  VarDescPtr var_desc = std::make_shared<VariableDescriptor>(name, type, dimensions,
+                                                             units, constant_status,
+                                                             description, standard_name);
+  var_descs.push_back(var_desc);
+  return var_desc;
+}
+
+// Retrieve the dimension with a given size.
+VarDescPtr Domain::get_var_desc(const std::string& name) {
+  auto matches_name = [&](VarDescPtr& var_desc) {
+    return var_desc->name == name;
+  };
+  VarDescPtr var_desc = *std::find_if(var_descs.begin(), var_descs.end(),
+                                      matches_name);
+  return var_desc;
+}
+
 }

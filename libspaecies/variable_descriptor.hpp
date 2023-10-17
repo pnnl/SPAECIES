@@ -54,6 +54,10 @@ public:
 
 };
 
+// This typedef is convenient due to almost always using pointers to work with
+// variable description objects.
+typedef std::shared_ptr<VariableDescriptor> VarDescPtr;
+
 }
 
 #endif // SPAECIES_VARIABLE_DESCRIPTOR_HPP

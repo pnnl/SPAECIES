@@ -17,6 +17,19 @@ TEST_CASE( "constructing dimensions using a domain", "[domain]" ) {
 
 }
 
+TEST_CASE( "constructing variables using a domain", "[domain]" ) {
+  Domain domain;
+  DimensionPtr col_dim = domain.add_dimension("column", 8);
+
+  SECTION( "a pointer to the returned variable is kept in the domain" ) {
+    VarDescPtr temp_desc = domain.add_var_desc("T", Float64Type, {col_dim}, "K");
+    // Note that this is checking for pointer equality, i.e. checking that
+    // the returned pointer is to the same location in memory.
+    REQUIRE( domain.get_var_desc("T") == temp_desc );
+  }
+
+}
+
 TEST_CASE( "a variable's size can be calculated", "[variable_descriptor]" ) {
   Domain domain;
   DimensionPtr col_dim = domain.add_dimension("column", 8);
@@ -24,21 +37,21 @@ TEST_CASE( "a variable's size can be calculated", "[variable_descriptor]" ) {
   DimensionPtr tracer_dim = domain.add_dimension("tracer", 5);
 
   SECTION("a variable with no dimensions has a size of 1") {
-    VariableDescriptor var_desc("T", Float64Type, {}, "K");
-    std::size_t var_size = var_desc.size();
+    VarDescPtr var_desc = domain.add_var_desc("T", Float64Type, {}, "K");
+    std::size_t var_size = var_desc->size();
     REQUIRE( var_size == 1 );
   }
 
   SECTION("a variable with a single dimension has the size of that dimension") {
-    VariableDescriptor var_desc("T", Float64Type, {col_dim}, "K");
-    std::size_t var_size = var_desc.size();
+    VarDescPtr var_desc = domain.add_var_desc("T", Float64Type, {col_dim}, "K");
+    std::size_t var_size = var_desc->size();
     REQUIRE( var_size == col_dim->size );
   }
 
   SECTION("a variable with many dimensions has a size equal to their product") {
-    VariableDescriptor var_desc("T", Float64Type,
-                                {col_dim, lev_dim, tracer_dim}, "K");
-    std::size_t var_size = var_desc.size();
+    VarDescPtr var_desc = domain.add_var_desc("T", Float64Type,
+                                              {col_dim, lev_dim, tracer_dim}, "K");
+    std::size_t var_size = var_desc->size();
     REQUIRE( var_size == (col_dim->size * lev_dim->size * tracer_dim->size) );
   }
 
