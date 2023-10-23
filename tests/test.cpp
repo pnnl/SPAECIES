@@ -5,7 +5,7 @@
 
 using namespace spaecies;
 
-TEST_CASE( "constructing dimensions using a domain", "[domain]" ) {
+TEST_CASE( "constructing dimensions using a domain", "[Domain]" ) {
   Domain domain;
 
   SECTION( "a pointer to the returned dimension is kept in the domain" ) {
@@ -28,7 +28,7 @@ TEST_CASE( "constructing dimensions using a domain", "[domain]" ) {
 
 }
 
-TEST_CASE( "constructing variables using a domain", "[domain]" ) {
+TEST_CASE( "constructing variables using a domain", "[Domain]" ) {
   Domain domain;
   DimensionPtr col_dim = domain.add_dimension("column", 8);
 
@@ -52,29 +52,79 @@ TEST_CASE( "constructing variables using a domain", "[domain]" ) {
 
 }
 
-TEST_CASE( "a variable's size can be calculated", "[variable_descriptor]" ) {
+TEST_CASE( "a variable's size can be calculated", "[VariableDescriptor]" ) {
   Domain domain;
   DimensionPtr col_dim = domain.add_dimension("column", 8);
   DimensionPtr lev_dim = domain.add_dimension("level", 10);
   DimensionPtr tracer_dim = domain.add_dimension("tracer", 5);
 
-  SECTION("a variable with no dimensions has a size of 1") {
+  SECTION( "a variable with no dimensions has a size of 1" ) {
     VarDescPtr var_desc = domain.add_var_desc("T", Float64Type, {}, "K");
     std::size_t var_size = var_desc->size();
     REQUIRE( var_size == 1 );
   }
 
-  SECTION("a variable with a single dimension has the size of that dimension") {
+  SECTION( "a variable with a single dimension has the size of that dimension" ) {
     VarDescPtr var_desc = domain.add_var_desc("T", Float64Type, {col_dim}, "K");
     std::size_t var_size = var_desc->size();
     REQUIRE( var_size == col_dim->size );
   }
 
-  SECTION("a variable with many dimensions has a size equal to their product") {
+  SECTION( "a variable with many dimensions has a size equal to their product" ) {
     VarDescPtr var_desc = domain.add_var_desc("T", Float64Type,
                                               {col_dim, lev_dim, tracer_dim}, "K");
     std::size_t var_size = var_desc->size();
     REQUIRE( var_size == (col_dim->size * lev_dim->size * tracer_dim->size) );
+  }
+
+}
+
+TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariable]" ) {
+  Domain domain;
+  DimensionPtr col_dim = domain.add_dimension("column", 8);
+  DimensionPtr lev_dim = domain.add_dimension("level", 10);
+  DimensionPtr tracer_dim = domain.add_dimension("tracer", 5);
+
+  SECTION( "a scalar variable's value can be accessed" ) {
+    VarDescPtr boil_desc = domain.add_var_desc("BOILING_POINT", Float64Type, {}, "K");
+    double boiling_point = 373.16;
+    ContiguousVariable<double> t_boil(boil_desc, &boiling_point);
+    REQUIRE( t_boil.size() == boil_desc->size() );
+    REQUIRE( t_boil[0] == boiling_point );
+    // Pretend we have a reason to change this. "Oops, we had the wrong value, fix it."
+    t_boil[0] = 373.15;
+    REQUIRE( t_boil[0] == 373.15 );
+  }
+
+  SECTION( "a vector variable's values can be accessed" ) {
+    VarDescPtr t_desc = domain.add_var_desc("T", Float64Type, {col_dim}, "K");
+    double t_buff[col_dim->size];
+    for (int i; i != col_dim->size; ++i) {
+      t_buff[i] = 2. * i;
+    }
+    ContiguousVariable<double> t_var(t_desc, t_buff);
+    REQUIRE( t_var.size() == t_desc->size() );
+    for (int i; i != col_dim->size; ++i) {
+      REQUIRE( t_var[i] == 2. * i );
+      t_var[i] = t_var[i] + 3.;
+      REQUIRE( t_var[i] == 2. * i + 3. );
+    }
+  }
+
+  SECTION( "a multidimensional variable's flattened representation can be accessed" ) {
+    VarDescPtr t_desc = domain.add_var_desc("T", Float64Type, {col_dim, lev_dim}, "K");
+    std::size_t total_size = col_dim->size * lev_dim->size;
+    double t_buff[total_size];
+    for (int i; i != total_size; ++i) {
+      t_buff[i] = 2. * i;
+    }
+    ContiguousVariable<double> t_var(t_desc, t_buff);
+    REQUIRE( t_var.size() == t_desc->size() );
+    for (int i; i != total_size; ++i) {
+      REQUIRE( t_var[i] == 2. * i );
+      t_var[i] = t_var[i] + 3.;
+      REQUIRE( t_var[i] == 2. * i + 3. );
+    }
   }
 
 }
