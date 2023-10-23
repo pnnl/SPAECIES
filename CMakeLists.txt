@@ -6,7 +6,7 @@ find_package(SUNDIALS 7.1.0 REQUIRED)
 find_package(Boost REQUIRED)
 
 if (BUILD_TESTING)
-  find_package(Catch2 3)
+  find_package(Catch2 3 REQUIRED)
   include(CTest)
   include(Catch)
   add_subdirectory(tests)
