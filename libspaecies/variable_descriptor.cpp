@@ -3,8 +3,26 @@
 #include <functional>
 #include <numeric>
 
+#include "exceptions.hpp"
+
 namespace spaecies
 {
+
+std::string spaecies_type_name(VariableType type) {
+  switch (type) {
+  case Float64Type:
+    return FLOAT64NAME;
+  case Float32Type:
+    return FLOAT32NAME;
+  case Int64Type:
+    return INT64NAME;
+  case Int32Type:
+    return INT32NAME;
+  case BoolType:
+    return BOOLNAME;
+  }
+  throw UnreachableException("invalid VariableType in spaecies_type_name");
+}
 
 VariableDescriptor::VariableDescriptor(const std::string name,
                                        VariableType type,

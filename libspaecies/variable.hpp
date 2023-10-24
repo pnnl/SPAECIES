@@ -1,6 +1,7 @@
 #ifndef SPAECIES_VARIABLE_HPP
 #define SPAECIES_VARIABLE_HPP
 
+#include "exceptions.hpp"
 #include "variable_descriptor.hpp"
 
 namespace spaecies {
@@ -19,6 +20,13 @@ public:
 
 protected:
   Variable(const VarDescPtr var_desc) : var_desc(var_desc) {
+    VariableType expected_type = SPAECIES_TYPE<T>;
+    if (var_desc->type != expected_type) {
+      throw TypeMismatchException(spaecies_type_name(var_desc->type),
+                                  spaecies_type_name(expected_type),
+                                  "descriptor for " + var_desc->name
+                                  + "does not match Variable type");
+    }
   };
 
 };

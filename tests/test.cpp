@@ -1,9 +1,12 @@
 #define CATCH_CONFIG_MAIN
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers_all.hpp"
+#include "catch2/generators/catch_generators_all.hpp"
 
 #include "spaecies.hpp"
 
 using namespace spaecies;
+using Catch::Matchers::ContainsSubstring, Catch::Matchers::MessageMatches;
 
 TEST_CASE( "constructing dimensions using a domain", "[Domain]" ) {
   Domain domain;
@@ -75,6 +78,87 @@ TEST_CASE( "a variable's size can be calculated", "[VariableDescriptor]" ) {
                                               {col_dim, lev_dim, tracer_dim}, "K");
     std::size_t var_size = var_desc->size();
     REQUIRE( var_size == (col_dim->size * lev_dim->size * tracer_dim->size) );
+  }
+
+}
+
+TEST_CASE( "asking for human-readable type name", "[VariableDescriptor]" ) {
+
+  SECTION( "correct type names for supported types" ) {
+    REQUIRE( spaecies_type_name(Float64Type) == "64-bit float" );
+    REQUIRE( spaecies_type_name(Float32Type) == "32-bit float" );
+    REQUIRE( spaecies_type_name(Int64Type) == "64-bit integer" );
+    REQUIRE( spaecies_type_name(Int32Type) == "32-bit integer" );
+    REQUIRE( spaecies_type_name(BoolType) == "boolean" );
+  }
+
+}
+
+TEST_CASE( "raising exceptions when buffer and descriptor type don't match", "[TypeMismatchException]" ) {
+  Domain domain;
+  double var_double;
+  float var_float;
+  std::int64_t var_int64;
+  std::int32_t var_int32;
+  bool var_bool;
+
+  // For this and the following sections, we don't require the exception to use an exact string,
+  // but we do check for specific substrings communicating particular information.
+  SECTION( "a descriptor only works with buffers of the same type" ) {
+    auto desc_type = GENERATE( Float64Type, Float32Type, Int64Type, Int32Type, BoolType );
+    VarDescPtr desc = domain.add_var_desc("foo_variable", desc_type, {}, "");
+    auto match_desc_type = ContainsSubstring(spaecies_type_name(desc_type));
+    auto match_desc_name = ContainsSubstring("foo_variable");
+    if (desc_type == Float64Type) {
+      REQUIRE_NOTHROW( ContiguousVariable(desc, &var_double) );
+    }
+    else {
+      auto match_var_type = ContainsSubstring(spaecies_type_name(Float64Type));
+      auto match =  MessageMatches(match_desc_type && match_desc_name
+                                   && match_var_type);
+      REQUIRE_THROWS_MATCHES( ContiguousVariable(desc, &var_double), TypeMismatchException,
+                              match );
+    }
+    if (desc_type == Float32Type) {
+      REQUIRE_NOTHROW( ContiguousVariable(desc, &var_float) );
+    }
+    else {
+      auto match_var_type = ContainsSubstring(spaecies_type_name(Float32Type));
+      auto match =  MessageMatches(match_desc_type && match_desc_name
+                                   && match_var_type);
+      REQUIRE_THROWS_MATCHES( ContiguousVariable(desc, &var_float), TypeMismatchException,
+                              match );
+    }
+    if (desc_type == Int64Type) {
+      REQUIRE_NOTHROW( ContiguousVariable(desc, &var_int64) );
+    }
+    else {
+      auto match_var_type = ContainsSubstring(spaecies_type_name(Int64Type));
+      auto match =  MessageMatches(match_desc_type && match_desc_name
+                                   && match_var_type);
+      REQUIRE_THROWS_MATCHES( ContiguousVariable(desc, &var_int64), TypeMismatchException,
+                              match );
+    }
+    if (desc_type == Int32Type) {
+      REQUIRE_NOTHROW( ContiguousVariable(desc, &var_int32) );
+    }
+    else {
+      auto match_var_type = ContainsSubstring(spaecies_type_name(Int32Type));
+      auto match =  MessageMatches(match_desc_type && match_desc_name
+                                   && match_var_type);
+      REQUIRE_THROWS_MATCHES( ContiguousVariable(desc, &var_int32), TypeMismatchException,
+                              match );
+    }
+    if (desc_type == BoolType) {
+      REQUIRE_NOTHROW( ContiguousVariable(desc, &var_bool) );
+    }
+    else {
+      auto match_var_type = ContainsSubstring(spaecies_type_name(BoolType));
+      auto match =  MessageMatches(match_desc_type && match_desc_name
+                                   && match_var_type);
+      REQUIRE_THROWS_MATCHES( ContiguousVariable(desc, &var_bool), TypeMismatchException,
+                              match );
+    }
   }
 
 }

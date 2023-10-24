@@ -1,5 +1,6 @@
 add_library(spaecies STATIC
   spaecies.cpp
+  exceptions.cpp
   dimension.cpp
   domain.cpp
   variable_descriptor.cpp)

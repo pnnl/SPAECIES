@@ -4,6 +4,7 @@
 #include "contiguous_variable.hpp"
 #include "dimension.hpp"
 #include "domain.hpp"
+#include "exceptions.hpp"
 #include "variable.hpp"
 #include "variable_descriptor.hpp"
 

@@ -1,6 +1,7 @@
 #ifndef SPAECIES_VARIABLE_DESCRIPTOR_HPP
 #define SPAECIES_VARIABLE_DESCRIPTOR_HPP
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -11,6 +12,7 @@
 namespace spaecies
 {
 
+// Variable types declared in descriptor.
 enum VariableType {
   Float64Type,
   Float32Type,
@@ -19,6 +21,29 @@ enum VariableType {
   BoolType
 };
 
+// Simple lookup to connect C++ types to the dynamic descriptor types.
+template <class T>
+constexpr VariableType SPAECIES_TYPE;
+template <>
+constexpr VariableType SPAECIES_TYPE<double> = Float64Type;
+template <>
+constexpr VariableType SPAECIES_TYPE<float> = Float32Type;
+template <>
+constexpr VariableType SPAECIES_TYPE<int_least64_t> = Int64Type;
+template <>
+constexpr VariableType SPAECIES_TYPE<int_least32_t> = Int32Type;
+template <>
+constexpr VariableType SPAECIES_TYPE<bool> = BoolType;
+
+const std::string FLOAT64NAME = "64-bit float";
+const std::string FLOAT32NAME = "32-bit float";
+const std::string INT64NAME = "64-bit integer";
+const std::string INT32NAME = "32-bit integer";
+const std::string BOOLNAME = "boolean";
+
+std::string spaecies_type_name(VariableType type);
+
+// Is the variable a constant in time?
 enum VariableConstantStatus {
   IsConstant,
   IsNotConstant
