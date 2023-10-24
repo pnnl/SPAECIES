@@ -212,3 +212,53 @@ TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariable]" )
   }
 
 }
+
+TEST_CASE( "Holding memory for multiple variables in a variable array", "[VariableArray]" ) {
+  Domain dom;
+  DimensionPtr col_dim = dom.add_dimension("column", 8);
+  DimensionPtr lev_dim = dom.add_dimension("level", 10);
+  VarDescPtr t_desc = dom.add_var_desc("T", Float64Type, {col_dim, lev_dim}, "K");
+  VarDescPtr q_desc = dom.add_var_desc("q", Float64Type, {col_dim, lev_dim}, "kg/kg");
+  VarDescPtr p_surf_desc = dom.add_var_desc("p_surf", Float64Type, {col_dim}, "Pa");
+
+  SECTION( "variables can be accessed through a variable array" ) {
+    VariableArray<double> var_array{t_desc, q_desc, p_surf_desc};
+    REQUIRE( var_array.size == t_desc->size() + q_desc->size() + p_surf_desc->size() );
+    auto t = var_array.get_variable("T");
+    auto q = var_array.get_variable("q");
+    auto p_surf = var_array.get_variable("p_surf");
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 2.*i;
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      q[i] = i + 0.5;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    // The following checks that the writes worked without overlapping.
+    for (int i = 0; i != t.size(); ++i) {
+      REQUIRE( t[i] == 2.*i );
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      REQUIRE( q[i] == i + 0.5 );
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+    }
+  }
+
+  SECTION( "variable arrays can be constructed with vectors" ) {
+    std::vector<VarDescPtr> var_descs = {t_desc, q_desc, p_surf_desc};
+    VariableArray<double> var_array(var_descs);
+    REQUIRE( var_array.size == t_desc->size() + q_desc->size() + p_surf_desc->size() );
+    auto t = var_array.get_variable("T");
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 2.*i;
+    }
+    for (int i = 0; i != t.size(); ++i) {
+      REQUIRE( t[i] == 2.*i );
+    }
+  }
+
+}

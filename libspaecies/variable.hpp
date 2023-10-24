@@ -6,7 +6,7 @@
 
 namespace spaecies {
 
-template<class T>
+template <class T>
 class Variable {
 public:
   const VarDescPtr var_desc;
