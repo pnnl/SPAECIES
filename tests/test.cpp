@@ -90,6 +90,7 @@ TEST_CASE( "asking for human-readable type name", "[VariableDescriptor]" ) {
     REQUIRE( spaecies_type_name(Int64Type) == "64-bit integer" );
     REQUIRE( spaecies_type_name(Int32Type) == "32-bit integer" );
     REQUIRE( spaecies_type_name(BoolType) == "boolean" );
+    REQUIRE( spaecies_type_name(InvalidType) == "[invalid type]" );
   }
 
 }
@@ -105,7 +106,7 @@ TEST_CASE( "raising exceptions when buffer and descriptor type don't match", "[T
   // For this and the following sections, we don't require the exception to use an exact string,
   // but we do check for specific substrings communicating particular information.
   SECTION( "a descriptor only works with buffers of the same type" ) {
-    auto desc_type = GENERATE( Float64Type, Float32Type, Int64Type, Int32Type, BoolType );
+    auto desc_type = GENERATE( Float64Type, Float32Type, Int64Type, Int32Type, BoolType, InvalidType );
     VarDescPtr desc = domain.add_var_desc("foo_variable", desc_type, {}, "");
     auto match_desc_type = ContainsSubstring(spaecies_type_name(desc_type));
     auto match_desc_name = ContainsSubstring("foo_variable");
@@ -183,12 +184,12 @@ TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariable]" )
   SECTION( "a vector variable's values can be accessed" ) {
     VarDescPtr t_desc = domain.add_var_desc("T", Float64Type, {col_dim}, "K");
     double t_buff[col_dim->size];
-    for (int i; i != col_dim->size; ++i) {
+    for (int i = 0; i != col_dim->size; ++i) {
       t_buff[i] = 2. * i;
     }
     ContiguousVariable<double> t_var(t_desc, t_buff);
     REQUIRE( t_var.size() == t_desc->size() );
-    for (int i; i != col_dim->size; ++i) {
+    for (int i = 0; i != col_dim->size; ++i) {
       REQUIRE( t_var[i] == 2. * i );
       t_var[i] = t_var[i] + 3.;
       REQUIRE( t_var[i] == 2. * i + 3. );
@@ -199,12 +200,12 @@ TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariable]" )
     VarDescPtr t_desc = domain.add_var_desc("T", Float64Type, {col_dim, lev_dim}, "K");
     std::size_t total_size = col_dim->size * lev_dim->size;
     double t_buff[total_size];
-    for (int i; i != total_size; ++i) {
+    for (int i = 0; i != total_size; ++i) {
       t_buff[i] = 2. * i;
     }
     ContiguousVariable<double> t_var(t_desc, t_buff);
     REQUIRE( t_var.size() == t_desc->size() );
-    for (int i; i != total_size; ++i) {
+    for (int i = 0; i != total_size; ++i) {
       REQUIRE( t_var[i] == 2. * i );
       t_var[i] = t_var[i] + 3.;
       REQUIRE( t_var[i] == 2. * i + 3. );

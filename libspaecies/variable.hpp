@@ -25,7 +25,7 @@ protected:
       throw TypeMismatchException(spaecies_type_name(var_desc->type),
                                   spaecies_type_name(expected_type),
                                   "descriptor for " + var_desc->name
-                                  + "does not match Variable type");
+                                  + " does not match Variable type");
     }
   };
 

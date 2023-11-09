@@ -20,6 +20,8 @@ std::string spaecies_type_name(VariableType type) {
     return INT32NAME;
   case BoolType:
     return BOOLNAME;
+  case InvalidType:
+    return INVALIDNAME;
   }
   throw UnreachableException("invalid VariableType in spaecies_type_name");
 }

@@ -18,28 +18,30 @@ enum VariableType {
   Float32Type,
   Int64Type,
   Int32Type,
-  BoolType
+  BoolType,
+  InvalidType
 };
 
 // Simple lookup to connect C++ types to the dynamic descriptor types.
 template <class T>
-constexpr VariableType SPAECIES_TYPE;
+constexpr VariableType SPAECIES_TYPE = InvalidType;
 template <>
-constexpr VariableType SPAECIES_TYPE<double> = Float64Type;
+inline constexpr VariableType SPAECIES_TYPE<double> = Float64Type;
 template <>
-constexpr VariableType SPAECIES_TYPE<float> = Float32Type;
+inline constexpr VariableType SPAECIES_TYPE<float> = Float32Type;
 template <>
-constexpr VariableType SPAECIES_TYPE<int_least64_t> = Int64Type;
+inline constexpr VariableType SPAECIES_TYPE<int_least64_t> = Int64Type;
 template <>
-constexpr VariableType SPAECIES_TYPE<int_least32_t> = Int32Type;
+inline constexpr VariableType SPAECIES_TYPE<int_least32_t> = Int32Type;
 template <>
-constexpr VariableType SPAECIES_TYPE<bool> = BoolType;
+inline constexpr VariableType SPAECIES_TYPE<bool> = BoolType;
 
 const std::string FLOAT64NAME = "64-bit float";
 const std::string FLOAT32NAME = "32-bit float";
 const std::string INT64NAME = "64-bit integer";
 const std::string INT32NAME = "32-bit integer";
 const std::string BOOLNAME = "boolean";
+const std::string INVALIDNAME = "[invalid type]";
 
 std::string spaecies_type_name(VariableType type);
 
