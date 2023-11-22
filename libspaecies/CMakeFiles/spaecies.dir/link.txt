@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc libspaecies.a CMakeFiles/spaecies.dir/spaecies.cpp.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib libspaecies.a

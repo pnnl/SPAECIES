@@ -1,5 +1,6 @@
 #include "forward_euler_integrator.hpp"
 #include "arkode/arkode_erkstep.h"
+#include <iostream>
 
 ForwardEulerIntegrator::ForwardEulerIntegrator(const RainshaftConstants* constants,
                                                const RainshaftGrid* grid,
@@ -41,6 +42,18 @@ RainshaftSolution ForwardEulerIntegrator::integrate(double initial_time,
   long int num_rhs_evals = 0;
   // SPS: And this return value.
   ERKStepGetNumRhsEvals(arkode_mem, &num_rhs_evals);
+
+  // get last step size that SUNDIALS chose
+  double last_step = 0.0;
+  ERKStepGetLastStep(arkode_mem, &last_step);
+
+  // current time
+  double tcur = 0.0;
+  ERKStepGetCurrentTime(arkode_mem, &tcur);
+
+  
+
+  // TODO: 
 
   // SPS: Make RAII wrapper for this.
   ERKStepFree(&arkode_mem);

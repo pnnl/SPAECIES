@@ -1,3 +1,4 @@
+// #include "example_utilities.hpp"
 #include "spaecies.hpp"
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
@@ -17,9 +18,13 @@
 #include "self_collision.hpp"
 #include "sequential_split_integrator.hpp"
 #include "sundials/sundials_context.h"
+#include <sundials/sundials_logger.h>
 #include <iostream>
 #include <cmath>
 #include <chrono>
+
+// // Private function to check function return values
+// int check_flag(const int flag, const std::string funcname);
 
 int main(int argc, char** argv)
 {
@@ -32,9 +37,13 @@ int main(int argc, char** argv)
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
                                0.62197, 1.e-14, 9.80616, 1.e-5, 5.e-3,
                                0.988919555598356, 1.e3, 1.e-4};
+
+  // reusable error flag
+  int flag;
+
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
-  double model_top = 2.e3;
+  double model_top = 3.e3;
   // Surface pressure and temperature in Pa and K, respectively.
   double srf_pres = 1.e5, srf_temp = 293.15;
   // Lapse rate of initial condition in K/m.
@@ -44,36 +53,39 @@ int main(int argc, char** argv)
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
-  double dt = 1.e-3;
+  double dt = 2000.0;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
-  double final_time = 1800.;
+  double final_time = dt;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
   auto nlev = grid.nlev;
+
   sundials::Context sun_ctxt = sundials::Context();
   // Set up initial condition.
   SaturationFormulae sat_form(constants);
   // Initial condition for nr and qr is just 0, and allocate t and q as well.
   std::vector<double> t(nlev, 0.), q(nlev, 0.), nr(nlev, 0.), qr(nlev, 0.);
+
   // Coming up with an initial condition for t and q is slightly tricky, because
   // we only have an implicit relationship between t, q, and dz. But since the
   // effect of q on layer height is not large, start by ignoring it, in which
   // case we do have an explicit relationship between t and dz.
   double rog = constants.rdry / constants.g;
-  std::vector<double> z_int(nlev+1, 0.);
+  std::vector<double> z_int(nlev, 0.);
   for (int il = nlev - 1; il != -1; --il) {
     double pdel = grid.p_int[il+1]-grid.p_int[il];
     t[il] = (srf_temp - lapse_rate*z_int[il+1])
       / (1. + 0.5 * lapse_rate * rog * pdel/ grid.p_mid[il]);
     z_int[il] = rog * t[il] * pdel / grid.p_mid[il];
   }
+
   // Now iterate until change in dz between successive iterations is small;
   // ten iterations should do it.
   bool converged = false;
-  double t_tolerance = 1.e-3; // Kelvin
-  for (int it = 0; it != 10 && !converged; ++it) {
+  double t_tolerance = 1.e-1; // Kelvin
+  for (int it = 0; it != 1000 && !converged; ++it) {
     std::vector<double> t_v(nlev, 0.);
     for (std::size_t il = 0; il != nlev; ++il) {
       q[il] = rel_hum_init * sat_form.q_sat_dry(t[il], grid.p_mid[il]);
@@ -86,16 +98,26 @@ int main(int argc, char** argv)
     converged = true;
     for (std::size_t il = 0; il!= nlev; ++il) {
       double new_temp = srf_temp - lapse_rate * (z_int[il] - 0.5 * dz[il]);
+
       if (abs(new_temp - t[il]) > t_tolerance) {
         converged = false;
       }
+
+      // std::cout << t[il] << " " << new_temp << std::endl;
       t[il] = new_temp;
     }
   }
+
+
+  // for (int il = nlev - 1; il != -1; --il) {
+  //   std::cout << t[il] << ", " << z_int[il] << ", " << q[il] << std::endl;
+  // }
+
   if (!converged) {
     std::cerr << "Initial condition iteration failed to converge." << std::endl;
     return 1;
   }
+  
   RainshaftState initial_state(t, q, nr, qr);
   RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
   // Sedimentation process.
@@ -120,19 +142,49 @@ int main(int argc, char** argv)
   // std::vector<const RainshaftIntegrator *> seq_ints{&local_step, &sed_loop};
   // SequentialSplitIntegrator seq_step(seq_ints);
   // FixedSubstepIntegrator intg(&seq_step, dt);
+
+  // setup logging
+  SUNLogger logger = NULL;
+
+  flag = SUNLogger_Create(
+    NULL, // no MPI communicator
+    0, // output on process 0 (the only one)
+    &logger
+  );
+
+  // Attach the logger
+  flag = SUNContext_SetLogger(sun_ctxt, logger);
+
+  // Setup log files
+  flag = SUNLogger_SetErrorFilename(logger, "stderr");
+
+  flag = SUNLogger_SetWarningFilename(logger, "stderr");
+
+  // logging file name
+  flag = SUNLogger_SetInfoFilename(logger, "rainshaft1.log");
+
+
+
+
+  FILE *outdata;
+  outdata = fopen("sundials_savedresults.csv", "w");
+  fclose(outdata);
+
   // ARKODE Settings
-  // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
-  // FixedSubstepIntegrator intg(&micro_step, dt);
-  // Pure Forward Euler Settings
-  ForwardEulerIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
+  ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
   FixedSubstepIntegrator intg(&micro_step, dt);
+
+  // // Pure Forward Euler Settings
+  // ForwardEulerIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
+  // FixedSubstepIntegrator intg(&micro_step, dt);
+
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);
   auto after_sol = high_resolution_clock::now();
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_1ms_no_table.nc");
+  NetcdfWriter writer("./rainshaft_default2ndorder_2000.nc");
   writer.write_grid(grid);
   writer.write_states(solution.states);
   writer.write_derived_vars(solution.dvars);
@@ -140,5 +192,8 @@ int main(int argc, char** argv)
   writer.write_walltime_ms(walltime_ms.count());
   // Ensure that the library is linked and greet the user.
   spaecies::do_nothing();
+
+  if (logger) SUNLogger_Destroy(&logger);  // Free logger
+
   return 0;
 }
