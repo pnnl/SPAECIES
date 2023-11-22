@@ -2,8 +2,10 @@
 #define SPAECIES_VARIABLE_ARRAY_HPP
 
 #include <initializer_list>
+#include <tuple>
 
 #include "contiguous_variable.hpp"
+#include "exceptions.hpp"
 
 namespace spaecies {
 
@@ -19,31 +21,12 @@ public:
       data(size) {
   };
   ContiguousVariable<T> get_variable(const std::string& name) {
-    std::size_t idx = 0;
-    VarDescPtr var_desc_out;
-    for (VarDescPtr var_desc : var_descs) {
-      if (var_desc->name == name) {
-        var_desc_out = var_desc;
-        break;
-      }
-      idx += var_desc->size();
-    }
-    // SPS: need to cover case where variable is not found.
-    return make_contiguous_variable(var_desc_out, &data[idx]);
+    auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs);
+    return make_contiguous_variable(var_desc, &data[idx]);
   };
-  // SPS: need to unit test const version and consolidate with non-const version.
   const ContiguousVariable<T> get_variable(const std::string& name) const {
-    std::size_t idx = 0;
-    VarDescPtr var_desc_out;
-    for (VarDescPtr var_desc : var_descs) {
-      if (var_desc->name == name) {
-        var_desc_out = var_desc;
-        break;
-      }
-      idx += var_desc->size();
-    }
-    // SPS: need to cover case where variable is not found.
-    return make_contiguous_variable(var_desc_out, &data[idx]);
+    auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs);
+    return make_contiguous_variable(var_desc, &data[idx]);
   };
   const std::size_t size;
   const std::vector<VarDescPtr> var_descs;
@@ -57,6 +40,22 @@ private:
       my_size += var_desc->size();
     }
     return my_size;
+  }
+  static std::tuple<VarDescPtr, std::size_t> name_to_desc_and_idx(const std::string& name,
+                                                                  const std::vector<VarDescPtr> var_descs) {
+    std::size_t idx = 0;
+    VarDescPtr var_desc_out;
+    for (VarDescPtr var_desc : var_descs) {
+      if (var_desc->name == name) {
+        var_desc_out = var_desc;
+        break;
+      }
+      idx += var_desc->size();
+    }
+    if (var_desc_out == nullptr) {
+      throw(VariableNotFoundException(name, "variable not found in variable array"));
+    }
+    return std::tuple(var_desc_out, idx);
   }
 };
 

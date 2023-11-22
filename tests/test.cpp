@@ -274,6 +274,35 @@ TEST_CASE( "Holding memory for multiple variables in a variable array", "[Variab
     }
   }
 
+  SECTION( "getting a const variable from a const VariableArray" ) {
+    VariableArray<double> var_array = {t_desc, q_desc};
+    auto t = var_array.get_variable("T");
+    auto q = var_array.get_variable("q");
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 2.*i;
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      q[i] = i + 0.5;
+    }
+    const VariableArray<double> *var_ptr = &var_array;
+    const ContiguousVariable<double> t_const = var_ptr->get_variable("T");
+    const ContiguousVariable<double> q_const = var_ptr->get_variable("q");
+    REQUIRE( t.size() == t_const.size() );
+    for (int i = 0; i != t.size(); ++i) {
+      REQUIRE( t_const[i] == t[i] );
+    }
+    REQUIRE( q.size() == q_const.size() );
+    for (int i = 0; i != q.size(); ++i) {
+      REQUIRE( q_const[i] == q[i] );
+    }
+  }
+
+  SECTION( "variables can be accessed through a variable array" ) {
+    VariableArray<double> var_array{t_desc, q_desc, p_surf_desc};
+    REQUIRE_THROWS_MATCHES( var_array.get_variable("invalid"), VariableNotFoundException,
+                            MessageMatches(ContainsSubstring("variable array") && ContainsSubstring("invalid")) );
+  }
+
 }
 
 // Utility macro for testing the copy constructors of exceptions.
