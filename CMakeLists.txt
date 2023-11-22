@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
+
+if( "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}" )
+  message( FATAL_ERROR
+    " FATAL: In-source builds are not allowed."
+    " Remember to delete CMakeCache.txt and any other generated files"
+    " (e.g. the CMakeFiles/ directory), then build in a separate source tree.")
+endif()
+
 project(SPAECIES LANGUAGES CXX VERSION 0.0.1)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(NetCDF REQUIRED)
