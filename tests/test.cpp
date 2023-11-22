@@ -59,6 +59,12 @@ TEST_CASE( "constructing variables using a domain", "[Domain]" ) {
     REQUIRE( req_vars[1] == temp_desc );
   }
 
+  SECTION( "querying a non-existent variable raises an error" ) {
+    // Ensure that an exception is thrown with the requested variable
+    // in the what string.
+    REQUIRE_THROWS_MATCHES( domain.get_var_desc("qr"), VariableNotFoundException, MessageMatches(ContainsSubstring("qr") && ContainsSubstring("domain")) );
+  }
+
 }
 
 TEST_CASE( "a variable's size can be calculated", "[VariableDescriptor]" ) {
@@ -291,6 +297,10 @@ TEST_CASE( "Copy constructing exceptions" , "[exceptions]" ) {
 
   SECTION( "UnreachableException can be copied" ) {
     check_exception_copy(UnreachableException, "foobar");
+  }
+
+  SECTION( "VariableNotFoundException can be copied" ) {
+    check_exception_copy(VariableNotFoundException, "foo", "bar");
   }
 
 }

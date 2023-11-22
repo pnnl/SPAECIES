@@ -33,6 +33,15 @@ public:
   UnreachableException(const UnreachableException& other) noexcept;
 };
 
+class VariableNotFoundException : public std::runtime_error {
+public:
+  // Construct with a string describing the variable not found.
+  VariableNotFoundException(const std::string& name, const std::string& details);
+  // Copy constructor with noexcept.
+  VariableNotFoundException(const VariableNotFoundException& other) noexcept;
+
+};
+
 }
 
 #endif // SPAECIES_EXCEPTIONS_HPP

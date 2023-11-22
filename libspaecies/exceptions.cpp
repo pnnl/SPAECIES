@@ -42,4 +42,17 @@ UnreachableException::UnreachableException(const UnreachableException& other) no
   : std::logic_error(other) {
 }
 
+std::string variable_not_found_string(const std::string& name, const std::string& details) {
+  return "no variable named '" + name + "' was found: " + details;
+}
+
+VariableNotFoundException::VariableNotFoundException(const std::string& name,
+                                                     const std::string& details)
+  : runtime_error(variable_not_found_string(name, details)) {
+}
+
+VariableNotFoundException::VariableNotFoundException(const VariableNotFoundException& other) noexcept
+  : runtime_error(other) {
+}
+
 }

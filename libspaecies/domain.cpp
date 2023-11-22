@@ -53,10 +53,13 @@ VarDescPtr Domain::get_var_desc(const std::string& name) {
   auto matches_name = [&](VarDescPtr& var_desc) {
     return var_desc->name == name;
   };
-  VarDescPtr var_desc = *std::find_if(var_descs.begin(), var_descs.end(),
-                                      matches_name);
-  // SPS: need to cover case where variable is not found.
-  return var_desc;
+  auto find_result = std::find_if(var_descs.begin(), var_descs.end(),
+                                  matches_name);
+  if (find_result == var_descs.end()) {
+    throw(VariableNotFoundException(name, "variable descriptor not found in domain"));
+  } else {
+    return *find_result;
+  }
 }
 
 std::vector<VarDescPtr> Domain::get_var_descs(const std::vector<std::string>& names) {
