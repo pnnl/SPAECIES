@@ -35,3 +35,6 @@
 *.ipynb_checkpoints
 *.png
 *.gif
+
+# Apple-specific directory marking files
+**/.DS_Store
