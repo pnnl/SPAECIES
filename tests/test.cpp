@@ -29,6 +29,12 @@ TEST_CASE( "constructing dimensions using a domain", "[Domain]" ) {
     REQUIRE( req_dims[1] == col_dim );
   }
 
+  SECTION( "querying a non-existent dimension raises an error" ) {
+    // Ensure that an exception is thrown with the requested dimension
+    // in the what string.
+    REQUIRE_THROWS_MATCHES( domain.get_dimension("column"), DimensionNotFoundException, MessageMatches(ContainsSubstring("column") && ContainsSubstring("domain")) );
+  }
+
 }
 
 TEST_CASE( "constructing variables using a domain", "[Domain]" ) {
@@ -263,3 +269,30 @@ TEST_CASE( "Holding memory for multiple variables in a variable array", "[Variab
   }
 
 }
+
+// Utility macro for testing the copy constructors of exceptions.
+// These constructors are pretty trivial pieces of code, but it's easy
+// to forget to implement them if they are not used in the library itself.
+#define check_exception_copy( T, ... ) { T original(__VA_ARGS__); T copy (original); REQUIRE( original.what() == copy.what() ); }
+
+TEST_CASE( "Copy constructing exceptions" , "[exceptions]" ) {
+
+  // Note that comparing the "what()" outputs here is doing a comparison of the
+  // returned char pointers, which is what we want to test because the copy
+  // constructor for exceptions should point to the same string.
+
+  SECTION( "DimensionNotFoundException can be copied" ) {
+    check_exception_copy(DimensionNotFoundException, "foo", "bar");
+  }
+
+  SECTION( "TypeMismatchException can be copied" ) {
+    check_exception_copy(TypeMismatchException, "foo1", "foo2", "bar");
+  }
+
+  SECTION( "UnreachableException can be copied" ) {
+    check_exception_copy(UnreachableException, "foobar");
+  }
+
+}
+
+#undef check_exception_copy

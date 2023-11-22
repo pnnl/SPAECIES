@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "exceptions.hpp"
+
 namespace spaecies {
 
 DimensionPtr Domain::add_dimension(const std::string& name, std::size_t size) {
@@ -10,14 +12,18 @@ DimensionPtr Domain::add_dimension(const std::string& name, std::size_t size) {
   return new_dim;
 }
 
+// Retrieve the dimension with a given name.
 DimensionPtr Domain::get_dimension(const std::string& name) {
   auto matches_name = [&](DimensionPtr& dim_ptr) {
     return dim_ptr->name == name;
   };
-  DimensionPtr dim_ptr = *std::find_if(dimensions.begin(), dimensions.end(),
-                                       matches_name);
-  // SPS: need to cover case where variable is not found.
-  return dim_ptr;
+  auto find_result = std::find_if(dimensions.begin(), dimensions.end(),
+                                  matches_name);
+  if (find_result == dimensions.end()) {
+    throw(DimensionNotFoundException(name, "dimension not found in domain"));
+  } else {
+    return *find_result;
+  }
 }
 
 std::vector<DimensionPtr> Domain::get_dimensions(const std::vector<std::string>& names) {
@@ -42,7 +48,7 @@ VarDescPtr Domain::add_var_desc(const std::string name,
   return var_desc;
 }
 
-// Retrieve the dimension with a given size.
+// Retrieve the variable with a given name
 VarDescPtr Domain::get_var_desc(const std::string& name) {
   auto matches_name = [&](VarDescPtr& var_desc) {
     return var_desc->name == name;

@@ -6,6 +6,15 @@
 
 namespace spaecies {
 
+class DimensionNotFoundException : public std::runtime_error {
+public:
+  // Construct with a string describing the dimension not found.
+  DimensionNotFoundException(const std::string& name, const std::string& details);
+  // Copy constructor with noexcept.
+  DimensionNotFoundException(const DimensionNotFoundException& other) noexcept;
+
+};
+
 class TypeMismatchException : public std::runtime_error {
 public:
   // Construct with strings describing the dynamic type, then the expected
