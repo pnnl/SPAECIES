@@ -29,7 +29,7 @@ public:
       idx += var_desc->size();
     }
     // SPS: need to cover case where variable is not found.
-    return ContiguousVariable(var_desc_out, &data[idx]);
+    return make_contiguous_variable(var_desc_out, &data[idx]);
   };
   // SPS: need to unit test const version and consolidate with non-const version.
   const ContiguousVariable<T> get_variable(const std::string& name) const {
@@ -43,7 +43,7 @@ public:
       idx += var_desc->size();
     }
     // SPS: need to cover case where variable is not found.
-    return ContiguousVariable(var_desc_out, &data[idx]);
+    return make_contiguous_variable(var_desc_out, &data[idx]);
   };
   const std::size_t size;
   const std::vector<VarDescPtr> var_descs;
