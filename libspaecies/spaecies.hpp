@@ -1,7 +1,7 @@
 #ifndef SPAECIES_HPP
 #define SPAECIES_HPP
 
-#include "contiguous_variable.hpp"
+#include "contiguous_variable_view.hpp"
 #include "dimension.hpp"
 #include "domain.hpp"
 #include "exceptions.hpp"

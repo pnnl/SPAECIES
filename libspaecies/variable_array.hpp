@@ -4,7 +4,7 @@
 #include <initializer_list>
 #include <tuple>
 
-#include "contiguous_variable.hpp"
+#include "contiguous_variable_view.hpp"
 #include "exceptions.hpp"
 
 namespace spaecies {
@@ -20,13 +20,13 @@ public:
       size(calc_size(var_descs)),
       data(size) {
   };
-  ContiguousVariable<T> get_variable(const std::string& name) {
+  ContiguousVariableView<T> get_variable(const std::string& name) {
     auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs);
-    return make_contiguous_variable(var_desc, &data[idx]);
+    return make_contiguous_variable_view(var_desc, &data[idx]);
   };
-  const ContiguousVariable<T> get_variable(const std::string& name) const {
+  const ContiguousVariableView<T> get_variable(const std::string& name) const {
     auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs);
-    return make_contiguous_variable(var_desc, &data[idx]);
+    return make_contiguous_variable_view(var_desc, &data[idx]);
   };
   const std::size_t size;
   const std::vector<VarDescPtr> var_descs;

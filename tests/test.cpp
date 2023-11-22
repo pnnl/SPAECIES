@@ -123,60 +123,60 @@ TEST_CASE( "raising exceptions when buffer and descriptor type don't match", "[T
     auto match_desc_type = ContainsSubstring(spaecies_type_name(desc_type));
     auto match_desc_name = ContainsSubstring("foo_variable");
     if (desc_type == Float64Type) {
-      REQUIRE_NOTHROW( ContiguousVariable(desc, &var_double) );
+      REQUIRE_NOTHROW( ContiguousVariableView(desc, &var_double) );
     }
     else {
       auto match_var_type = ContainsSubstring(spaecies_type_name(Float64Type));
       auto match =  MessageMatches(match_desc_type && match_desc_name
                                    && match_var_type);
-      REQUIRE_THROWS_MATCHES( ContiguousVariable(desc, &var_double), TypeMismatchException,
+      REQUIRE_THROWS_MATCHES( ContiguousVariableView(desc, &var_double), TypeMismatchException,
                               match );
     }
     if (desc_type == Float32Type) {
-      REQUIRE_NOTHROW( ContiguousVariable(desc, &var_float) );
+      REQUIRE_NOTHROW( ContiguousVariableView(desc, &var_float) );
     }
     else {
       auto match_var_type = ContainsSubstring(spaecies_type_name(Float32Type));
       auto match =  MessageMatches(match_desc_type && match_desc_name
                                    && match_var_type);
-      REQUIRE_THROWS_MATCHES( ContiguousVariable(desc, &var_float), TypeMismatchException,
+      REQUIRE_THROWS_MATCHES( ContiguousVariableView(desc, &var_float), TypeMismatchException,
                               match );
     }
     if (desc_type == Int64Type) {
-      REQUIRE_NOTHROW( ContiguousVariable(desc, &var_int64) );
+      REQUIRE_NOTHROW( ContiguousVariableView(desc, &var_int64) );
     }
     else {
       auto match_var_type = ContainsSubstring(spaecies_type_name(Int64Type));
       auto match =  MessageMatches(match_desc_type && match_desc_name
                                    && match_var_type);
-      REQUIRE_THROWS_MATCHES( ContiguousVariable(desc, &var_int64), TypeMismatchException,
+      REQUIRE_THROWS_MATCHES( ContiguousVariableView(desc, &var_int64), TypeMismatchException,
                               match );
     }
     if (desc_type == Int32Type) {
-      REQUIRE_NOTHROW( ContiguousVariable(desc, &var_int32) );
+      REQUIRE_NOTHROW( ContiguousVariableView(desc, &var_int32) );
     }
     else {
       auto match_var_type = ContainsSubstring(spaecies_type_name(Int32Type));
       auto match =  MessageMatches(match_desc_type && match_desc_name
                                    && match_var_type);
-      REQUIRE_THROWS_MATCHES( ContiguousVariable(desc, &var_int32), TypeMismatchException,
+      REQUIRE_THROWS_MATCHES( ContiguousVariableView(desc, &var_int32), TypeMismatchException,
                               match );
     }
     if (desc_type == BoolType) {
-      REQUIRE_NOTHROW( ContiguousVariable(desc, &var_bool) );
+      REQUIRE_NOTHROW( ContiguousVariableView(desc, &var_bool) );
     }
     else {
       auto match_var_type = ContainsSubstring(spaecies_type_name(BoolType));
       auto match =  MessageMatches(match_desc_type && match_desc_name
                                    && match_var_type);
-      REQUIRE_THROWS_MATCHES( ContiguousVariable(desc, &var_bool), TypeMismatchException,
+      REQUIRE_THROWS_MATCHES( ContiguousVariableView(desc, &var_bool), TypeMismatchException,
                               match );
     }
   }
 
 }
 
-TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariable]" ) {
+TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariableView]" ) {
   Domain domain;
   DimensionPtr col_dim = domain.add_dimension("column", 8);
   DimensionPtr lev_dim = domain.add_dimension("level", 10);
@@ -185,7 +185,7 @@ TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariable]" )
   SECTION( "a scalar variable's value can be accessed" ) {
     VarDescPtr boil_desc = domain.add_var_desc("BOILING_POINT", Float64Type, {}, "K");
     double boiling_point = 373.16;
-    ContiguousVariable<double> t_boil(boil_desc, &boiling_point);
+    ContiguousVariableView<double> t_boil(boil_desc, &boiling_point);
     REQUIRE( t_boil.size() == boil_desc->size() );
     REQUIRE( t_boil[0] == boiling_point );
     // Pretend we have a reason to change this. "Oops, we had the wrong value, fix it."
@@ -199,7 +199,7 @@ TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariable]" )
     for (int i = 0; i != col_dim->size; ++i) {
       t_buff[i] = 2. * i;
     }
-    ContiguousVariable<double> t_var(t_desc, t_buff);
+    ContiguousVariableView<double> t_var(t_desc, t_buff);
     REQUIRE( t_var.size() == t_desc->size() );
     for (int i = 0; i != col_dim->size; ++i) {
       REQUIRE( t_var[i] == 2. * i );
@@ -215,7 +215,7 @@ TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariable]" )
     for (int i = 0; i != total_size; ++i) {
       t_buff[i] = 2. * i;
     }
-    ContiguousVariable<double> t_var(t_desc, t_buff);
+    ContiguousVariableView<double> t_var(t_desc, t_buff);
     REQUIRE( t_var.size() == t_desc->size() );
     for (int i = 0; i != total_size; ++i) {
       REQUIRE( t_var[i] == 2. * i );
@@ -285,8 +285,8 @@ TEST_CASE( "Holding memory for multiple variables in a variable array", "[Variab
       q[i] = i + 0.5;
     }
     const VariableArray<double> *var_ptr = &var_array;
-    const ContiguousVariable<double> t_const = var_ptr->get_variable("T");
-    const ContiguousVariable<double> q_const = var_ptr->get_variable("q");
+    const ContiguousVariableView<double> t_const = var_ptr->get_variable("T");
+    const ContiguousVariableView<double> q_const = var_ptr->get_variable("q");
     REQUIRE( t.size() == t_const.size() );
     for (int i = 0; i != t.size(); ++i) {
       REQUIRE( t_const[i] == t[i] );
