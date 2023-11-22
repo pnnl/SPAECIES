@@ -1,5 +1,5 @@
-#ifndef SPAECIES_VARIABLE_HPP
-#define SPAECIES_VARIABLE_HPP
+#ifndef SPAECIES_VARIABLE_VIEW_HPP
+#define SPAECIES_VARIABLE_VIEW_HPP
 
 #include "exceptions.hpp"
 #include "variable_descriptor.hpp"
@@ -7,7 +7,7 @@
 namespace spaecies {
 
 template <class T>
-class Variable {
+class VariableView {
 public:
   const VarDescPtr var_desc;
   // Access a scalar value of the flattened variable.
@@ -19,7 +19,7 @@ public:
   }
 
 protected:
-  Variable(const VarDescPtr var_desc) : var_desc(var_desc) {
+  VariableView(const VarDescPtr var_desc) : var_desc(var_desc) {
     VariableType expected_type = SPAECIES_TYPE<T>;
     if (var_desc->type != expected_type) {
       throw TypeMismatchException(spaecies_type_name(var_desc->type),
@@ -33,4 +33,4 @@ protected:
 
 }
 
-#endif // SPAECIES_VARIABLE_HPP
+#endif // SPAECIES_VARIABLE_VIEW_HPP

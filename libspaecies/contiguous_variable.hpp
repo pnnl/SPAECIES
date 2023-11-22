@@ -3,7 +3,7 @@
 
 #include <type_traits>
 
-#include "variable.hpp"
+#include "variable_view.hpp"
 
 namespace spaecies {
 
@@ -20,11 +20,11 @@ const ContiguousVariable<T> make_contiguous_variable(const VarDescPtr var_desc, 
 }
 
 template<class T>
-class ContiguousVariable : public Variable<T> {
+class ContiguousVariable : public VariableView<T> {
 public:
   // Construct a ContiguousVariable from a description and pointer.
   ContiguousVariable(const VarDescPtr var_desc, T* data_ptr)
-    : Variable<T>(var_desc), data_ptr(data_ptr) {
+    : VariableView<T>(var_desc), data_ptr(data_ptr) {
   }
   // Access a scalar value of the flattened variable.
   inline T& operator[](std::size_t idx) {

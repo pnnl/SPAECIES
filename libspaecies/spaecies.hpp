@@ -5,7 +5,7 @@
 #include "dimension.hpp"
 #include "domain.hpp"
 #include "exceptions.hpp"
-#include "variable.hpp"
+#include "variable_view.hpp"
 #include "variable_array.hpp"
 #include "variable_descriptor.hpp"
 
