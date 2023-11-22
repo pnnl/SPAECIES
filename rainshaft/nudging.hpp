@@ -2,6 +2,8 @@
 #define NUDGING_HPP
 #include <vector>
 
+#include "spaecies.hpp"
+
 #include "rainshaft_process.hpp"
 
 class Nudging : public RainshaftProcess {
@@ -14,7 +16,7 @@ public:
   // Calculate tendency from current state.
   RainshaftTendency calc_tend(const RainshaftConstants& constants,
                               const RainshaftGrid& grid,
-                              const RainshaftState& state,
+                              const spaecies::VariableArray<double>& state,
                               const RainshaftDerivedVars& dvars) const;
 
   double time_scale;

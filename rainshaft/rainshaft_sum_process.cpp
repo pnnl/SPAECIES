@@ -1,5 +1,4 @@
 #include "rainshaft_sum_process.hpp"
-#include <iostream>
 
 SumProcess::SumProcess(const std::vector<const RainshaftProcess *>& processes)
   : nsub(processes.size()), sub_processes(processes) {
@@ -7,7 +6,7 @@ SumProcess::SumProcess(const std::vector<const RainshaftProcess *>& processes)
 
 RainshaftTendency SumProcess::calc_tend(const RainshaftConstants& constants,
                                         const RainshaftGrid& grid,
-                                        const RainshaftState& state,
+                                        const spaecies::VariableArray<double>& state,
                                         const RainshaftDerivedVars& dvars) const {
   std::vector<double> t_tend(grid.nlev, 0.), q_tend(grid.nlev, 0.);
   std::vector<double> nr_tend(grid.nlev, 0.), qr_tend(grid.nlev, 0.);

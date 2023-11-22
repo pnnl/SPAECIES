@@ -1,6 +1,8 @@
 #ifndef RAINSHAFT_INTEGRATOR_HPP
 #define RAINSHAFT_INTEGRATOR_HPP
-#include "rainshaft_state.hpp"
+
+#include "spaecies.hpp"
+
 #include "rainshaft_solution.hpp"
 
 class RainshaftIntegrator {
@@ -9,7 +11,7 @@ public:
 
   virtual RainshaftSolution integrate(double initial_time,
                                       double final_time,
-                                      const RainshaftState& initial_state) const = 0;
+                                      const spaecies::VariableArray<double>& initial_state) const = 0;
 
 };
 

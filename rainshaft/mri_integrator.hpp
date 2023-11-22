@@ -16,6 +16,7 @@ public:
                 const RainshaftProcess *const process_fast,
                 const RainshaftProcess *const process_slow_exp,
                 const RainshaftProcess *const process_slow_imp,
+                const std::vector<spaecies::VarDescPtr>& var_descs,
                 const double dt_fast,
                 const double dt_slow,
                 const int order = 3,
@@ -23,7 +24,7 @@ public:
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const RainshaftState &initial_state) const;
+                              const spaecies::VariableArray<double> &initial_state) const;
 };
 
 #endif // MRI_INTEGRATOR_HPP

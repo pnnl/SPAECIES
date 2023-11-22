@@ -6,9 +6,12 @@
 #include "rainshaft_integrator.hpp"
 #include "sundials/sundials_context.hpp"
 #include "nvector/nvector_serial.h"
+
+#include "spaecies.hpp"
+
+#include "rainshaft_integrator.hpp"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
-#include "rainshaft_state.hpp"
 #include "rainshaft_process.hpp"
 #include "rainshaft_solution.hpp"
 #include "rainshaft_tendency.hpp"
@@ -24,14 +27,15 @@ private:
     const RainshaftConstants &constants;
     const RainshaftGrid &grid;
     const PartitionArray processes;
+    const std::vector<spaecies::VarDescPtr> var_descs;
   };
 
   template <int PARTITION>
   static int rainshaft_f(sunrealtype t, N_Vector y, N_Vector ydot, void *user_data)
   {
     // SPS: Should stop using std::vector to reduce copies and allocations.
-    RainshaftState state = n_vector_to_state(y);
     RainshaftUserData *cast_data = (RainshaftUserData *)user_data;
+    spaecies::VariableArray<double> state = n_vector_to_state(y, cast_data->var_descs);
     RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data->constants,
                                                       cast_data->grid,
                                                       state);
@@ -57,8 +61,9 @@ public:
   SundialsIntegrator(const RainshaftConstants &constants,
                      const RainshaftGrid &grid,
                      const PartitionArray processes,
+                     const std::vector<spaecies::VarDescPtr>& var_descs,
                      const int steps_per_output)
-      : user_data{constants, grid, processes}, steps_per_output(steps_per_output)
+      : user_data{constants, grid, processes, var_descs}, steps_per_output(steps_per_output)
   {
     SUNContext_PushErrHandler(sun_ctxt, SundialsIntegrator::handle_error, nullptr);
   }
@@ -90,17 +95,18 @@ protected:
                            const Mode normal,
                            const Mode one_step) const
   {
-    std::vector<RainshaftState> states;
+    std::vector<spaecies::VariableArray<double>> states;
     std::vector<RainshaftDerivedVars> dvars;
 
     sunrealtype tret = -std::numeric_limits<sunrealtype>::infinity();
+    auto ydot = N_VClone(y);
     if (steps_per_output > 0)
     {
       for (int i = 0; tret < final_time; i++)
       {
         if (i % steps_per_output == 0)
         {
-          const auto new_state = n_vector_to_state(y);
+          const auto new_state = n_vector_to_state(y, user_data.var_descs);
           dvars.emplace_back(user_data.constants, user_data.grid, new_state);
           states.push_back(new_state);
         }
@@ -112,36 +118,20 @@ protected:
       evolveFun(mem, final_time, y, &tret, normal);
     }
 
-    const auto new_state = n_vector_to_state(y);
+    const auto new_state = n_vector_to_state(y, user_data.var_descs);
     dvars.emplace_back(user_data.constants, user_data.grid, new_state);
     states.push_back(new_state);
 
     return RainshaftSolution(states, dvars, countFun());
   }
 
-  static N_Vector state_to_n_vector(const sundials::Context &sun_ctxt, const RainshaftState &state)
+  static N_Vector state_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArray<double> &state)
   {
-    sunindextype nz = state.t.size();
-    // SPS: It should not assume 4 variables; move some of this to RainshaftState itself?
-    sunindextype num_variables = nz * 4;
-    N_Vector y = N_VNew_Serial(num_variables, sun_ctxt);
-    sunrealtype *ydata = N_VGetArrayPointer_Serial(y);
-    for (sunindextype j = 0; j != nz; ++j)
-    {
-      ydata[j] = state.t[j];
-    }
-    for (sunindextype j = 0; j != nz; ++j)
-    {
-      ydata[nz + j] = state.q[j];
-    }
-    for (sunindextype j = 0; j != nz; ++j)
-    {
-      ydata[2 * nz + j] = state.nr[j];
-    }
-    for (sunindextype j = 0; j != nz; ++j)
-    {
-      ydata[3 * nz + j] = state.qr[j];
-    }
+    sunindextype num_variables = state.size;
+    // Unsafe cast is necessary because SUNDIALS does not have separate const
+    // types for input vectors it will not change; we have to trust that the
+    // caller and SUNDIALS will not change the result here.
+    N_Vector y = N_VMake_Serial(num_variables, (double*) state.data.data(), sun_ctxt);
     return y;
   }
 
@@ -149,7 +139,7 @@ protected:
   static void tend_to_n_vector(const RainshaftTendency &tend, N_Vector ydot)
   {
     sunindextype nz = tend.t_tend.size();
-    sunrealtype *ydata = N_VGetArrayPointer_Serial(ydot);
+    auto ydata = N_VGetArrayPointer_Serial(ydot);
     for (sunindextype j = 0; j != nz; ++j)
     {
       ydata[j] = tend.t_tend[j];
@@ -168,28 +158,16 @@ protected:
     }
   }
 
-  static RainshaftState n_vector_to_state(N_Vector y)
+  static spaecies::VariableArray<double> n_vector_to_state(N_Vector y, const std::vector<spaecies::VarDescPtr>& var_descs)
   {
-    sunindextype nz = N_VGetLength(y) / 4;
-    sunrealtype *ydata = N_VGetArrayPointer(y);
-    std::vector<double> t(nz), q(nz), nr(nz), qr(nz);
-    for (sunindextype j = 0; j != nz; ++j)
-    {
-      t[j] = ydata[j];
+    // SPS: need to make this copy go away by implementing non-owning VariableArrays.
+    spaecies::VariableArray<double> state(var_descs);
+    std::size_t size = state.size;
+    auto ydata = N_VGetArrayPointer(y);
+    for (sunindextype i = 0; i != size; ++i) {
+      state.data[i] = ydata[i];
     }
-    for (sunindextype j = 0; j != nz; ++j)
-    {
-      q[j] = ydata[nz + j];
-    }
-    for (sunindextype j = 0; j != nz; ++j)
-    {
-      nr[j] = ydata[2 * nz + j];
-    }
-    for (sunindextype j = 0; j != nz; ++j)
-    {
-      qr[j] = ydata[3 * nz + j];
-    }
-    return RainshaftState(t, q, nr, qr);
+    return state;
   }
 };
 

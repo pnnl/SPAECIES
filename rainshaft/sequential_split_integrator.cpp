@@ -6,8 +6,8 @@ SequentialSplitIntegrator::SequentialSplitIntegrator(const std::vector<const Rai
 
 RainshaftSolution SequentialSplitIntegrator::integrate(double initial_time,
                                                        double final_time,
-                                                       const RainshaftState& initial_state) const {
-  std::vector<RainshaftState> states{initial_state};
+                                                       const spaecies::VariableArray<double>& initial_state) const {
+  std::vector<spaecies::VariableArray<double>> states{initial_state};
   std::vector<RainshaftDerivedVars> dvars;
   // This is a very inelegant way to keep the latest solution in scope,
   // since solutions have const members and can't be copied over.

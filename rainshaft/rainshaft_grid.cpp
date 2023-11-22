@@ -1,5 +1,4 @@
 #include "rainshaft_grid.hpp"
-#include "rainshaft_state.hpp"
 #include <stdexcept>
 #include <cmath>
 

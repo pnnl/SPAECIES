@@ -12,7 +12,6 @@ add_executable(rainshaft
   rainshaft_grid.cpp
   rainshaft_ncio.cpp
   rainshaft_solution.cpp
-  rainshaft_state.cpp
   rainshaft_sum_process.cpp
   rainshaft_tendency.cpp
   saturation.cpp

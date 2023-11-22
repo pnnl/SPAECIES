@@ -6,7 +6,6 @@
 #include "nudging.hpp"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
-#include "rainshaft_state.hpp"
 #include "rainshaft_tendency.hpp"
 #include "rainshaft_solution.hpp"
 #include "rainshaft_ncio.hpp"
@@ -44,7 +43,7 @@ int main(int argc, char** argv)
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
-  double dt = 1.e-3;
+  double dt = 1.;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -54,8 +53,20 @@ int main(int argc, char** argv)
   auto nlev = grid.nlev;
   // Set up initial condition.
   SaturationFormulae sat_form(constants);
-  // Initial condition for nr and qr is just 0, and allocate t and q as well.
-  std::vector<double> t(nlev, 0.), q(nlev, 0.), nr(nlev, 0.), qr(nlev, 0.);
+
+  spaecies::Domain dom;
+  spaecies::DimensionPtr lev_dim = dom.add_dimension("level", nlev);
+  spaecies::VarDescPtr t_desc = dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K");
+  spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
+  spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
+  spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
+  std::vector<spaecies::VarDescPtr> state_descs = {t_desc, q_desc, nr_desc, qr_desc};
+  spaecies::VariableArray<double> initial_state(state_descs);
+  auto t = initial_state.get_variable("T");
+  auto q = initial_state.get_variable("q");
+  auto nr = initial_state.get_variable("nr");
+  auto qr = initial_state.get_variable("qr");
+
   // Coming up with an initial condition for t and q is slightly tricky, because
   // we only have an implicit relationship between t, q, and dz. But since the
   // effect of q on layer height is not large, start by ignoring it, in which
@@ -95,16 +106,22 @@ int main(int argc, char** argv)
     std::cerr << "Initial condition iteration failed to converge." << std::endl;
     return 1;
   }
-  RainshaftState initial_state(t, q, nr, qr);
   RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
   // Sedimentation process.
-  Sedimentation sed(constants, false, false);
+  Sedimentation sed(constants, true, false);
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(constants, &sat_form, false, false);
+  Evaporation evap(constants, &sat_form, true, false);
   // Nudging to initial condition.
-  Nudging nudge(nudge_time_scale, t, q);
+  // SPS: Need some kind of span-like interface to avoid having to
+  // do this copy.
+  std::vector<double> t_vec, q_vec;
+  for (int i = 0; i != nlev; ++i) {
+    t_vec.push_back(t[i]);
+    q_vec.push_back(q[i]);
+  }
+  Nudging nudge(nudge_time_scale, t_vec, q_vec);
   // Sum of all processes.
   std::vector<const RainshaftProcess *> micro_processes{&sed};
   SumProcess all_micro = SumProcess(micro_processes);
@@ -113,28 +130,31 @@ int main(int argc, char** argv)
   SumProcess all_local = SumProcess(local_processes);
   // Evolve state forward.
   // P3 Settings
-  // ForwardEulerIntegrator sed_step(&constants, &grid, &sed, &sun_ctxt);
+  // ForwardEulerIntegrator sed_step(&constants, &grid, &sed, state_descs, &sun_ctxt);
   // SedCflIntegrator sed_loop(&constants, &grid, &sed, &sed_step);
-  // ForwardEulerIntegrator local_step(&constants, &grid, &all_local, &sun_ctxt);
+  // ForwardEulerIntegrator local_step(&constants, &grid, &all_local, state_descs, &sun_ctxt);
   // std::vector<const RainshaftIntegrator *> seq_ints{&local_step, &sed_loop};
   // SequentialSplitIntegrator seq_step(seq_ints);
   // FixedSubstepIntegrator intg(&seq_step, dt);
   // ARKODE Settings
-  // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
+  // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, state_descs, &sun_ctxt);
   // FixedSubstepIntegrator intg(&micro_step, dt);
   // Pure Forward Euler Settings
   // ForwardEulerIntegrator micro_step(constants, grid, &all_micro);
-  IMEXIntegrator micro_step(constants, grid, &all_local, &all_micro, dt, 4, 1);
+  IMEXIntegrator micro_step(constants, grid, &all_local, &all_micro, state_descs, dt, 4, 1);
   FixedSubstepIntegrator intg(&micro_step, dt);
+  // Pure Forward Euler Settings
+  // ForwardEulerIntegrator micro_step(&constants, &grid, &all_micro, state_descs, &sun_ctxt);
+  // FixedSubstepIntegrator intg(&micro_step, dt);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);
   auto after_sol = high_resolution_clock::now();
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_1ms_no_table.nc");
+  NetcdfWriter writer("./rainshaft_ark2_1s.nc");
   writer.write_grid(grid);
-  writer.write_states(solution.states);
+  writer.write_variable_arrays(solution.states);
   writer.write_derived_vars(solution.dvars);
   writer.write_num_rhs_evals(solution.num_rhs_evals);
   writer.write_walltime_ms(walltime_ms.count());

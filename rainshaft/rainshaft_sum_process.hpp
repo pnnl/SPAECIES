@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <vector>
 
+#include "spaecies.hpp"
+
 #include "rainshaft_process.hpp"
 
 class SumProcess : public RainshaftProcess {
@@ -16,7 +18,7 @@ public:
   // Calculate tendency from current state.
   RainshaftTendency calc_tend(const RainshaftConstants& constants,
                               const RainshaftGrid& grid,
-                              const RainshaftState& state,
+                              const spaecies::VariableArray<double>& state,
                               const RainshaftDerivedVars& dvars) const;
 
 private:

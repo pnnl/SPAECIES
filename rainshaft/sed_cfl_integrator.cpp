@@ -11,8 +11,8 @@ SedCflIntegrator::SedCflIntegrator(const RainshaftConstants* constants,
 
 RainshaftSolution SedCflIntegrator::integrate(double initial_time,
                                               double final_time,
-                                              const RainshaftState& initial_state) const {
-  std::vector<RainshaftState> states{initial_state};
+                                              const spaecies::VariableArray<double>& initial_state) const {
+  std::vector<spaecies::VariableArray<double>> states{initial_state};
   std::vector<RainshaftDerivedVars> dvars{RainshaftDerivedVars(*constants, *grid, initial_state)};
   int num_rhs_evals = 0;
   double current_time = initial_time;

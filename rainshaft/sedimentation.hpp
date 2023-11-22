@@ -4,6 +4,8 @@
 #include <optional>
 #include <tuple>
 
+#include "spaecies.hpp"
+
 #include "lookup_linear.hpp"
 #include "rainshaft_process.hpp"
 
@@ -19,7 +21,7 @@ public:
   // Calculate tendency from current state.
   RainshaftTendency calc_tend(const RainshaftConstants& constants,
                               const RainshaftGrid& grid,
-                              const RainshaftState& state,
+                              const spaecies::VariableArray<double>& state,
                               const RainshaftDerivedVars& dvars) const;
 
   // For a given value of lambdar, what are the rain number and mass fall speeds?

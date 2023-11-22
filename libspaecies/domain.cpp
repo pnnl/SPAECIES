@@ -16,6 +16,7 @@ DimensionPtr Domain::get_dimension(const std::string& name) {
   };
   DimensionPtr dim_ptr = *std::find_if(dimensions.begin(), dimensions.end(),
                                        matches_name);
+  // SPS: need to cover case where variable is not found.
   return dim_ptr;
 }
 
@@ -48,6 +49,7 @@ VarDescPtr Domain::get_var_desc(const std::string& name) {
   };
   VarDescPtr var_desc = *std::find_if(var_descs.begin(), var_descs.end(),
                                       matches_name);
+  // SPS: need to cover case where variable is not found.
   return var_desc;
 }
 

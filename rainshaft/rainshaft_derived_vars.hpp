@@ -2,9 +2,10 @@
 #define RAINSHAFT_DERIVED_VARS_HPP
 #include <vector>
 
+#include "spaecies.hpp"
+
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
-#include "rainshaft_state.hpp"
 
 class RainshaftDerivedVars {
 
@@ -13,7 +14,7 @@ public:
   // Constructor from state.
   RainshaftDerivedVars(const RainshaftConstants& constants,
                        const RainshaftGrid& grid,
-                       const RainshaftState& state);
+                       const spaecies::VariableArray<double>& state);
 
   // Cell heights (m)
   const std::vector<double> dz;

@@ -3,6 +3,8 @@
 #include <vector>
 #include <optional>
 
+#include "spaecies.hpp"
+
 #include "lookup_linear.hpp"
 #include "rainshaft_process.hpp"
 #include "saturation.hpp"
@@ -20,7 +22,7 @@ public:
   // Calculate tendency from current state.
   RainshaftTendency calc_tend(const RainshaftConstants& constants,
                               const RainshaftGrid& grid,
-                              const RainshaftState& state,
+                              const spaecies::VariableArray<double>& state,
                               const RainshaftDerivedVars& dvars) const;
 
   // Calculate characteristic velocity used for velocity calculation.

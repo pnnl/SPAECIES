@@ -8,10 +8,11 @@ IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
                                        const RainshaftGrid &grid,
                                        const RainshaftProcess *const process_exp,
                                        const RainshaftProcess *const process_imp,
+                                       const std::vector<spaecies::VarDescPtr>& var_descs,
                                        const double dt,
                                        const int order,
                                        const int steps_per_output)
-    : SundialsIntegrator(constants, grid, {process_exp, process_imp}, steps_per_output),
+    : SundialsIntegrator(constants, grid, {process_exp, process_imp}, var_descs, steps_per_output),
       dt(dt), order(order)
 {
 }
@@ -19,7 +20,7 @@ IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
 // SPS: Need to generalize this to get output states at arbitary times.
 RainshaftSolution IMEXIntegrator::integrate(double initial_time,
                                                 double final_time,
-                                                const RainshaftState &initial_state) const
+                                                const spaecies::VariableArray<double> &initial_state) const
 {
   auto y = state_to_n_vector(sun_ctxt, initial_state);
   void *arkode_mem = ARKStepCreate(create_f<0>(), create_f<1>(), initial_time, y, sun_ctxt);
@@ -46,7 +47,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   const sunrealtype reltol = fac * 1.e-2;
   auto abstol = N_VClone(y);
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
-  const auto nz = initial_state.t.size();
+  const auto nz = user_data.grid.nlev;
   for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[j] = fac * 1.e-1;

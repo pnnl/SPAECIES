@@ -14,7 +14,7 @@ public:
   virtual T& operator[](std::size_t idx) = 0;
   virtual const T operator[](std::size_t idx) const = 0;
   // Get the variable size.
-  std::size_t size() {
+  std::size_t size() const {
     return var_desc->size();
   }
 

@@ -1,7 +1,7 @@
 #include "rainshaft_solution.hpp"
 #include <stdexcept>
 
-RainshaftSolution::RainshaftSolution(const std::vector<RainshaftState>& state_vec,
+RainshaftSolution::RainshaftSolution(const std::vector<spaecies::VariableArray<double>>& state_vec,
                                      const std::vector<RainshaftDerivedVars>& dvar_vec,
                                      int num_rhs_evals_in)
   : states(state_vec), dvars(dvar_vec), num_rhs_evals(num_rhs_evals_in) {

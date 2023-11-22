@@ -1,5 +1,8 @@
 #ifndef SED_CFL_INTEGRATOR_HPP
 #define SED_CFL_INTEGRATOR_HPP
+
+#include "spaecies.hpp"
+
 #include "rainshaft_integrator.hpp"
 #include "sedimentation.hpp"
 
@@ -14,7 +17,7 @@ public:
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const RainshaftState& initial_state) const;
+                              const spaecies::VariableArray<double>& initial_state) const;
 
 private:
 

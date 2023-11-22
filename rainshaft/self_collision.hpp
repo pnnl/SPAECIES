@@ -2,6 +2,8 @@
 #define SELF_COLLISION_HPP
 #include <vector>
 
+#include "spaecies.hpp"
+
 #include "rainshaft_process.hpp"
 
 class SelfCollision : public RainshaftProcess {
@@ -11,7 +13,7 @@ public:
   // Calculate tendency from current state.
   RainshaftTendency calc_tend(const RainshaftConstants& constants,
                               const RainshaftGrid& grid,
-                              const RainshaftState& state,
+                              const spaecies::VariableArray<double>& state,
                               const RainshaftDerivedVars& dvars) const;
 
   // For given rain variables, measure whether collisions typically end

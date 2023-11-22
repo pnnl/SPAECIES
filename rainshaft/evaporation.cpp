@@ -99,34 +99,38 @@ Evaporation::Evaporation(const RainshaftConstants& constants,
 
 RainshaftTendency Evaporation::calc_tend(const RainshaftConstants& constants,
                                          const RainshaftGrid& grid,
-                                         const RainshaftState& state,
+                                         const spaecies::VariableArray<double>& state,
                                          const RainshaftDerivedVars& dvars) const {
   std::vector<double> t_tend(grid.nlev, 0.), q_tend(grid.nlev, 0.);
   std::vector<double> nr_tend(grid.nlev, 0.), qr_tend(grid.nlev, 0.);
+  auto t = state.get_variable("T");
+  auto q = state.get_variable("q");
+  auto nr = state.get_variable("nr");
+  auto qr = state.get_variable("qr");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     // Skip the rest of this if no rain.
-    if (state.qr[il] < constants.qsmall) {
+    if (qr[il] < constants.qsmall) {
       continue;
     }
-    double q_sat_dry = sat_form->q_sat_dry(state.t[il], grid.p_mid[il]);
+    double q_sat_dry = sat_form->q_sat_dry(t[il], grid.p_mid[il]);
     // Skip the rest of this if not saturated.
-    if (q_sat_dry < state.q[il]) {
+    if (q_sat_dry < q[il]) {
       continue;
     }
-    double dv = calc_diffusivity(state.t[il], grid.p_mid[il]);
-    double visc_over_rho = calc_dynamic_viscosity(state.t[il]) / dvars.rho_dry[il];
+    double dv = calc_diffusivity(t[il], grid.p_mid[il]);
+    double visc_over_rho = calc_dynamic_viscosity(t[il]) / dvars.rho_dry[il];
     double schmidt_num = visc_over_rho / dv;
     double v_evap = calc_v_evap(constants, dvars.lambdar[il]);
-    double inv_tau = 2. * constants.pi * state.nr[il] * dvars.rho_dry[il] * dv;
+    double inv_tau = 2. * constants.pi * nr[il] * dvars.rho_dry[il] * dv;
     inv_tau *= 0.78 / dvars.lambdar[il] + (0.32 * pow(schmidt_num, 1./3.)
                                        * sqrt(1./visc_over_rho) * v_evap);
     double abl = 1. + (constants.latvap*constants.latvap * q_sat_dry
                        / (constants.cp * constants.rvapor
-                          * state.t[il]*state.t[il]));
-    q_tend[il] = (q_sat_dry - state.q[il]) * inv_tau / abl;
+                          * t[il]*t[il]));
+    q_tend[il] = (q_sat_dry - q[il]) * inv_tau / abl;
     t_tend[il] = - q_tend[il] * (constants.latvap / constants.cp);
     qr_tend[il] = - q_tend[il];
-    nr_tend[il] = - q_tend[il] * (state.nr[il] / state.qr[il]);
+    nr_tend[il] = - q_tend[il] * (nr[il] / qr[il]);
   }
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }

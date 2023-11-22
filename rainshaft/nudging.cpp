@@ -13,13 +13,15 @@ Nudging::Nudging(double time_scale_in, const std::vector<double>& t, const std::
 
 RainshaftTendency Nudging::calc_tend(const RainshaftConstants& constants,
                                      const RainshaftGrid& grid,
-                                     const RainshaftState& state,
+                                     const spaecies::VariableArray<double>& state,
                                      const RainshaftDerivedVars& dvars) const {
   std::vector<double> t_tend(grid.nlev, 0.), q_tend(grid.nlev, 0.);
   std::vector<double> nr_tend(grid.nlev, 0.), qr_tend(grid.nlev, 0.);
+  auto t = state.get_variable("T");
+  auto q = state.get_variable("q");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
-    t_tend[il] = (t0[il] - state.t[il]) / time_scale;
-    q_tend[il] = (q0[il] - state.q[il]) / time_scale;
+    t_tend[il] = (t0[il] - t[il]) / time_scale;
+    q_tend[il] = (q0[il] - q[il]) / time_scale;
   }
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }

@@ -8,7 +8,7 @@ FixedSubstepIntegrator::FixedSubstepIntegrator(const RainshaftIntegrator *inner_
 
 RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
                                                     double final_time,
-                                                    const RainshaftState& initial_state) const {
+                                                    const spaecies::VariableArray<double>& initial_state) const {
   double time_interval = final_time - initial_time;
   double approx_num_steps = time_interval / dt;
   double rounded_num_steps = std::round(approx_num_steps);
@@ -24,7 +24,7 @@ RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
     need_partial_step = true;
     partial_step_size = time_interval - (num_full_steps * dt);
   }
-  std::vector<RainshaftState> states{initial_state};
+  std::vector<spaecies::VariableArray<double>> states{initial_state};
   std::vector<RainshaftDerivedVars> dvars;
   int num_rhs_evals = 0;
   double current_time = initial_time;
