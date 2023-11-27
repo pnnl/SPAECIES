@@ -18,11 +18,11 @@ RainshaftTendency Nudging::calc_tend(const RainshaftConstants& constants,
   std::vector<double> t_tend(grid.nlev, 0.), q_tend(grid.nlev, 0.);
   std::vector<double> nr_tend(grid.nlev, 0.), qr_tend(grid.nlev, 0.);
   for (std::size_t il = 0; il != grid.nlev; ++il) {
-    t_tend[il] = (t0[il] - state.t[il]) / time_scale;
-    q_tend[il] = (q0[il] - state.q[il]) / time_scale;
+    // t_tend[il] = (t0[il] - state.t[il]) / time_scale;
+    // q_tend[il] = (q0[il] - state.q[il]) / time_scale;
 
-    // t_tend[il] = 0.0;
-    // q_tend[il] = 0.0;
+    t_tend[il] = 0.0;
+    q_tend[il] = 0.0;
   }
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }

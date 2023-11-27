@@ -161,7 +161,7 @@ int main(int argc, char** argv)
   flag = SUNLogger_SetWarningFilename(logger, "stderr");
 
   // logging file name
-  flag = SUNLogger_SetInfoFilename(logger, "rainshaft1.log");
+  flag = SUNLogger_SetInfoFilename(logger, "rainshaft_noreaction.log");
 
 
 
@@ -184,7 +184,7 @@ int main(int argc, char** argv)
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_default2ndorder_2000.nc");
+  NetcdfWriter writer("./rainshaft_default2ndorder_noreaction_2000.nc");
   writer.write_grid(grid);
   writer.write_states(solution.states);
   writer.write_derived_vars(solution.dvars);

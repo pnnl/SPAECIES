@@ -1,0 +1,30 @@
+add_executable(rainshaft
+  evaporation.cpp
+  explicit_integrator.cpp
+  fixed_substep_integrator.cpp
+  forward_euler_integrator.cpp
+  lookup_linear.cpp
+  lookup_table.cpp
+  nudging.cpp
+  rainshaft_driver.cpp
+  rainshaft_derived_vars.cpp
+  rainshaft_grid.cpp
+  rainshaft_ncio.cpp
+  rainshaft_solution.cpp
+  rainshaft_state.cpp
+  rainshaft_sum_process.cpp
+  rainshaft_tendency.cpp
+  saturation.cpp
+  sed_cfl_integrator.cpp
+  sedimentation.cpp
+  self_collision.cpp
+  sequential_split_integrator.cpp
+  sundials_integrator.cpp
+)
+target_link_libraries(rainshaft
+  NetCDF::NetCDF
+  SUNDIALS::arkode
+  spaecies)
+target_include_directories(rainshaft PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}
+)
