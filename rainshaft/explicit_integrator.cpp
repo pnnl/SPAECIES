@@ -40,7 +40,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   N_VDestroy(y0);
 
   // SPS: And this return value.
-  ERKStepSetOrder(arkode_mem, 2);
+  ERKStepSetOrder(arkode_mem, 3);
 
   // custom 2nd order method from Steven
   // sunrealtype a[] = {0,0,0,0,0.3333333333333333,0,0,0,-2.3333333333333335,3,0,0,3,-4,2,0};

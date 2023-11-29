@@ -41,6 +41,8 @@ int main(int argc, char** argv)
   // reusable error flag
   int flag;
 
+  bool uniform_grid_flag = true;
+
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
   double model_top = 3.e3;
@@ -59,7 +61,7 @@ int main(int argc, char** argv)
   // Final time to integrate to.
   double final_time = dt;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
-                                           srf_temp, lapse_rate);
+                                           srf_temp, lapse_rate, uniform_grid_flag);
   auto nlev = grid.nlev;
 
   sundials::Context sun_ctxt = sundials::Context();
@@ -73,7 +75,8 @@ int main(int argc, char** argv)
   // effect of q on layer height is not large, start by ignoring it, in which
   // case we do have an explicit relationship between t and dz.
   double rog = constants.rdry / constants.g;
-  std::vector<double> z_int(nlev, 0.);
+  // std::cout << nlev << std::endl;
+  std::vector<double> z_int(nlev+1, 0.);
   for (int il = nlev - 1; il != -1; --il) {
     double pdel = grid.p_int[il+1]-grid.p_int[il];
     t[il] = (srf_temp - lapse_rate*z_int[il+1])
@@ -161,7 +164,7 @@ int main(int argc, char** argv)
   flag = SUNLogger_SetWarningFilename(logger, "stderr");
 
   // logging file name
-  flag = SUNLogger_SetInfoFilename(logger, "rainshaft_noreaction.log");
+  flag = SUNLogger_SetInfoFilename(logger, "rainshaft_reaction.log");
 
 
 

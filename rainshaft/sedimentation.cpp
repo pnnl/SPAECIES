@@ -57,13 +57,11 @@ RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants& constants,
     speeds = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
     v0.push_back(speeds[0]);
     v3.push_back(speeds[1]);
-    // nr_tend_lev = v0[il-1]*state.nr[il-1]*dvars.rho_dry[il-1] - v0[il]*state.nr[il]*dvars.rho_dry[il];
-    // nr_tend_lev /= dvars.dz[il] * dvars.rho_dry[il];
-    // qr_tend_lev = v3[il-1]*state.qr[il-1]*dvars.rho_dry[il-1] - v3[il]*state.qr[il]*dvars.rho_dry[il];
-    // qr_tend_lev /= dvars.dz[il] * dvars.rho_dry[il];
+    nr_tend_lev = v0[il-1]*state.nr[il-1]*dvars.rho_dry[il-1] - v0[il]*state.nr[il]*dvars.rho_dry[il];
+    nr_tend_lev /= dvars.dz[il] * dvars.rho_dry[il];
+    qr_tend_lev = v3[il-1]*state.qr[il-1]*dvars.rho_dry[il-1] - v3[il]*state.qr[il]*dvars.rho_dry[il];
+    qr_tend_lev /= dvars.dz[il] * dvars.rho_dry[il];
 
-    nr_tend_lev = 0.0;
-    qr_tend_lev = 0.0;
     nr_tend.push_back(nr_tend_lev);
     qr_tend.push_back(qr_tend_lev);
   }

@@ -11,8 +11,7 @@ RainshaftTendency SelfCollision::calc_tend(const RainshaftConstants& constants,
   std::vector<double> nr_tend(grid.nlev, 0.), qr_tend(grid.nlev, 0.);
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     double b = breakup_fac(constants, state.nr[il], state.qr[il]);
-    // nr_tend[il] = -5.78 * b * state.nr[il] * state.qr[il] * dvars.rho_dry[il];
-    nr_tend[il] = 0.0;
+    nr_tend[il] = -5.78 * b * state.nr[il] * state.qr[il] * dvars.rho_dry[il];
   }
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }

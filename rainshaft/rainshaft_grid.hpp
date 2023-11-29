@@ -25,13 +25,14 @@ public:
   const std::vector<double> p_int;
   // Pressure at cell "midpoints" (Pa)
   const std::vector<double> p_mid;
-
 };
 
 RainshaftGrid make_e3sm_like_grid(RainshaftConstants constants,
                                   double model_top, double srf_pres,
-                                  double srf_temp, double lapse_rate);
+                                  double srf_temp, double lapse_rate,
+                                  bool uniform_grid_flag);
 
-void generate_pcoord(const double* e3sm_ilev_init, double* e3sm_ilev);
+void generate_pcoord(const double* e3sm_ilev, const std::size_t num_e3sm_levs,
+                     const bool uniform_grid_flag);
 
 #endif // RAINSHAFT_GRID_HPP
