@@ -43,18 +43,6 @@ RainshaftSolution ForwardEulerIntegrator::integrate(double initial_time,
   // SPS: And this return value.
   ERKStepGetNumRhsEvals(arkode_mem, &num_rhs_evals);
 
-  // get last step size that SUNDIALS chose
-  double last_step = 0.0;
-  ERKStepGetLastStep(arkode_mem, &last_step);
-
-  // current time
-  double tcur = 0.0;
-  ERKStepGetCurrentTime(arkode_mem, &tcur);
-
-  
-
-  // TODO: 
-
   // SPS: Make RAII wrapper for this.
   ERKStepFree(&arkode_mem);
   return RainshaftSolution(states, dvars, num_rhs_evals);

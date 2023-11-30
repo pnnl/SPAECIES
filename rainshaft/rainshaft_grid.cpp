@@ -2,7 +2,6 @@
 #include "rainshaft_state.hpp"
 #include <stdexcept>
 #include <cmath>
-#include <iostream>
 
 std::vector<double> get_midpoints(const std::vector<double>& int_vec) {
   std::vector<double> mid_vec;
@@ -25,7 +24,7 @@ void generate_pcoord(double* e3sm_ilev, const std::size_t num_e3sm_levs,
 
   if (uniform_grid_flag)
   {
-    double dp = (1000.0 - 1.0) / num_e3sm_levs;
+    double dp = (1000.0 - 1.0) / (num_e3sm_levs-1);
 
     for (std::size_t i = 0; i < num_e3sm_levs; ++i) {
       e3sm_ilev[i] = 1.0 + i*dp;

@@ -1,16 +1,7 @@
 #include "explicit_integrator.hpp"
 #include "arkode/arkode_erkstep.h"
 #include <iostream>
-#include <cstdlib>
-#include <cstdio>
 #include "sundials/sundials_context.h"
-#include "sunadaptcontroller/sunadaptcontroller_soderlind.h"
-
-#include "sedimentation.hpp"
-#include <algorithm>
-#include <cmath>
-
-using namespace std;
 
 ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants* constants,
                                        const RainshaftGrid* grid,
@@ -32,11 +23,6 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   //void* arkode_mem = ARKStepCreate(rainshaft_f, NULL, initial_time, y0, *sun_ctxt);
 
   void* arkode_mem = ERKStepCreate(rainshaft_f, initial_time, y0, *sun_ctxt);
-
-  
-
-  // ERKStepSetFixedStep(arkode_mem, 3.0);
-
   N_VDestroy(y0);
 
   // SPS: And this return value.
@@ -62,32 +48,18 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   realtype *tol_data = N_VGetArrayPointer_Serial(abstol);
 
   // Sean's original tolerances
-  // for (sunindextype j = 0; j != nz; ++j) {
-  //   tol_data[j] = fac * 1.e-1;
-  // }
-  // for (sunindextype j = 0; j != nz; ++j) {
-  //   tol_data[nz + j] = fac * 1.e-5;
-  // }
-  // for (sunindextype j = 0; j != nz; ++j) {
-  //   tol_data[2*nz + j] = fac * 1.e-1;
-  // }
-  // for (sunindextype j = 0; j != nz; ++j) {
-  //   tol_data[3*nz + j] = fac * 1.e-8;
-  // }
-
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[j] = 1.e-10;
+    tol_data[j] = fac * 1.e-1;
   }
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[nz + j] = 1.e-10;
+    tol_data[nz + j] = fac * 1.e-5;
   }
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[2*nz + j] = 1.e-10;
+    tol_data[2*nz + j] = fac * 1.e-1;
   }
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[3*nz + j] = 1.e-10;
+    tol_data[3*nz + j] = fac * 1.e-8;
   }
-
 
   // SPS: And this return value.
   ERKStepSVtolerances(arkode_mem, reltol, abstol);
@@ -98,23 +70,15 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   // prevent step behavior
   ERKStepSetFixedStepBounds(arkode_mem, 1.0, 1.0);
 
-  // // Steven's adaptivity (PID controller, default in arkode)
-  // ERKStepSetAdaptivityMethod(arkode_mem, 0, 1, 1, NULL);
+  // Steven's adaptivity (PID controller, default in arkode)
+  ERKStepSetAdaptivityMethod(arkode_mem, 0, 1, 1, NULL);
 
   // I-controller
   // ERKStepSetAdaptivityMethod(arkode_mem, 2, 1, 1, NULL);
 
-  // new adaptivity controls (PID?)
-  SUNAdaptController controller = SUNAdaptController_Soderlind(*sun_ctxt);
-  ERKStepSetAdaptController(arkode_mem, controller);
-
-  SUNAdaptController_SetParams_PID(controller, 1.0/18.0, 1.0/9.0, 1.0/18.0);
-
-  SUNAdaptController_SetErrorBias(controller, 1);
   ERKStepSetErrorBias(arkode_mem, 1);
 
   ERKStepSetSafetyFactor(arkode_mem, 0.5);
-
 
   // set max growth of the adaptive time step (limit it to a factor of 100)
   ERKStepSetMaxFirstGrowth(arkode_mem, 100.0);

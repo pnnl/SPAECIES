@@ -1,4 +1,3 @@
-// #include "example_utilities.hpp"
 #include "spaecies.hpp"
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
@@ -164,7 +163,7 @@ int main(int argc, char** argv)
   flag = SUNLogger_SetWarningFilename(logger, "stderr");
 
   // logging file name
-  flag = SUNLogger_SetInfoFilename(logger, "rainshaft_reaction.log");
+  flag = SUNLogger_SetInfoFilename(logger, "rainshaft.log");
 
 
 
@@ -187,7 +186,7 @@ int main(int argc, char** argv)
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_default2ndorder_noreaction_2000.nc");
+  NetcdfWriter writer("./rainshaft.nc");
   writer.write_grid(grid);
   writer.write_states(solution.states);
   writer.write_derived_vars(solution.dvars);
