@@ -1,4 +1,4 @@
-#include "explicit_integrator.hpp"
+#include "implicit_integrator.hpp"
 #include "arkode/arkode_arkstep.h"
 #include <iostream>
 #include <fstream>
@@ -15,40 +15,17 @@
 
 using namespace std;
 
-extern "C" {
-  int CFLStabilityFn(N_Vector y, realtype t, realtype *hstab, void *user_data) {
-    RainshaftState state = n_vector_to_state(y);
-    RainshaftUserData *cast_data = (RainshaftUserData*) user_data;
-    const RainshaftConstants *constants = cast_data->constants;
-    const RainshaftGrid *grid = cast_data->grid;
-    RainshaftDerivedVars dvars = RainshaftDerivedVars(*constants,
-                                                      *grid,
-                                                      state);
-    Sedimentation sed(*constants, false, false);
-    double lambdar_top = constants->pi * constants->rhow * constants->nr_top / constants->qr_top;
-    lambdar_top = cbrt(lambdar_top);
-    std::vector<double> speeds_top = sed.rain_fall_speeds(*constants, constants->rho_top, lambdar_top);
-    double cfl_time = dvars.dz[0] / speeds_top[1];
-    for (int il = 0; il != grid->nlev - 1; ++il) {
-      std::vector<double> speeds = sed.rain_fall_speeds(*constants, dvars.rho_dry[il], dvars.lambdar[il]);
-      cfl_time = std::max(cfl_time, dvars.dz[il+1] / speeds[1]);
-    }
-    *hstab = 0.99 * cfl_time;
-    return 0;
-  }
-}
 
-
-ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants* constants,
+ImplicitIntegrator::ImplicitIntegrator(const RainshaftConstants* constants,
                                        const double dt_in,
                                        const RainshaftGrid* grid,
                                        const RainshaftProcess* process,
                                        sundials::Context *sun_ctxt)
-  : SundialsIntegrator(constants, grid, process, sun_ctxt) {
+  : SundialsIntegrator(constants, grid, process, sun_ctxt), dt(dt_in) {
 }
 
 // SPS: Need to generalize this to get output states at arbitary times.
-RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
+RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
                                                 double final_time,
                                                 const RainshaftState& initial_state) const {
   int flag;
@@ -91,20 +68,6 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   N_Vector abstol = N_VNew_Serial(num_variables, *sun_ctxt);
   realtype *tol_data = N_VGetArrayPointer_Serial(abstol);
 
-  // Sean's original tolerances
-  // for (sunindextype j = 0; j != nz; ++j) {
-  //   tol_data[j] = fac * 1.e-1;
-  // }
-  // for (sunindextype j = 0; j != nz; ++j) {
-  //   tol_data[nz + j] = fac * 1.e-5;
-  // }
-  // for (sunindextype j = 0; j != nz; ++j) {
-  //   tol_data[2*nz + j] = fac * 1.e-1;
-  // }
-  // for (sunindextype j = 0; j != nz; ++j) {
-  //   tol_data[3*nz + j] = fac * 1.e-8;
-  // }
-
   for (sunindextype j = 0; j != nz; ++j) {
     tol_data[j] = 1.e-10;
   }
@@ -146,20 +109,6 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   ARKStepSetSafetyFactor(arkode_mem, 0.55);
 
 
-  // // set max growth of the adaptive time step (limit it to a factor of 100)
-  // ERKStepSetMaxFirstGrowth(arkode_mem, 100.0);
-
-  // ERKStepSetMaxStep(arkode_mem, 2.5);
-
-
-  // ERKStepSetMaxGrowth(arkode_mem, 100.0);
-
-
-  // ERKStepSetStabilityFn(arkode_mem, CFLStabilityFn, (void*) &user_data);
-  // ERKStepSetCFLFraction(arkode_mem, 0.99);
-
-
-
 
   // SPS: And this return value (and/or returned time).
   realtype tret = 0.;
@@ -167,23 +116,24 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
 
   while (tret < final_time) {
 
-    double dt = 40.96;
+    // use adaptive implicit stepper until t = 300.0
+    // ReInit here is in case of switching to a different method
+    if (tret > 300.0 & tret < 300.0+2.0*dt) {
+      ARKStepReInit(arkode_mem, NULL, rainshaft_f, tret, yout);
+      ARKStepSetTableName(arkode_mem, "ARKODE_KVAERNO_5_3_4", "ARKODE_ERK_NONE");
+      // ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(0.001));
+      ARKStepSetOrder(arkode_mem, 4);
+    }
 
-    // if (tret > 300.0 & tret < 305.0) {
-    //   ARKStepReInit(arkode_mem, NULL, rainshaft_f, tret, yout);
-    //   ARKStepSetTableName(arkode_mem, "ARKODE_KVAERNO_5_3_4", "ARKODE_ERK_NONE");
-    //   ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(0.001));
-    //   ARKStepSetOrder(arkode_mem, 4);
-    // }
-
-    // if (tret > 300.0) {
-    //   // ARKStepReInit(arkode_mem, rainshaft_f, NULL, tret, yout);
-    //   ARKStepSetFixedStep(arkode_mem, dt);
-    // } 
+    // use fixed step for t > 300
+    if (tret > 300.0) {
+      // ARKStepReInit(arkode_mem, rainshaft_f, NULL, tret, yout);
+      ARKStepSetFixedStep(arkode_mem, dt);
+    } 
 
 
-    // ARKStepSetFixedStep(arkode_mem, 0.01);
-
+    // ARK_NORMAL for last time step so that sundials interpolates
+    // back to final_time
     if (tret + dt > final_time) {
       ARKStepEvolve(arkode_mem, final_time, yout, &tret, ARK_NORMAL);
     } else {
@@ -230,16 +180,16 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
     N_Vector yerr_ewt = N_VClone(yerr);
     N_VProd(yerr, eweight, yerr_ewt);
 
-    // write to file
-    // char myfilename[]
-    FILE * fp;
-    char filepath[256];
-    snprintf (filepath, sizeof(filepath), "/Users/dong9/Desktop/rainshaft_errorvec/rainshaft_errorvec%d.txt", i);
+    // // write to file
+    // // char myfilename[]
+    // FILE * fp;
+    // char filepath[256];
+    // snprintf (filepath, sizeof(filepath), "/Users/dong9/Desktop/rainshaft_errorvec/rainshaft_errorvec%d.txt", i);
 
-    fp = fopen (filepath, "w+");
-    N_VPrintFile(yerr_ewt, fp);
-    // myfile.close();
-    fclose(fp);
+    // fp = fopen (filepath, "w+");
+    // N_VPrintFile(yerr_ewt, fp);
+    // // myfile.close();
+    // fclose(fp);
 
     std::cout << "tret: " << tret << ", Last time step size: " << last_step << ", Acc-limited steps: " << num_acc_steps << ", Error test fails: " << step_fails << std::endl;
     i++;

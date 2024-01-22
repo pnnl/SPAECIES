@@ -1,5 +1,6 @@
 #include "forward_euler_integrator.hpp"
 #include "arkode/arkode_erkstep.h"
+#include <iostream>
 
 ForwardEulerIntegrator::ForwardEulerIntegrator(const RainshaftConstants* constants,
                                                const RainshaftGrid* grid,

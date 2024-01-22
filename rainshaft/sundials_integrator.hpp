@@ -3,6 +3,7 @@
 #include "rainshaft_integrator.hpp"
 #include "sundials/sundials_context.h"
 #include "nvector/nvector_serial.h"
+#include "sunmatrix/sunmatrix_dense.h"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_state.hpp"
@@ -47,5 +48,8 @@ void tend_to_n_vector(const RainshaftTendency& tend, N_Vector ydot);
 RainshaftState n_vector_to_state(N_Vector y);
 
 int rainshaft_f(realtype t, N_Vector y, N_Vector ydot, void* user_data);
+
+int rainshaft_Jac(realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void* user_data, 
+                  N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
 #endif // SUNDIALS_INTEGRATOR_HPP

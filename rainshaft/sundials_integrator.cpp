@@ -85,3 +85,31 @@ int rainshaft_f(realtype t, N_Vector y, N_Vector ydot, void* user_data) {
   tend_to_n_vector(tend, ydot);
   return 0;
 }
+
+
+int rainshaft_Jac(realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void* user_data, 
+                  N_Vector tmp1, N_Vector tmp2, N_Vector tmp3) {
+  // SPS: Should stop using std::vector to reduce copies and allocations.
+  RainshaftState state = n_vector_to_state(y);
+  sunrealtype* Jdata = SUNDenseMatrix_Data(J);
+
+  // RainshaftUserData *cast_data = (RainshaftUserData*) user_data;
+  // RainshaftDerivedVars dvars = RainshaftDerivedVars(*cast_data->constants,
+  //                                                   *cast_data->grid,
+  //                                                   state);
+  // RainshaftTendency tend = cast_data->process->calc_tend(*cast_data->constants,
+  //                                                        *cast_data->grid,
+  //                                                        state, dvars);
+  // tend_to_n_vector(tend, ydot);
+
+  // loop over columns
+  for (std::size_t il = 1; il != 364; ++il) {
+    // loop over rows
+    for (std::size_t jl = 1; jl != 364; ++jl) {
+      Jdata[(il-1)*364 + jl-1] = SUN_RCONST(0.0);
+    }
+  }
+
+
+  return 0;
+}
