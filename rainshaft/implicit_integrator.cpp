@@ -48,7 +48,7 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
   N_VDestroy(y0);
 
   // SPS: And this return value.
-  int solverOrder = 4;
+  int solverOrder = 5;
   ARKStepSetOrder(arkode_mem, solverOrder);
 
   // SPS: And this return value.
@@ -57,11 +57,16 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
   // Attach linear solver 
   ARKStepSetLinearSolver(arkode_mem, LS, J);
 
-  // test Jacobian routine
-  ARKStepSetJacFn(arkode_mem, rainshaft_Jac);
+  // // test Jacobian routine
+  // ARKStepSetJacFn(arkode_mem, rainshaft_Jac);
 
   // SPS: And this return value.
   ARKStepSetMaxNumSteps(arkode_mem, 20000000.);
+
+  ARKStepSetMaxNonlinIters(arkode_mem, 10);
+  ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(0.000001));
+
+  // ARKStepSStolerances(arkode_mem, 1.e-6, 1.e-11);  
 
   double fac = 1.;
   realtype reltol = fac * 1.e-4;
@@ -86,28 +91,8 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
   ARKStepSVtolerances(arkode_mem, reltol, abstol);
   N_VDestroy(abstol);
   N_Vector yout = N_VNew_Serial(num_variables, *sun_ctxt);
-  
-
-  // // prevent step behavior
-  // ERKStepSetFixedStepBounds(arkode_mem, 1.0, 1.0);
-
-  // // // Steven's adaptivity (PID controller, default in arkode)
-  // ERKStepSetAdaptivityMethod(arkode_mem, 0, 1, 1, NULL);
-
-  // I-controller
-  // ERKStepSetAdaptivityMethod(arkode_mem, 2, 1, 1, NULL);
-
-  // // new adaptivity controls (PID?)
-  // SUNAdaptController controller = SUNAdaptController_Soderlind(*sun_ctxt);
-  // ERKStepSetAdaptController(arkode_mem, controller);
-
-  // SUNAdaptController_SetParams_PID(controller, 1.0/18.0, 1.0/9.0, 1.0/18.0);
-
-  // SUNAdaptController_SetErrorBias(controller, 1);
-  // ERKStepSetErrorBias(arkode_mem, 1);
 
   ARKStepSetSafetyFactor(arkode_mem, 0.55);
-
 
 
   // SPS: And this return value (and/or returned time).
@@ -116,18 +101,22 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
 
   while (tret < final_time) {
 
-    // use adaptive implicit stepper until t = 300.0
+    // use adaptive implicit stepper until t = 312.0
     // ReInit here is in case of switching to a different method
-    if (tret > 300.0 & tret < 300.0+2.0*dt) {
+    if (tret > 312.0 & tret < 317.0) { // probably a better way to do this range
+                                       // so that we don't call ReInit multiple times
       ARKStepReInit(arkode_mem, NULL, rainshaft_f, tret, yout);
-      ARKStepSetTableName(arkode_mem, "ARKODE_KVAERNO_5_3_4", "ARKODE_ERK_NONE");
+      // ARKStepSetTableName(arkode_mem, "ARKODE_KVAERNO_5_3_4", "ARKODE_ERK_NONE");
       // ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(0.001));
-      ARKStepSetOrder(arkode_mem, 4);
+      ARKStepSetOrder(arkode_mem, 5);
+
+      ARKStepSetMaxNonlinIters(arkode_mem, 80);
+      ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(0.000001));
+      std::cout << "Switching method" << std::endl;
     }
 
-    // use fixed step for t > 300
-    if (tret > 300.0) {
-      // ARKStepReInit(arkode_mem, rainshaft_f, NULL, tret, yout);
+    // use fixed step for t > 312
+    if (tret > 312.0) {
       ARKStepSetFixedStep(arkode_mem, dt);
     } 
 
@@ -169,16 +158,21 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
     double last_step = 0.0;
     ARKStepGetLastStep(arkode_mem, &last_step);
 
-    // get error vector
-    // std::cout << NV_LENGTH_S(yout) << std::endl;
-    N_Vector yerr = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt);
-    ARKStepGetEstLocalErrors(arkode_mem, yerr);
+    long int nniters = 0;
+    ARKStepGetNumNonlinSolvIters(arkode_mem, &nniters);
 
-    N_Vector eweight = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt); // N_VClone()
-    ARKStepGetErrWeights(arkode_mem, eweight);
+    long int nncfails = 0;
+    ARKStepGetNumNonlinSolvConvFails(arkode_mem, &nncfails);
 
-    N_Vector yerr_ewt = N_VClone(yerr);
-    N_VProd(yerr, eweight, yerr_ewt);
+    // get rel error vector
+    // N_Vector yerr = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt);
+    // ARKStepGetEstLocalErrors(arkode_mem, yerr);
+
+    // N_Vector eweight = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt); // N_VClone()
+    // ARKStepGetErrWeights(arkode_mem, eweight);
+
+    // N_Vector yerr_ewt = N_VClone(yerr);
+    // N_VProd(yerr, eweight, yerr_ewt);
 
     // // write to file
     // // char myfilename[]
@@ -191,9 +185,8 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
     // // myfile.close();
     // fclose(fp);
 
-    std::cout << "tret: " << tret << ", Last time step size: " << last_step << ", Acc-limited steps: " << num_acc_steps << ", Error test fails: " << step_fails << std::endl;
+    std::cout << "tret: " << tret << ", Last time step size: " << last_step << ", Acc-limited steps: " << num_acc_steps << ", Error test fails: " << step_fails << ", NLS iters: " << nniters << ", NLS conv. fails: " << nncfails << std::endl;
     i++;
-    // ERKStepReset(arkode_mem, tret, yout);
   }
   
 

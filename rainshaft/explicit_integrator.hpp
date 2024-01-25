@@ -6,6 +6,8 @@ class ExplicitIntegrator : public SundialsIntegrator {
 
 public:
 
+  double dt;
+  
   ExplicitIntegrator(const RainshaftConstants* constants,
                      const double dt_in,
                      const RainshaftGrid* grid,

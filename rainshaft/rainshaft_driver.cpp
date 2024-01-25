@@ -57,7 +57,7 @@ int main(int argc, char** argv)
   // Time step size in seconds for substepper i.e. after dt seconds, pass control back to rainshaft code.
   double dt = 2000.0;
   // Time step size in seconds for sundials integrator within each substep
-  double dt_fixedstep = 5.12;
+  double dt_fixedstep = 0.02;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -175,7 +175,7 @@ int main(int argc, char** argv)
 
 
   // ARKODE Settings
-  // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
+  // ExplicitIntegrator micro_step(&constants, dt_fixedstep, &grid, &all_micro, &sun_ctxt);
   ImplicitIntegrator micro_step(&constants, dt_fixedstep, &grid, &all_micro, &sun_ctxt);
   FixedSubstepIntegrator intg(&micro_step, dt);
 
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_order4_kvaerno_imp_dt4096.nc");
+  NetcdfWriter writer("./rainshaft_order5_imp_dt2.nc");
   writer.write_grid(grid);
   writer.write_states(solution.states);
   writer.write_derived_vars(solution.dvars);

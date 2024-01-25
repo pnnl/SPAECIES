@@ -1,5 +1,5 @@
 #include "explicit_integrator.hpp"
-#include "arkode/arkode_arkstep.h"
+#include "arkode/arkode_erkstep.h"
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
@@ -44,7 +44,7 @@ ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants* constants,
                                        const RainshaftGrid* grid,
                                        const RainshaftProcess* process,
                                        sundials::Context *sun_ctxt)
-  : SundialsIntegrator(constants, grid, process, sun_ctxt) {
+  : SundialsIntegrator(constants, grid, process, sun_ctxt), dt(dt_in) {
 }
 
 // SPS: Need to generalize this to get output states at arbitary times.
@@ -59,32 +59,20 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   sunindextype num_variables = nz * 4;
   std::cout << "num vars = " << num_variables << std::endl;
   N_Vector y0 = state_to_n_vector(sun_ctxt, initial_state);
-  // void* arkode_mem = ARKStepCreate(rainshaft_f, NULL, initial_time, y0, *sun_ctxt);
 
-  void* arkode_mem = ARKStepCreate(NULL, rainshaft_f, initial_time, y0, *sun_ctxt);
-
-  SUNLinearSolver LS = nullptr;  // linear solver memory structure
-  SUNMatrix J = nullptr;
-  J = SUNDenseMatrix(num_variables, num_variables, *sun_ctxt);
-  LS = SUNLinSol_Dense(y0, J, *sun_ctxt);
+  void* arkode_mem = ERKStepCreate(rainshaft_f, initial_time, y0, *sun_ctxt);
 
   N_VDestroy(y0);
 
   // SPS: And this return value.
   int solverOrder = 4;
-  ARKStepSetOrder(arkode_mem, solverOrder);
+  ERKStepSetOrder(arkode_mem, solverOrder);
 
   // SPS: And this return value.
-  ARKStepSetUserData(arkode_mem, (void*) &user_data);
-
-  // Attach linear solver 
-  ARKStepSetLinearSolver(arkode_mem, LS, J);
-
-  // test Jacobian routine
-  ARKStepSetJacFn(arkode_mem, rainshaft_Jac);
+  ERKStepSetUserData(arkode_mem, (void*) &user_data);
 
   // SPS: And this return value.
-  ARKStepSetMaxNumSteps(arkode_mem, 20000000.);
+  ERKStepSetMaxNumSteps(arkode_mem, 20000000.);
 
   double fac = 1.;
   realtype reltol = fac * 1.e-4;
@@ -120,7 +108,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
 
 
   // SPS: And this return value.
-  ARKStepSVtolerances(arkode_mem, reltol, abstol);
+  ERKStepSVtolerances(arkode_mem, reltol, abstol);
   N_VDestroy(abstol);
   N_Vector yout = N_VNew_Serial(num_variables, *sun_ctxt);
   
@@ -143,51 +131,20 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   // SUNAdaptController_SetErrorBias(controller, 1);
   // ERKStepSetErrorBias(arkode_mem, 1);
 
-  ARKStepSetSafetyFactor(arkode_mem, 0.55);
-
-
-  // // set max growth of the adaptive time step (limit it to a factor of 100)
-  // ERKStepSetMaxFirstGrowth(arkode_mem, 100.0);
-
-  // ERKStepSetMaxStep(arkode_mem, 2.5);
-
-
-  // ERKStepSetMaxGrowth(arkode_mem, 100.0);
-
-
-  // ERKStepSetStabilityFn(arkode_mem, CFLStabilityFn, (void*) &user_data);
-  // ERKStepSetCFLFraction(arkode_mem, 0.99);
-
-
+  ERKStepSetSafetyFactor(arkode_mem, 0.55);
 
 
   // SPS: And this return value (and/or returned time).
   realtype tret = 0.;
+  double last_step = 0.0;
   int i = 0;
 
   while (tret < final_time) {
 
-    double dt = 40.96;
-
-    // if (tret > 300.0 & tret < 305.0) {
-    //   ARKStepReInit(arkode_mem, NULL, rainshaft_f, tret, yout);
-    //   ARKStepSetTableName(arkode_mem, "ARKODE_KVAERNO_5_3_4", "ARKODE_ERK_NONE");
-    //   ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(0.001));
-    //   ARKStepSetOrder(arkode_mem, 4);
-    // }
-
-    // if (tret > 300.0) {
-    //   // ARKStepReInit(arkode_mem, rainshaft_f, NULL, tret, yout);
-    //   ARKStepSetFixedStep(arkode_mem, dt);
-    // } 
-
-
-    // ARKStepSetFixedStep(arkode_mem, 0.01);
-
-    if (tret + dt > final_time) {
-      ARKStepEvolve(arkode_mem, final_time, yout, &tret, ARK_NORMAL);
+    if (tret + last_step > final_time) {
+      ERKStepEvolve(arkode_mem, final_time, yout, &tret, ARK_NORMAL);
     } else {
-      ARKStepEvolve(arkode_mem, final_time, yout, &tret, ARK_ONE_STEP);
+      ERKStepEvolve(arkode_mem, final_time, yout, &tret, ARK_ONE_STEP);
     }
     
     
@@ -197,53 +154,48 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
     dvars.push_back(calc_dvars(new_state));
 
     long int num_rhs_evals = 0;
-    long int num_rhs_evals_exp = 0;
     // SPS: And this return value.
-    ARKStepGetNumRhsEvals(arkode_mem, &num_rhs_evals_exp, &num_rhs_evals);
+    ERKStepGetNumRhsEvals(arkode_mem, &num_rhs_evals);
 
 
 
     // current time
     double tcur = 0.0;
-    ARKStepGetCurrentTime(arkode_mem, &tcur);
+    ERKStepGetCurrentTime(arkode_mem, &tcur);
 
     long int num_exp_steps = 0;
-    ARKStepGetNumExpSteps(arkode_mem, &num_exp_steps);
+    ERKStepGetNumExpSteps(arkode_mem, &num_exp_steps);
 
     long int num_acc_steps = 0;
-    ARKStepGetNumAccSteps(arkode_mem, &num_acc_steps);
+    ERKStepGetNumAccSteps(arkode_mem, &num_acc_steps);
 
     long int step_fails = 0;
-    ARKStepGetNumErrTestFails(arkode_mem, &step_fails);
+    ERKStepGetNumErrTestFails(arkode_mem, &step_fails);
+ 
+    ERKStepGetLastStep(arkode_mem, &last_step);
 
-    double last_step = 0.0;
-    ARKStepGetLastStep(arkode_mem, &last_step);
+    // // get rel. error vector
+    // N_Vector yerr = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt);
+    // ERKStepGetEstLocalErrors(arkode_mem, yerr);
 
-    // get error vector
-    // std::cout << NV_LENGTH_S(yout) << std::endl;
-    N_Vector yerr = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt);
-    ARKStepGetEstLocalErrors(arkode_mem, yerr);
+    // N_Vector eweight = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt); // N_VClone()
+    // ERKStepGetErrWeights(arkode_mem, eweight);
 
-    N_Vector eweight = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt); // N_VClone()
-    ARKStepGetErrWeights(arkode_mem, eweight);
+    // N_Vector yerr_ewt = N_VClone(yerr);
+    // N_VProd(yerr, eweight, yerr_ewt);
 
-    N_Vector yerr_ewt = N_VClone(yerr);
-    N_VProd(yerr, eweight, yerr_ewt);
+    // // write to file
+    // // char myfilename[]
+    // FILE * fp;
+    // char filepath[256];
+    // snprintf (filepath, sizeof(filepath), "/Users/dong9/Desktop/rainshaft_errorvec/rainshaft_errorvec%d.txt", i);
 
-    // write to file
-    // char myfilename[]
-    FILE * fp;
-    char filepath[256];
-    snprintf (filepath, sizeof(filepath), "/Users/dong9/Desktop/rainshaft_errorvec/rainshaft_errorvec%d.txt", i);
-
-    fp = fopen (filepath, "w+");
-    N_VPrintFile(yerr_ewt, fp);
-    // myfile.close();
-    fclose(fp);
+    // fp = fopen (filepath, "w+");
+    // N_VPrintFile(yerr_ewt, fp);
+    // fclose(fp);
 
     std::cout << "tret: " << tret << ", Last time step size: " << last_step << ", Acc-limited steps: " << num_acc_steps << ", Error test fails: " << step_fails << std::endl;
     i++;
-    // ERKStepReset(arkode_mem, tret, yout);
   }
   
 
@@ -254,19 +206,18 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   dvars.push_back(calc_dvars(new_state));
 
   long int num_rhs_evals = 0;
-  long int num_rhs_evals_exp = 0;
   // SPS: And this return value.
-  ARKStepGetNumRhsEvals(arkode_mem, &num_rhs_evals_exp, &num_rhs_evals);
+  ERKStepGetNumRhsEvals(arkode_mem, &num_rhs_evals);
 
 
 
   FILE *outdata;
   outdata = fopen("sundials_savedresults.csv", "a+");
 
-  ARKStepPrintAllStats(arkode_mem, outdata, SUN_OUTPUTFORMAT_CSV);
+  ERKStepPrintAllStats(arkode_mem, outdata, SUN_OUTPUTFORMAT_CSV);
   fclose(outdata);
 
   // SPS: Make RAII wrapper for this.
-  ARKStepFree(&arkode_mem);
+  ERKStepFree(&arkode_mem);
   return RainshaftSolution(states, dvars, num_rhs_evals);
 }
