@@ -131,7 +131,7 @@ protected:
     // Unsafe cast is necessary because SUNDIALS does not have separate const
     // types for input vectors it will not change; we have to trust that the
     // caller and SUNDIALS will not change the result here.
-    N_Vector y = N_VMake_Serial(num_variables, (double*) state.data.data(), sun_ctxt);
+    N_Vector y = N_VMake_Serial(num_variables, (double*) state.data(), sun_ctxt);
     return y;
   }
 
@@ -164,8 +164,9 @@ protected:
     spaecies::VariableArray<double> state(var_descs);
     std::size_t size = state.size;
     auto ydata = N_VGetArrayPointer(y);
+    double* state_ptr = state.data();
     for (sunindextype i = 0; i != size; ++i) {
-      state.data[i] = ydata[i];
+      state_ptr[i] = ydata[i];
     }
     return state;
   }

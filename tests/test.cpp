@@ -193,6 +193,29 @@ TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariableView
     REQUIRE( t_boil[0] == 373.15 );
   }
 
+  SECTION( "make_contiguous_variable_view can also create views" ) {
+    VarDescPtr boil_desc = domain.add_var_desc("BOILING_POINT", Float64Type, {}, "K");
+    double boiling_point = 373.16;
+    ContiguousVariableView<double> t_boil = make_contiguous_variable_view(boil_desc, &boiling_point);
+    REQUIRE( t_boil.size() == boil_desc->size() );
+    REQUIRE( t_boil[0] == boiling_point );
+    // Pretend we have a reason to change this. "Oops, we had the wrong value, fix it."
+    t_boil[0] = 373.15;
+    REQUIRE( t_boil[0] == 373.15 );
+  }
+
+  SECTION( "make_contiguous_variable_view can create const views" ) {
+    VarDescPtr boil_desc = domain.add_var_desc("BOILING_POINT", Float64Type, {}, "K");
+    double boiling_point = 373.16;
+    const double* const_boil_ptr = &boiling_point;
+    const ContiguousVariableView<double> t_boil = make_contiguous_variable_view(boil_desc, const_boil_ptr);
+    REQUIRE( t_boil.size() == boil_desc->size() );
+    REQUIRE( t_boil[0] == boiling_point );
+    // External code changing pointed-to memory.
+    boiling_point = 373.15;
+    REQUIRE( t_boil[0] == 373.15 );
+  }
+
   SECTION( "a vector variable's values can be accessed" ) {
     VarDescPtr t_desc = domain.add_var_desc("T", Float64Type, {col_dim}, "K");
     double t_buff[col_dim->size];
@@ -274,6 +297,18 @@ TEST_CASE( "Holding memory for multiple variables in a variable array", "[Variab
     }
   }
 
+  SECTION( "getting a pointer to array data" ) {
+    VariableArray<double> var_array{t_desc};
+    auto t = var_array.get_variable("T");
+    double *data_ptr = var_array.data();
+    for (int i = 0; i != t.size(); ++i) {
+      data_ptr[i] = 2.*i;
+    }
+    for (int i = 0; i != t.size(); ++i) {
+      REQUIRE( t[i] == 2.*i );
+    }
+  }
+
   SECTION( "getting a const variable from a const VariableArray" ) {
     VariableArray<double> var_array = {t_desc, q_desc};
     auto t = var_array.get_variable("T");
@@ -297,10 +332,164 @@ TEST_CASE( "Holding memory for multiple variables in a variable array", "[Variab
     }
   }
 
-  SECTION( "variables can be accessed through a variable array" ) {
+  SECTION( "getting a const pointer to const array data" ) {
+    VariableArray<double> var_array{t_desc};
+    auto t = var_array.get_variable("T");
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 2.*i;
+    }
+    const VariableArray<double> const_var_array = var_array;
+    auto const_t = const_var_array.get_variable("T");
+    const double *data_ptr = const_var_array.data();
+    for (int i = 0; i != t.size(); ++i) {
+      REQUIRE( const_t[i] == 2.*i );
+      REQUIRE( data_ptr[i] == 2.*i );
+    }
+  }
+
+  SECTION( "getting an error message when a variable is not in the array" ) {
     VariableArray<double> var_array{t_desc, q_desc, p_surf_desc};
     REQUIRE_THROWS_MATCHES( var_array.get_variable("invalid"), VariableNotFoundException,
                             MessageMatches(ContainsSubstring("variable array") && ContainsSubstring("invalid")) );
+  }
+
+}
+
+TEST_CASE( "interacting with data through a non-owned array view", "[VariableArrayView]" ) {
+  Domain dom;
+  DimensionPtr col_dim = dom.add_dimension("column", 8);
+  DimensionPtr lev_dim = dom.add_dimension("level", 10);
+  VarDescPtr t_desc = dom.add_var_desc("T", Float64Type, {col_dim, lev_dim}, "K");
+  VarDescPtr q_desc = dom.add_var_desc("q", Float64Type, {col_dim, lev_dim}, "kg/kg");
+  VarDescPtr p_surf_desc = dom.add_var_desc("p_surf", Float64Type, {col_dim}, "Pa");
+  std::size_t t_idx = 0;
+  std::size_t q_idx = t_desc->size();
+  std::size_t p_idx = q_idx + q_desc->size();
+  std::size_t total_size = p_idx + p_surf_desc->size();
+
+  SECTION( "variables can be accessed through a variable array view" ) {
+    double data[total_size];
+    VariableArrayView<double> view({t_desc, q_desc, p_surf_desc}, &data[0]);
+    REQUIRE( view.size == total_size );
+    auto t = view.get_variable("T");
+    auto q = view.get_variable("q");
+    auto p_surf = view.get_variable("p_surf");
+    auto t_array = &data[t_idx];
+    auto q_array = &data[q_idx];
+    auto p_surf_array = &data[p_idx];
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 2.*i;
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      q[i] = i + 0.5;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != t.size(); ++i) {
+      REQUIRE( t[i] == 2.*i );
+      REQUIRE( t_array[i] == 2.*i );
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      REQUIRE( q[i] == i + 0.5 );
+      REQUIRE( q_array[i] == i + 0.5 );
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+      REQUIRE( p_surf_array[i] == -2. * i );
+    }
+  }
+
+  SECTION( "getting a pointer to view data" ) {
+    double data[total_size];
+    VariableArrayView<double> view({t_desc, q_desc, p_surf_desc}, &data[0]);
+    double *data_ptr = view.data();
+    for (int i = 0; i != view.size; ++i) {
+      data_ptr[i] = 2.*i;
+    }
+    for (int i = 0; i != total_size; ++i) {
+      REQUIRE( data[i] == 2.*i );
+    }
+  }
+
+  SECTION( "a VariableArrayView can be constructed with make_variable_array_view" ) {
+    double data[total_size];
+    VariableArrayView<double> view = make_variable_array_view({t_desc, q_desc, p_surf_desc}, &data[0]);
+    REQUIRE( view.size == total_size );
+    auto t = view.get_variable("T");
+    auto q = view.get_variable("q");
+    auto p_surf = view.get_variable("p_surf");
+    auto t_array = &data[t_idx];
+    auto q_array = &data[q_idx];
+    auto p_surf_array = &data[p_idx];
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 2.*i;
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      q[i] = i + 0.5;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != t.size(); ++i) {
+      REQUIRE( t[i] == 2.*i );
+      REQUIRE( t_array[i] == 2.*i );
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      REQUIRE( q[i] == i + 0.5 );
+      REQUIRE( q_array[i] == i + 0.5 );
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+      REQUIRE( p_surf_array[i] == -2. * i );
+    }
+  }
+
+  SECTION( "getting a const variable from a const VariableArrayView" ) {
+    double data[total_size];
+    const double* construct_ptr = &data[0];
+    const VariableArrayView<double> view = make_variable_array_view({t_desc, q_desc, p_surf_desc}, construct_ptr);
+    REQUIRE( view.size == total_size );
+    auto t = view.get_variable("T");
+    auto q = view.get_variable("q");
+    auto p_surf = view.get_variable("p_surf");
+    auto t_array = &data[t_idx];
+    auto q_array = &data[q_idx];
+    auto p_surf_array = &data[p_idx];
+    for (int i = 0; i != t.size(); ++i) {
+      t_array[i] = 2.*i;
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      q_array[i] = i + 0.5;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf_array[i] = -2. * i;
+    }
+    for (int i = 0; i != t.size(); ++i) {
+      REQUIRE( t[i] == 2.*i );
+      REQUIRE( t_array[i] == 2.*i );
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      REQUIRE( q[i] == i + 0.5 );
+      REQUIRE( q_array[i] == i + 0.5 );
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+      REQUIRE( p_surf_array[i] == -2. * i );
+    }
+  }
+
+  SECTION( "getting a const pointer to view data" ) {
+    double data[total_size];
+    const double* construct_ptr = &data[0];
+    const VariableArrayView<double> view = make_variable_array_view({t_desc, q_desc, p_surf_desc}, construct_ptr);
+    const double *data_ptr = view.data();
+    for (int i = 0; i != total_size; ++i) {
+      data[i] = 2.*i;
+    }
+    for (int i = 0; i != view.size; ++i) {
+      REQUIRE( data_ptr[i] == 2.*i );
+    }
   }
 
 }
