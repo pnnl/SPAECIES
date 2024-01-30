@@ -1,6 +1,7 @@
 #ifndef SPAECIES_VARIABLE_ARRAY_HPP
 #define SPAECIES_VARIABLE_ARRAY_HPP
 
+#include <cstring>
 #include <initializer_list>
 #include <tuple>
 
@@ -21,6 +22,10 @@ public:
       data_array(this->size) {
     this->data_ptr = data_array.data();
   };
+  VariableArray(const VariableArrayView<T>& view)
+    : VariableArray(view.var_descs) {
+    std::memcpy(this->data_ptr, view.data(), this->size * sizeof(T));
+  }
   const ContiguousVariableView<T> get_variable(const std::string& name) const {
     auto [var_desc, idx] = VariableArrayView<T>::name_to_desc_and_idx(name, this->var_descs);
     return make_contiguous_variable_view(var_desc, &data_array[idx]);

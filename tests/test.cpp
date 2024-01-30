@@ -347,6 +347,51 @@ TEST_CASE( "Holding memory for multiple variables in a variable array", "[Variab
     }
   }
 
+  SECTION( "variable arrays can be constructed by copying data from views" ) {
+    // Create "original" data.
+    VariableArray<double> var_array{t_desc, q_desc, p_surf_desc};
+    REQUIRE( var_array.size == t_desc->size() + q_desc->size() + p_surf_desc->size() );
+    auto t = var_array.get_variable("T");
+    auto q = var_array.get_variable("q");
+    auto p_surf = var_array.get_variable("p_surf");
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 2.*i;
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      q[i] = i + 0.5;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    // Const reference to the var_array.
+    const VariableArrayView<double>& view = var_array;
+    // Make new array.
+    VariableArray<double> new_array(view);
+    auto t_new = new_array.get_variable("T");
+    auto q_new = new_array.get_variable("q");
+    auto p_surf_new = new_array.get_variable("p_surf");
+    // Clear original array.
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 0.;
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      q[i] = 0.;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = 0.;
+    }
+    // The following checks that the data was copied.
+    for (int i = 0; i != t_new.size(); ++i) {
+      REQUIRE( t_new[i] == 2.*i );
+    }
+    for (int i = 0; i != q_new.size(); ++i) {
+      REQUIRE( q_new[i] == i + 0.5 );
+    }
+    for (int i = 0; i != p_surf_new.size(); ++i) {
+      REQUIRE( p_surf_new[i] == -2. * i );
+    }
+  }
+
   SECTION( "getting an error message when a variable is not in the array" ) {
     VariableArray<double> var_array{t_desc, q_desc, p_surf_desc};
     REQUIRE_THROWS_MATCHES( var_array.get_variable("invalid"), VariableNotFoundException,
