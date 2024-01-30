@@ -18,7 +18,7 @@ VariableArrayView<T> make_variable_array_view(const std::vector<VarDescPtr>& var
 
 template<class T>
 const VariableArrayView<T> make_variable_array_view(const std::vector<VarDescPtr>& var_descs, const T* data_ptr) {
-  return VariableArrayView(var_descs, (T*) data_ptr);
+  return VariableArrayView(var_descs, const_cast<T*>(data_ptr));
 }
 
 template <class T>

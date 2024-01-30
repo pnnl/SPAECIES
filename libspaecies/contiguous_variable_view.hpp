@@ -16,7 +16,7 @@ ContiguousVariableView<T> make_contiguous_variable_view(const VarDescPtr var_des
 
 template<class T>
 const ContiguousVariableView<T> make_contiguous_variable_view(const VarDescPtr var_desc, const T* data_ptr) {
-  return ContiguousVariableView(var_desc, (T*) data_ptr);
+  return ContiguousVariableView(var_desc, const_cast<T*>(data_ptr));
 }
 
 template<class T>
