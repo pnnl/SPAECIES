@@ -63,7 +63,6 @@ protected:
     }
     return std::tuple(var_desc_out, idx);
   }
-private:
   static std::size_t calc_size(const std::vector<VarDescPtr> var_descs) {
     std::size_t my_size = 0;
     for (VarDescPtr var_desc : var_descs) {
