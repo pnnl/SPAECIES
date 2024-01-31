@@ -11,7 +11,8 @@ public:
   ImplicitIntegrator(const RainshaftConstants* constants,
                      const double dt_in,
                      const RainshaftGrid* grid,
-                     const RainshaftProcess* process,
+                     const RainshaftProcess* process_exp,
+                     const RainshaftProcess* process_imp,
                      sundials::Context *sun_ctxt);
 
 

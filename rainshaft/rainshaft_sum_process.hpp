@@ -19,6 +19,12 @@ public:
                               const RainshaftState& state,
                               const RainshaftDerivedVars& dvars) const;
 
+  // Calculate Jacobian of tendency from current state.
+  RainshaftTendencyJac calc_tend_jac(const RainshaftConstants& constants,
+                              const RainshaftGrid& grid,
+                              const RainshaftState& state,
+                              const RainshaftDerivedVars& dvars) const;
+
 private:
 
   // Number of subprocesses in this process.

@@ -33,10 +33,21 @@ int main(int argc, char** argv)
 
   // Set up model constants.
   // SPS: Choose rho_top in a more principled way?
-  RainshaftConstants constants{3.14159265358979323846,
-                               287.04, 1.00464e3, 461.50, 997., 2.501e6,
-                               0.62197, 1.e-14, 9.80616, 1.e-5, 5.e-3,
-                               0.988919555598356, 1.e3, 1.e-4};
+  RainshaftConstants constants{3.14159265358979323846, // pi
+                               287.04, // dry air gas constant
+                               1.00464e3, // dry air heat capacity
+                               461.50, // water vapor gas constant
+                               997., // density of liquid water
+                               2.501e6, // latent heat of vaporization
+                               0.62197, // Water vapor/dry air molecular mass ratio (unitless)
+                               1.e-14, // qsmall
+                               1.e-16, // nrsmall
+                               9.80616, // gravitational accel.
+                               1.e-5, // Minimum allowed mean rain diameter (m)
+                               5.e-3, // Maximum allowed mean rain diameter (m)
+                               0.988919555598356, // rho at top of column (kg/m^3)
+                               1.e3, // nr at top of column (#/kg) (BC)
+                               1.e-4}; // qr at top of column (kg/kg) (BC)
 
   // reusable error flag
   int flag;
@@ -57,7 +68,7 @@ int main(int argc, char** argv)
   // Time step size in seconds for substepper i.e. after dt seconds, pass control back to rainshaft code.
   double dt = 2000.0;
   // Time step size in seconds for sundials integrator within each substep
-  double dt_fixedstep = 0.02;
+  double dt_fixedstep = 0.04;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -130,19 +141,23 @@ int main(int argc, char** argv)
   RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
   // Sedimentation process.
   Sedimentation sed(constants, false, false);
+
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
   Evaporation evap(constants, &sat_form, false, false);
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
+
   // Sum of all processes.
   // std::vector<const RainshaftProcess *> micro_processes{&sed, &self_coll, &evap, &nudge};
   std::vector<const RainshaftProcess *> micro_processes{&sed};
   SumProcess all_micro = SumProcess(micro_processes);
+
   // Sum of local processes.
   std::vector<const RainshaftProcess *> local_processes{&self_coll, &evap, &nudge};
   SumProcess all_local = SumProcess(local_processes);
+
   // Evolve state forward.
   // P3 Settings
   // ForwardEulerIntegrator sed_step(&constants, &grid, &sed, &sun_ctxt);
@@ -176,7 +191,7 @@ int main(int argc, char** argv)
 
   // ARKODE Settings
   // ExplicitIntegrator micro_step(&constants, dt_fixedstep, &grid, &all_micro, &sun_ctxt);
-  ImplicitIntegrator micro_step(&constants, dt_fixedstep, &grid, &all_micro, &sun_ctxt);
+  ImplicitIntegrator micro_step(&constants, dt_fixedstep, &grid, &all_local, &all_micro, &sun_ctxt);
   FixedSubstepIntegrator intg(&micro_step, dt);
 
   // // Pure Forward Euler Settings
@@ -189,7 +204,7 @@ int main(int argc, char** argv)
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_order5_imp_dt2.nc");
+  NetcdfWriter writer("./rainshaft_order3_imp_dt4.nc");
   writer.write_grid(grid);
   writer.write_states(solution.states);
   writer.write_derived_vars(solution.dvars);

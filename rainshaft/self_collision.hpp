@@ -14,6 +14,11 @@ public:
                               const RainshaftState& state,
                               const RainshaftDerivedVars& dvars) const;
 
+  RainshaftTendencyJac calc_tend_jac(const RainshaftConstants& constants,
+                                           const RainshaftGrid& grid,
+                                           const RainshaftState& state,
+                                           const RainshaftDerivedVars& dvars) const;
+
   // For given rain variables, measure whether collisions typically end
   // up merging drops (breakup_fac \approx 1) or is there significant
   // breakup (breakup_fac < 1).

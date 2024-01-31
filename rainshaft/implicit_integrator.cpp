@@ -19,9 +19,10 @@ using namespace std;
 ImplicitIntegrator::ImplicitIntegrator(const RainshaftConstants* constants,
                                        const double dt_in,
                                        const RainshaftGrid* grid,
-                                       const RainshaftProcess* process,
+                                       const RainshaftProcess* process_exp,
+                                       const RainshaftProcess* process_imp,
                                        sundials::Context *sun_ctxt)
-  : SundialsIntegrator(constants, grid, process, sun_ctxt), dt(dt_in) {
+  : SundialsIntegrator(constants, grid, process_exp, process_imp, sun_ctxt), dt(dt_in) {
 }
 
 // SPS: Need to generalize this to get output states at arbitary times.
@@ -38,7 +39,7 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
   N_Vector y0 = state_to_n_vector(sun_ctxt, initial_state);
   // void* arkode_mem = ARKStepCreate(rainshaft_f, NULL, initial_time, y0, *sun_ctxt);
 
-  void* arkode_mem = ARKStepCreate(NULL, rainshaft_f, initial_time, y0, *sun_ctxt);
+  void* arkode_mem = ARKStepCreate(NULL, rainshaft_f_imp, initial_time, y0, *sun_ctxt);
 
   SUNLinearSolver LS = nullptr;  // linear solver memory structure
   SUNMatrix J = nullptr;
@@ -48,7 +49,7 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
   N_VDestroy(y0);
 
   // SPS: And this return value.
-  int solverOrder = 5;
+  int solverOrder = 6;
   ARKStepSetOrder(arkode_mem, solverOrder);
 
   // SPS: And this return value.
@@ -57,14 +58,14 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
   // Attach linear solver 
   ARKStepSetLinearSolver(arkode_mem, LS, J);
 
-  // // test Jacobian routine
+  // // Jacobian routine
   // ARKStepSetJacFn(arkode_mem, rainshaft_Jac);
 
   // SPS: And this return value.
   ARKStepSetMaxNumSteps(arkode_mem, 20000000.);
 
-  ARKStepSetMaxNonlinIters(arkode_mem, 10);
-  ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(0.000001));
+  ARKStepSetMaxNonlinIters(arkode_mem, 80);
+  ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(1.e-6));
 
   // ARKStepSStolerances(arkode_mem, 1.e-6, 1.e-11);  
 
@@ -103,12 +104,14 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
 
     // use adaptive implicit stepper until t = 312.0
     // ReInit here is in case of switching to a different method
-    if (tret > 312.0 & tret < 317.0) { // probably a better way to do this range
+    if (tret > 312.0 & tret < 312.0 + 10.0) { // probably a better way to do this range
                                        // so that we don't call ReInit multiple times
-      ARKStepReInit(arkode_mem, NULL, rainshaft_f, tret, yout);
-      // ARKStepSetTableName(arkode_mem, "ARKODE_KVAERNO_5_3_4", "ARKODE_ERK_NONE");
-      // ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(0.001));
+      ARKStepReInit(arkode_mem, NULL, rainshaft_f_imp, tret, yout);
+
       ARKStepSetOrder(arkode_mem, 5);
+
+
+      ARKStepSetJacFn(arkode_mem, rainshaft_Jac);
 
       ARKStepSetMaxNonlinIters(arkode_mem, 80);
       ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(0.000001));
@@ -165,14 +168,14 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
     ARKStepGetNumNonlinSolvConvFails(arkode_mem, &nncfails);
 
     // get rel error vector
-    // N_Vector yerr = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt);
-    // ARKStepGetEstLocalErrors(arkode_mem, yerr);
+    N_Vector yerr = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt);
+    ARKStepGetEstLocalErrors(arkode_mem, yerr);
 
-    // N_Vector eweight = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt); // N_VClone()
-    // ARKStepGetErrWeights(arkode_mem, eweight);
+    N_Vector eweight = N_VNew_Serial(NV_LENGTH_S(yout), *sun_ctxt); // N_VClone()
+    ARKStepGetErrWeights(arkode_mem, eweight);
 
-    // N_Vector yerr_ewt = N_VClone(yerr);
-    // N_VProd(yerr, eweight, yerr_ewt);
+    N_Vector yerr_ewt = N_VClone(yerr);
+    N_VProd(yerr, eweight, yerr_ewt);
 
     // // write to file
     // // char myfilename[]
@@ -184,6 +187,27 @@ RainshaftSolution ImplicitIntegrator::integrate(double initial_time,
     // N_VPrintFile(yerr_ewt, fp);
     // // myfile.close();
     // fclose(fp);
+
+
+    // // write to file
+    // // char myfilename[]
+    // ARKStepGetJac(arkode_mem, &J);
+
+    // char filepath2[256];
+    // snprintf (filepath2, sizeof(filepath2), "/Users/dong9/Desktop/Jacobians/jacobian%d.txt", i);
+
+    // fp = fopen (filepath2, "w+");
+    // SUNDenseMatrix_Print(J, fp);
+    // fclose(fp);
+
+    // realtype* Jdata = SUNDenseMatrix_Data(J);
+    // for (sunindextype i = num_variables/2; i != num_variables; ++i) {
+    //   for (sunindextype j = num_variables/2; j != num_variables; ++j) {
+    //     std::cout << Jdata[j*num_variables + i]<< " ";
+    //   }
+    //   std::cout << std::endl;
+    // }
+    // std::cout << std::endl;
 
     std::cout << "tret: " << tret << ", Last time step size: " << last_step << ", Acc-limited steps: " << num_acc_steps << ", Error test fails: " << step_fails << ", NLS iters: " << nniters << ", NLS conv. fails: " << nncfails << std::endl;
     i++;

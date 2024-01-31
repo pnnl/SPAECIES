@@ -20,6 +20,12 @@ public:
                               const RainshaftState& state,
                               const RainshaftDerivedVars& dvars) const;
 
+  // Jacobian of tendency
+  RainshaftTendencyJac calc_tend_jac(const RainshaftConstants& constants,
+                              const RainshaftGrid& grid,
+                              const RainshaftState& state,
+                              const RainshaftDerivedVars& dvars) const;
+
   // For a given value of lambdar, what are the rain number and mass fall speeds?
   std::vector<double> rain_fall_speeds(const RainshaftConstants& constants,
                                        double rho, double lambdar) const;

@@ -16,6 +16,20 @@ RainshaftTendency SelfCollision::calc_tend(const RainshaftConstants& constants,
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
 
+// placeholder for jacobian of self collision!
+RainshaftTendencyJac SelfCollision::calc_tend_jac(const RainshaftConstants& constants,
+                                           const RainshaftGrid& grid,
+                                           const RainshaftState& state,
+                                           const RainshaftDerivedVars& dvars) const {
+  double* t_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
+  double* q_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
+  double* nr_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
+  double* qr_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
+
+  return RainshaftTendencyJac(t_tend_jac, q_tend_jac, nr_tend_jac, qr_tend_jac);
+}
+
+
 double SelfCollision::breakup_fac(const RainshaftConstants& constants,
                                                double nr, double qr) const {
   // SPS: Should put in an assert that nr is sufficiently large?

@@ -1,6 +1,5 @@
 add_executable(rainshaft
   evaporation.cpp
-  explicit_integrator.cpp
   implicit_integrator.cpp
   fixed_substep_integrator.cpp
   lookup_linear.cpp
@@ -14,6 +13,7 @@ add_executable(rainshaft
   rainshaft_state.cpp
   rainshaft_sum_process.cpp
   rainshaft_tendency.cpp
+  rainshaft_tendency_jac.cpp
   saturation.cpp
   sedimentation.cpp
   self_collision.cpp

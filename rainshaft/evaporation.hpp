@@ -23,6 +23,11 @@ public:
                               const RainshaftState& state,
                               const RainshaftDerivedVars& dvars) const;
 
+  RainshaftTendencyJac calc_tend_jac(const RainshaftConstants& constants,
+                                     const RainshaftGrid& grid,
+                                     const RainshaftState& state,
+                                     const RainshaftDerivedVars& dvars) const;
+
   // Calculate characteristic velocity used for velocity calculation.
   double calc_v_evap(const RainshaftConstants& constants, double lambdar) const;
 
