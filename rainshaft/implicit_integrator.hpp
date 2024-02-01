@@ -1,18 +1,21 @@
-#ifndef EXPLICIT_INTEGRATOR_HPP
-#define EXPLICIT_INTEGRATOR_HPP
+#ifndef IMPLICIT_INTEGRATOR_HPP
+#define IMPLICIT_INTEGRATOR_HPP
 #include "sundials_integrator.hpp"
 
-class ExplicitIntegrator : public SundialsIntegrator {
+class ImplicitIntegrator : public SundialsIntegrator {
 
 public:
 
   double dt;
-  
-  ExplicitIntegrator(const RainshaftConstants* constants,
+
+  ImplicitIntegrator(const RainshaftConstants* constants,
                      const double dt_in,
                      const RainshaftGrid* grid,
-                     const RainshaftProcess* process,
+                     const RainshaftProcess* process_exp,
+                     const RainshaftProcess* process_imp,
                      sundials::Context *sun_ctxt);
+
+
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
@@ -20,4 +23,4 @@ public:
 
 };
 
-#endif // EXPLICIT_INTEGRATOR_HPP
+#endif // IMPLICIT_INTEGRATOR_HPP

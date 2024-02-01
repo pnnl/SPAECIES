@@ -1,5 +1,6 @@
 #include "rainshaft_ncio.hpp"
 #include <cstddef>
+#include <iostream>
 
 NetcdfWriter::NetcdfWriter(const std::string& file_name) {
   // SPS: Should throw error if this fails, probably also allow the file mode
@@ -32,6 +33,9 @@ void NetcdfWriter::write_states(const std::vector<RainshaftState>& states) {
   int levid, timeid, tid, qid, nrid, qrid;
   std::size_t nlev = states[0].t.size();
   std::size_t ntimes = states.size();
+
+  std::cout << ntimes << std::endl;
+
   // SPS: Need to check errors from all these as well.
   // SPS: Add variable metadata to all these too.
   // SPS: Error if vertical coordinate not defined?

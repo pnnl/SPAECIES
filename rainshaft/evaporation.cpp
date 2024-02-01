@@ -131,6 +131,19 @@ RainshaftTendency Evaporation::calc_tend(const RainshaftConstants& constants,
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
 
+// placeholder for Jacobian!
+RainshaftTendencyJac Evaporation::calc_tend_jac(const RainshaftConstants& constants,
+                                         const RainshaftGrid& grid,
+                                         const RainshaftState& state,
+                                         const RainshaftDerivedVars& dvars) const {
+  double* t_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
+  double* q_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
+  double* nr_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
+  double* qr_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
+
+  return RainshaftTendencyJac(t_tend_jac, q_tend_jac, nr_tend_jac, qr_tend_jac);
+}
+
 double Evaporation::calc_v_evap(const RainshaftConstants& constants, double lambdar) const {
   if (v_table.has_value()) {
     double d_micron = 1.e6 / lambdar;
