@@ -22,6 +22,7 @@ add_executable(rainshaft
 target_link_libraries(rainshaft
   NetCDF::NetCDF
   SUNDIALS::arkode
+  Boost::boost
   spaecies)
 target_include_directories(rainshaft PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
