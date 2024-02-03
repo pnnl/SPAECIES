@@ -9,6 +9,8 @@
 #include "rainshaft_tendency.hpp"
 #include "rainshaft_tendency_jac.hpp"
 
+#include "sundials/sundials_matrix.h"
+
 class RainshaftProcess {
 
 public:
@@ -19,10 +21,17 @@ public:
                                       const RainshaftState& state,
                                       const RainshaftDerivedVars& dvars) const = 0;
 
+  // TODO: remove
   virtual RainshaftTendencyJac calc_tend_jac(const RainshaftConstants& constants,
                                       const RainshaftGrid& grid,
                                       const RainshaftState& state,
                                       const RainshaftDerivedVars& dvars) const = 0;
+
+  virtual void calc_tend_jac(const RainshaftConstants& constants,
+                             const RainshaftGrid& grid,
+                             const RainshaftState& state,
+                             const RainshaftDerivedVars& dvars,
+                             SUNMatrix jac) const = 0;
 };
 
 #endif // RAINSHAFT_PROCESS_HPP

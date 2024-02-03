@@ -22,6 +22,12 @@ public:
                                        const RainshaftState& state,
                                        const RainshaftDerivedVars& dvars) const;
 
+  void calc_tend_jac(const RainshaftConstants& constants,
+                     const RainshaftGrid& grid,
+                     const RainshaftState& state,
+                     const RainshaftDerivedVars& dvars,
+                     SUNMatrix jac) const;
+
   double time_scale;
   const std::vector<double> t0;
   const std::vector<double> q0;

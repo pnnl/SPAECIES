@@ -33,9 +33,9 @@ RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants& constants,
                                            const RainshaftGrid& grid,
                                            const RainshaftState& state,
                                            const RainshaftDerivedVars& dvars) const {
-  std::vector<double> t_tend, q_tend, nr_tend, qr_tend;
+  std::vector<double> t_tend(grid.nlev), q_tend(grid.nlev), nr_tend(grid.nlev), qr_tend(grid.nlev);
   double nr_tend_lev, qr_tend_lev;
-  std::vector<double> v0, v3;
+  std::vector<double> v0(grid.nlev), v3(grid.nlev);
   t_tend.push_back(0.);
   q_tend.push_back(0.);
   // SPS: Should have a utility rather than duplicating lambdar calculation.
@@ -184,6 +184,16 @@ RainshaftTendencyJac Sedimentation::calc_tend_jac(const RainshaftConstants& cons
 
   return RainshaftTendencyJac(t_tend_jac, q_tend_jac, nr_tend_jac, qr_tend_jac);
 }
+
+  void Sedimentation::calc_tend_jac(const RainshaftConstants& constants,
+                                    const RainshaftGrid& grid,
+                                    const RainshaftState& state,
+                                    const RainshaftDerivedVars& dvars,
+                                    SUNMatrix jac) const
+  {
+    const auto jac_id = SUNMatGetID(jac);
+    
+  }
 
 
 std::vector<double> Sedimentation::rain_fall_speeds(const RainshaftConstants& constants,

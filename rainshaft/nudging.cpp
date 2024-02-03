@@ -36,3 +36,11 @@ RainshaftTendencyJac Nudging::calc_tend_jac(const RainshaftConstants& constants,
 
   return RainshaftTendencyJac(t_tend_jac, q_tend_jac, nr_tend_jac, qr_tend_jac);
 }
+
+void Nudging::calc_tend_jac(const RainshaftConstants& constants,
+                            const RainshaftGrid& grid,
+                            const RainshaftState& state,
+                            const RainshaftDerivedVars& dvars,
+                            SUNMatrix jac) const {
+  throw std::logic_error("Function not implemented");
+}

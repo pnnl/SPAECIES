@@ -1,6 +1,7 @@
 #include "self_collision.hpp"
 #include <cstddef>
 #include <cmath>
+#include <stdexcept>
 using std::min, std::cbrt, std::exp;
 
 RainshaftTendency SelfCollision::calc_tend(const RainshaftConstants& constants,
@@ -27,6 +28,15 @@ RainshaftTendencyJac SelfCollision::calc_tend_jac(const RainshaftConstants& cons
   double* qr_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
 
   return RainshaftTendencyJac(t_tend_jac, q_tend_jac, nr_tend_jac, qr_tend_jac);
+}
+
+
+void SelfCollision::calc_tend_jac(const RainshaftConstants& constants,
+                            const RainshaftGrid& grid,
+                            const RainshaftState& state,
+                            const RainshaftDerivedVars& dvars,
+                            SUNMatrix jac) const {
+  throw std::logic_error("Function not implemented");
 }
 
 

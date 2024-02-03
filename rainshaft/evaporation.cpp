@@ -144,6 +144,14 @@ RainshaftTendencyJac Evaporation::calc_tend_jac(const RainshaftConstants& consta
   return RainshaftTendencyJac(t_tend_jac, q_tend_jac, nr_tend_jac, qr_tend_jac);
 }
 
+void Evaporation::calc_tend_jac(const RainshaftConstants& constants,
+                            const RainshaftGrid& grid,
+                            const RainshaftState& state,
+                            const RainshaftDerivedVars& dvars,
+                            SUNMatrix jac) const {
+  throw std::logic_error("Function not implemented");
+}
+
 double Evaporation::calc_v_evap(const RainshaftConstants& constants, double lambdar) const {
   if (v_table.has_value()) {
     double d_micron = 1.e6 / lambdar;
