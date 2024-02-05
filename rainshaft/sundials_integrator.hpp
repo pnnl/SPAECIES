@@ -33,9 +33,8 @@ private:
   template <int PARTITION>
   static int rainshaft_f(sunrealtype t, N_Vector y, N_Vector ydot, void *user_data)
   {
-    // SPS: Should stop using std::vector to reduce copies and allocations.
     RainshaftUserData *cast_data = (RainshaftUserData *)user_data;
-    spaecies::VariableArray<double> state = n_vector_to_state(y, cast_data->var_descs);
+    spaecies::VariableArrayView<double> state = n_vector_to_state(y, cast_data->var_descs);
     RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data->constants,
                                                       cast_data->grid,
                                                       state);
@@ -91,7 +90,7 @@ protected:
                            C countFun,
                            void *mem,
                            const double final_time,
-                           const N_Vector y,
+                           const N_Vector y_init,
                            const Mode normal,
                            const Mode one_step) const
   {
@@ -99,33 +98,45 @@ protected:
     std::vector<RainshaftDerivedVars> dvars;
 
     sunrealtype tret = -std::numeric_limits<sunrealtype>::infinity();
-    auto ydot = N_VClone(y);
     if (steps_per_output > 0)
     {
+      states.emplace_back(n_vector_to_state(y_init, user_data.var_descs));
+      dvars.emplace_back(user_data.constants, user_data.grid, states.back());
+      N_Vector y_out = N_VClone(y_init);
+      bool output_this_iter = true;
       for (int i = 0; tret < final_time; i++)
       {
-        if (i % steps_per_output == 0)
+        evolveFun(mem, final_time, y_out, &tret, one_step);
+        output_this_iter = (i+1) % steps_per_output == 0;
+        if (output_this_iter)
         {
-          const auto new_state = n_vector_to_state(y, user_data.var_descs);
-          dvars.emplace_back(user_data.constants, user_data.grid, new_state);
-          states.push_back(new_state);
+          states.emplace_back(n_vector_to_state(y_out, user_data.var_descs));
+          dvars.emplace_back(user_data.constants, user_data.grid, states.back());
         }
-        evolveFun(mem, final_time, y, &tret, one_step);
       }
+      // Output only if there isn't already an output for the last iteration.
+      if (!output_this_iter)
+      {
+        states.emplace_back(n_vector_to_state(y_out, user_data.var_descs));
+        dvars.emplace_back(user_data.constants, user_data.grid, states.back());
+      }
+      N_VDestroy(y_out);
     }
     else
     {
-      evolveFun(mem, final_time, y, &tret, normal);
+      // If we're only evolving and saving output once, place output directly
+      // into the state vector rather than copying.
+      states.emplace_back(user_data.var_descs); // empty state for output
+      N_Vector y_out = state_to_n_vector(sun_ctxt, states.back());
+      evolveFun(mem, final_time, y_out, &tret, normal);
+      dvars.emplace_back(user_data.constants, user_data.grid, states.back());
+      N_VDestroy(y_out);
     }
 
-    const auto new_state = n_vector_to_state(y, user_data.var_descs);
-    dvars.emplace_back(user_data.constants, user_data.grid, new_state);
-    states.push_back(new_state);
-
-    return RainshaftSolution(states, dvars, countFun());
+    return RainshaftSolution(std::move(states), std::move(dvars), countFun());
   }
 
-  static N_Vector state_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArray<double> &state)
+  static N_Vector state_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<double> &state)
   {
     sunindextype num_variables = state.size;
     // Unsafe cast is necessary because SUNDIALS does not have separate const
@@ -158,17 +169,10 @@ protected:
     }
   }
 
-  static spaecies::VariableArray<double> n_vector_to_state(N_Vector y, const std::vector<spaecies::VarDescPtr>& var_descs)
+  static const spaecies::VariableArrayView<double> n_vector_to_state(N_Vector y, const std::vector<spaecies::VarDescPtr>& var_descs)
   {
-    // SPS: need to make this copy go away by implementing non-owning VariableArrays.
-    spaecies::VariableArray<double> state(var_descs);
-    std::size_t size = state.size;
-    auto ydata = N_VGetArrayPointer(y);
-    double* state_ptr = state.data();
-    for (sunindextype i = 0; i != size; ++i) {
-      state_ptr[i] = ydata[i];
-    }
-    return state;
+    const sunrealtype* ydata = N_VGetArrayPointer(y);
+    return spaecies::make_variable_array_view(var_descs, &ydata[0]);
   }
 };
 

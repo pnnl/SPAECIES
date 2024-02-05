@@ -28,7 +28,7 @@ Sedimentation::Sedimentation(const RainshaftConstants& constants, bool use_v_tab
 
 RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants &constants,
                                            const RainshaftGrid &grid,
-                                           const spaecies::VariableArray<double> &state,
+                                           const spaecies::VariableArrayView<double> &state,
                                            const RainshaftDerivedVars &dvars) const
 {
   std::vector<double> t_tend(grid.nlev, 0.0), q_tend(grid.nlev, 0.0), nr_tend(grid.nlev), qr_tend(grid.nlev);

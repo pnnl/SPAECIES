@@ -13,7 +13,7 @@ public:
   // Calculate tendency from current state.
   RainshaftTendency calc_tend(const RainshaftConstants& constants,
                               const RainshaftGrid& grid,
-                              const spaecies::VariableArray<double>& state,
+                              const spaecies::VariableArrayView<double>& state,
                               const RainshaftDerivedVars& dvars) const;
 
   // For given rain variables, measure whether collisions typically end

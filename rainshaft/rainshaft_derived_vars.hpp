@@ -14,7 +14,7 @@ public:
   // Constructor from state.
   RainshaftDerivedVars(const RainshaftConstants& constants,
                        const RainshaftGrid& grid,
-                       const spaecies::VariableArray<double>& state);
+                       const spaecies::VariableArrayView<double>& state);
 
   // Cell heights (m)
   const std::vector<double> dz;

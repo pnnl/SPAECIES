@@ -15,6 +15,11 @@ public:
                     const std::vector<RainshaftDerivedVars>& dvar_vec,
                     int num_rhs_evals_in);
 
+  // Constructor moving state and derived variable vectors into object.
+  RainshaftSolution(std::vector<spaecies::VariableArray<double>>&& state_vec,
+                    std::vector<RainshaftDerivedVars>&& dvar_vec,
+                    int num_rhs_evals_in);
+
   // State vector.
   const std::vector<spaecies::VariableArray<double>> states;
   // Derived variables vector.

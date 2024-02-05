@@ -5,7 +5,7 @@ using std::min, std::cbrt, std::exp;
 
 RainshaftTendency SelfCollision::calc_tend(const RainshaftConstants& constants,
                                            const RainshaftGrid& grid,
-                                           const spaecies::VariableArray<double>& state,
+                                           const spaecies::VariableArrayView<double>& state,
                                            const RainshaftDerivedVars& dvars) const {
   std::vector<double> t_tend(grid.nlev, 0.), q_tend(grid.nlev, 0.);
   std::vector<double> nr_tend(grid.nlev, 0.), qr_tend(grid.nlev, 0.);
