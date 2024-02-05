@@ -19,12 +19,13 @@ MRIIntegrator::MRIIntegrator(const RainshaftConstants &constants,
                              const RainshaftProcess *const process_fast,
                              const RainshaftProcess *const process_slow_exp,
                              const RainshaftProcess *const process_slow_imp,
-                             const std::vector<spaecies::VarDescPtr>& var_descs,
+                             const std::vector<spaecies::VarDescPtr>& state_descs,
+                             const std::vector<spaecies::VarDescPtr>& tend_descs,
                              const double dt_fast,
                              const double dt_slow,
                              const int order,
                              const int steps_per_output)
-    : SundialsIntegrator(constants, grid, {process_fast, process_slow_exp, process_slow_imp}, var_descs, steps_per_output),
+    : SundialsIntegrator(constants, grid, {process_fast, process_slow_exp, process_slow_imp}, state_descs, tend_descs, steps_per_output),
       dt_fast(dt_fast), dt_slow(dt_slow), order(order)
 {
 }
@@ -34,7 +35,7 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
                                            double final_time,
                                            const spaecies::VariableArray<double> &initial_state) const
 {
-  auto y_init = state_to_n_vector(sun_ctxt, initial_state);
+  auto y_init = view_to_n_vector(sun_ctxt, initial_state);
 
   /* create an ARKStep object, setting fast (inner) right-hand side
      functions and the initial condition */

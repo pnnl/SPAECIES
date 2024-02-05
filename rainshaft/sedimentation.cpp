@@ -26,19 +26,20 @@ Sedimentation::Sedimentation(const RainshaftConstants& constants, bool use_v_tab
   }
 }
 
-RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants &constants,
-                                           const RainshaftGrid &grid,
-                                           const spaecies::VariableArrayView<double> &state,
-                                           const RainshaftDerivedVars &dvars) const
+void Sedimentation::calc_tend(const RainshaftConstants &constants,
+                              const RainshaftGrid &grid,
+                              const spaecies::VariableArrayView<double> &state,
+                              const RainshaftDerivedVars &dvars,
+                              spaecies::VariableArrayView<double>& tend) const
 {
-  std::vector<double> t_tend(grid.nlev, 0.0), q_tend(grid.nlev, 0.0), nr_tend(grid.nlev), qr_tend(grid.nlev);
-
   const auto lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
   const auto [speeds_top0, speeds_top3] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
   auto nr_prev_flux = speeds_top0 * constants.nr_top * constants.rho_top;
   auto qr_prev_flux = speeds_top3 * constants.qr_top * constants.rho_top;
   auto nr = state.get_variable("nr");
   auto qr = state.get_variable("qr");
+  auto nr_tend = tend.get_variable("nr_tend");
+  auto qr_tend = tend.get_variable("qr_tend");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
@@ -52,7 +53,6 @@ RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants &constants,
     nr_prev_flux = nr_flux;
     qr_prev_flux = qr_flux;
   }
-  return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
 
 Sedimentation::Speeds Sedimentation::rain_fall_speeds(const RainshaftConstants& constants,

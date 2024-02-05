@@ -19,10 +19,11 @@ public:
                 bool use_numerical_integration);
 
   // Calculate tendency from current state.
-  RainshaftTendency calc_tend(const RainshaftConstants& constants,
-                              const RainshaftGrid& grid,
-                              const spaecies::VariableArrayView<double>& state,
-                              const RainshaftDerivedVars& dvars) const;
+  void calc_tend(const RainshaftConstants& constants,
+                 const RainshaftGrid& grid,
+                 const spaecies::VariableArrayView<double>& state,
+                 const RainshaftDerivedVars& dvars,
+                 spaecies::VariableArrayView<double>& tend) const;
 
   // For a given value of lambdar, what are the rain number and mass fall speeds?
   Speeds rain_fall_speeds(const RainshaftConstants& constants,

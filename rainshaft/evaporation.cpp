@@ -97,16 +97,19 @@ Evaporation::Evaporation(const RainshaftConstants& constants,
   }
 }
 
-RainshaftTendency Evaporation::calc_tend(const RainshaftConstants& constants,
-                                         const RainshaftGrid& grid,
-                                         const spaecies::VariableArrayView<double>& state,
-                                         const RainshaftDerivedVars& dvars) const {
-  std::vector<double> t_tend(grid.nlev, 0.), q_tend(grid.nlev, 0.);
-  std::vector<double> nr_tend(grid.nlev, 0.), qr_tend(grid.nlev, 0.);
+void Evaporation::calc_tend(const RainshaftConstants& constants,
+                            const RainshaftGrid& grid,
+                            const spaecies::VariableArrayView<double>& state,
+                            const RainshaftDerivedVars& dvars,
+                            spaecies::VariableArrayView<double>& tend) const {
   auto t = state.get_variable("T");
   auto q = state.get_variable("q");
   auto nr = state.get_variable("nr");
   auto qr = state.get_variable("qr");
+  auto t_tend = tend.get_variable("T_tend");
+  auto q_tend = tend.get_variable("q_tend");
+  auto nr_tend = tend.get_variable("nr_tend");
+  auto qr_tend = tend.get_variable("qr_tend");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     // Skip the rest of this if no rain.
     if (qr[il] < constants.qsmall) {
@@ -132,7 +135,6 @@ RainshaftTendency Evaporation::calc_tend(const RainshaftConstants& constants,
     qr_tend[il] = - q_tend[il];
     nr_tend[il] = - q_tend[il] * (nr[il] / qr[il]);
   }
-  return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
 
 double Evaporation::calc_v_evap(const RainshaftConstants& constants, double lambdar) const {

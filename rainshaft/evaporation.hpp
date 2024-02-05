@@ -20,10 +20,11 @@ public:
               bool use_numerical_integration);
 
   // Calculate tendency from current state.
-  RainshaftTendency calc_tend(const RainshaftConstants& constants,
-                              const RainshaftGrid& grid,
-                              const spaecies::VariableArrayView<double>& state,
-                              const RainshaftDerivedVars& dvars) const;
+  void calc_tend(const RainshaftConstants& constants,
+                 const RainshaftGrid& grid,
+                 const spaecies::VariableArrayView<double>& state,
+                 const RainshaftDerivedVars& dvars,
+                 spaecies::VariableArrayView<double>& tend) const;
 
   // Calculate characteristic velocity used for velocity calculation.
   double calc_v_evap(const RainshaftConstants& constants, double lambdar) const;

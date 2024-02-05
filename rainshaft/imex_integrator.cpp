@@ -8,11 +8,12 @@ IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
                                        const RainshaftGrid &grid,
                                        const RainshaftProcess *const process_exp,
                                        const RainshaftProcess *const process_imp,
-                                       const std::vector<spaecies::VarDescPtr>& var_descs,
+                                       const std::vector<spaecies::VarDescPtr>& state_descs,
+                                       const std::vector<spaecies::VarDescPtr>& tend_descs,
                                        const double dt,
                                        const int order,
                                        const int steps_per_output)
-    : SundialsIntegrator(constants, grid, {process_exp, process_imp}, var_descs, steps_per_output),
+    : SundialsIntegrator(constants, grid, {process_exp, process_imp}, state_descs, tend_descs, steps_per_output),
       dt(dt), order(order)
 {
 }
@@ -22,7 +23,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
                                                 double final_time,
                                                 const spaecies::VariableArray<double> &initial_state) const
 {
-  auto y_init = state_to_n_vector(sun_ctxt, initial_state);
+  auto y_init = view_to_n_vector(sun_ctxt, initial_state);
   void *arkode_mem = ARKStepCreate(create_f<0>(), create_f<1>(), initial_time, y_init, sun_ctxt);
   ARKodeSetUserData(arkode_mem, (void *)&user_data);
   ARKodeSetFixedStep(arkode_mem, dt);

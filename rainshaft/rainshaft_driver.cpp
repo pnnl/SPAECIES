@@ -2,12 +2,11 @@
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
 #include "fixed_substep_integrator.hpp"
-// #include "forward_euler_integrator.hpp"
 #include "nudging.hpp"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
-#include "rainshaft_tendency.hpp"
 #include "rainshaft_solution.hpp"
+#include "rainshaft_tend_descs.hpp"
 #include "rainshaft_ncio.hpp"
 #include "rainshaft_sum_process.hpp"
 #include "saturation.hpp"
@@ -61,6 +60,7 @@ int main(int argc, char** argv)
   spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
   spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
   std::vector<spaecies::VarDescPtr> state_descs = {t_desc, q_desc, nr_desc, qr_desc};
+  auto tend_descs = tend_descs_from_state_descs(dom, state_descs);
   spaecies::VariableArray<double> initial_state(state_descs);
   auto t = initial_state.get_variable("T");
   auto q = initial_state.get_variable("q");
@@ -130,21 +130,21 @@ int main(int argc, char** argv)
   SumProcess all_local = SumProcess(local_processes);
   // Evolve state forward.
   // P3 Settings
-  // ForwardEulerIntegrator sed_step(&constants, &grid, &sed, state_descs, &sun_ctxt);
+  // ForwardEulerIntegrator sed_step(&constants, &grid, &sed, state_descs, tend_descs, &sun_ctxt);
   // SedCflIntegrator sed_loop(&constants, &grid, &sed, &sed_step);
-  // ForwardEulerIntegrator local_step(&constants, &grid, &all_local, state_descs, &sun_ctxt);
+  // ForwardEulerIntegrator local_step(&constants, &grid, &all_local, state_descs, tend_descs, &sun_ctxt);
   // std::vector<const RainshaftIntegrator *> seq_ints{&local_step, &sed_loop};
   // SequentialSplitIntegrator seq_step(seq_ints);
   // FixedSubstepIntegrator intg(&seq_step, dt);
   // ARKODE Settings
-  // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, state_descs, &sun_ctxt);
+  // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, state_descs, tend_descs, &sun_ctxt);
   // FixedSubstepIntegrator intg(&micro_step, dt);
   // Pure Forward Euler Settings
   // ForwardEulerIntegrator micro_step(constants, grid, &all_micro);
-  IMEXIntegrator micro_step(constants, grid, &all_local, &all_micro, state_descs, dt, 4, 1);
+  IMEXIntegrator micro_step(constants, grid, &all_local, &all_micro, state_descs, tend_descs, dt, 4, 1);
   FixedSubstepIntegrator intg(&micro_step, dt);
   // Pure Forward Euler Settings
-  // ForwardEulerIntegrator micro_step(&constants, &grid, &all_micro, state_descs, &sun_ctxt);
+  // ForwardEulerIntegrator micro_step(&constants, &grid, &all_micro, state_descs, tend_descs, &sun_ctxt);
   // FixedSubstepIntegrator intg(&micro_step, dt);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);

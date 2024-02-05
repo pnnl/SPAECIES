@@ -14,10 +14,11 @@ public:
           const std::vector<double>& q);
 
   // Calculate tendency from current state.
-  RainshaftTendency calc_tend(const RainshaftConstants& constants,
-                              const RainshaftGrid& grid,
-                              const spaecies::VariableArrayView<double>& state,
-                              const RainshaftDerivedVars& dvars) const;
+  void calc_tend(const RainshaftConstants& constants,
+                 const RainshaftGrid& grid,
+                 const spaecies::VariableArrayView<double>& state,
+                 const RainshaftDerivedVars& dvars,
+                 spaecies::VariableArrayView<double>& tend) const;
 
   double time_scale;
   const std::vector<double> t0;

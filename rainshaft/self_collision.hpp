@@ -11,10 +11,11 @@ class SelfCollision : public RainshaftProcess {
 public:
 
   // Calculate tendency from current state.
-  RainshaftTendency calc_tend(const RainshaftConstants& constants,
-                              const RainshaftGrid& grid,
-                              const spaecies::VariableArrayView<double>& state,
-                              const RainshaftDerivedVars& dvars) const;
+  void calc_tend(const RainshaftConstants& constants,
+                 const RainshaftGrid& grid,
+                 const spaecies::VariableArrayView<double>& state,
+                 const RainshaftDerivedVars& dvars,
+                 spaecies::VariableArrayView<double>& tend) const;
 
   // For given rain variables, measure whether collisions typically end
   // up merging drops (breakup_fac \approx 1) or is there significant

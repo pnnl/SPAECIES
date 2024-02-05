@@ -15,7 +15,8 @@ public:
   ExplicitIntegrator(const RainshaftConstants &constants,
                      const RainshaftGrid &grid,
                      const RainshaftProcess *const process,
-                     const std::vector<spaecies::VarDescPtr>& var_descs,
+                     const std::vector<spaecies::VarDescPtr>& state_descs,
+                     const std::vector<spaecies::VarDescPtr>& tend_descs,
                      const double dt = 0,
                      const int order = 4,
                      const int steps_per_output = -1);
