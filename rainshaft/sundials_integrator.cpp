@@ -7,7 +7,7 @@
 
 SundialsIntegrator::SundialsIntegrator(const RainshaftConstants& constants,
                                        const RainshaftGrid& grid,
-                                       const RainshaftProcess* process)
+                                       const RainshaftProcess* const process)
   : user_data{constants, grid, process} {
     SUNContext_PushErrHandler(sun_ctxt, [](int line, const char *func, const char *file, const char *msg,
       SUNErrCode err_code, void *err_user_data, SUNContext sunctx)

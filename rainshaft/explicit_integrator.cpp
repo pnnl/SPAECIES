@@ -5,7 +5,7 @@
 
 ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants& constants,
                                        const RainshaftGrid& grid,
-                                       const RainshaftProcess* process)
+                                       const RainshaftProcess* const process)
   : SundialsIntegrator(constants, grid, process) {
 }
 
