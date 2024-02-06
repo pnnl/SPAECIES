@@ -9,8 +9,7 @@ public:
   // Constructor requires timestep.
   ForwardEulerIntegrator(const RainshaftConstants* constants,
                          const RainshaftGrid* grid,
-                         const RainshaftProcess* process,
-                         sundials::Context *sun_ctxt);
+                         const RainshaftProcess* process);
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
