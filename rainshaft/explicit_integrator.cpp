@@ -19,8 +19,8 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   void* arkode_mem = ERKStepCreate(rainshaft_f, initial_time, y, sun_ctxt);
   ERKStepSetUserData(arkode_mem, (void*) &user_data);
   ERKStepSetMaxNumSteps(arkode_mem, -1);
-  sunrealtype fac = 1.;
-  sunrealtype reltol = fac * 1.e-2;
+  const sunrealtype fac = 1.;
+  const sunrealtype reltol = fac * 1.e-2;
   auto abstol = N_VClone(y);
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
   const auto nz = initial_state.t.size();
@@ -41,7 +41,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   
   sunrealtype tret = 0.;
   ERKStepEvolve(arkode_mem, final_time, y, &tret, ARK_NORMAL);
-  RainshaftState new_state = n_vector_to_state(y);
+  const auto new_state = n_vector_to_state(y);
   states.push_back(new_state);
   dvars.push_back(calc_dvars(new_state));
 
