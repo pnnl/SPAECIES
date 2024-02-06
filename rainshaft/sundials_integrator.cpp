@@ -1,7 +1,6 @@
 #include "sundials_integrator.hpp"
 #include "nvector/nvector_serial.h"
 #include <stdexcept>
-#include <sstream>
 #include <cstddef>
 #include <vector>
 
@@ -12,9 +11,7 @@ SundialsIntegrator::SundialsIntegrator(const RainshaftConstants& constants,
     SUNContext_PushErrHandler(sun_ctxt, [](int line, const char *func, const char *file, const char *msg,
       SUNErrCode err_code, void *err_user_data, SUNContext sunctx)
     {
-      std::ostringstream buf;
-      buf << msg << "\nIn " << func << " on line " << line << " of " << file;
-      throw std::logic_error(buf.str());
+      throw std::logic_error(msg);
     }, nullptr);
 }
 
