@@ -2,8 +2,8 @@
 #include "arkode/arkode_erkstep.h"
 #include "nvector/nvector_serial.h"
 
-ForwardEulerIntegrator::ForwardEulerIntegrator(const RainshaftConstants* constants,
-                                               const RainshaftGrid* grid,
+ForwardEulerIntegrator::ForwardEulerIntegrator(const RainshaftConstants& constants,
+                                               const RainshaftGrid& grid,
                                                const RainshaftProcess* process)
   : SundialsIntegrator(constants, grid, process) {
 }

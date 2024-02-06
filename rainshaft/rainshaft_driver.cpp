@@ -122,7 +122,7 @@ int main(int argc, char** argv)
   // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
   // FixedSubstepIntegrator intg(&micro_step, dt);
   // Pure Forward Euler Settings
-  ForwardEulerIntegrator micro_step(&constants, &grid, &all_micro);
+  ForwardEulerIntegrator micro_step(constants, grid, &all_micro);
   FixedSubstepIntegrator intg(&micro_step, dt);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);

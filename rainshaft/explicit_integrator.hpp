@@ -6,8 +6,8 @@ class ExplicitIntegrator : public SundialsIntegrator {
 
 public:
 
-  ExplicitIntegrator(const RainshaftConstants* constants,
-                     const RainshaftGrid* grid,
+  ExplicitIntegrator(const RainshaftConstants& constants,
+                     const RainshaftGrid& grid,
                      const RainshaftProcess* process);
 
   RainshaftSolution integrate(double initial_time,

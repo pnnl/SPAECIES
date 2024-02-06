@@ -7,8 +7,8 @@ class ForwardEulerIntegrator : public SundialsIntegrator {
 public:
 
   // Constructor requires timestep.
-  ForwardEulerIntegrator(const RainshaftConstants* constants,
-                         const RainshaftGrid* grid,
+  ForwardEulerIntegrator(const RainshaftConstants& constants,
+                         const RainshaftGrid& grid,
                          const RainshaftProcess* process);
 
   RainshaftSolution integrate(double initial_time,

@@ -3,8 +3,8 @@
 #include "nvector/nvector_serial.h"
 #include "sunadaptcontroller/sunadaptcontroller_soderlind.h"
 
-ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants* constants,
-                                       const RainshaftGrid* grid,
+ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants& constants,
+                                       const RainshaftGrid& grid,
                                        const RainshaftProcess* process)
   : SundialsIntegrator(constants, grid, process) {
 }

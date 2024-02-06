@@ -12,8 +12,8 @@
 
 // SPS: See if you can make use of this type safer with pointer changes...
 struct RainshaftUserData {
-  const RainshaftConstants* constants;
-  const RainshaftGrid* grid;
+  const RainshaftConstants& constants;
+  const RainshaftGrid& grid;
   const RainshaftProcess* process;
 };
 
@@ -23,8 +23,8 @@ public:
 
   // SPS: Need to consider wrapping pointer types to check that none of the
   // pointers become invalid while this object exists.
-  SundialsIntegrator(const RainshaftConstants* constants,
-                     const RainshaftGrid* grid,
+  SundialsIntegrator(const RainshaftConstants& constants,
+                     const RainshaftGrid& grid,
                      const RainshaftProcess* process);
 
   const sundials::Context sun_ctxt;

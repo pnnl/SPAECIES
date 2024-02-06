@@ -5,8 +5,8 @@
 #include <cstddef>
 #include <vector>
 
-SundialsIntegrator::SundialsIntegrator(const RainshaftConstants* constants,
-                                       const RainshaftGrid* grid,
+SundialsIntegrator::SundialsIntegrator(const RainshaftConstants& constants,
+                                       const RainshaftGrid& grid,
                                        const RainshaftProcess* process)
   : user_data{constants, grid, process} {
     SUNContext_PushErrHandler(sun_ctxt, [](int line, const char *func, const char *file, const char *msg,
@@ -19,7 +19,7 @@ SundialsIntegrator::SundialsIntegrator(const RainshaftConstants* constants,
 }
 
 RainshaftDerivedVars SundialsIntegrator::calc_dvars(const RainshaftState& state) const {
-  return RainshaftDerivedVars(*user_data.constants, *user_data.grid, state);
+  return RainshaftDerivedVars(user_data.constants, user_data.grid, state);
 }
 
 N_Vector state_to_n_vector(const sundials::Context& sun_ctxt, const RainshaftState& state) {
@@ -84,11 +84,11 @@ int rainshaft_f(sunrealtype t, N_Vector y, N_Vector ydot, void* user_data) {
   // SPS: Should stop using std::vector to reduce copies and allocations.
   RainshaftState state = n_vector_to_state(y);
   RainshaftUserData *cast_data = (RainshaftUserData*) user_data;
-  RainshaftDerivedVars dvars = RainshaftDerivedVars(*cast_data->constants,
-                                                    *cast_data->grid,
+  RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data->constants,
+                                                    cast_data->grid,
                                                     state);
-  RainshaftTendency tend = cast_data->process->calc_tend(*cast_data->constants,
-                                                         *cast_data->grid,
+  RainshaftTendency tend = cast_data->process->calc_tend(cast_data->constants,
+                                                         cast_data->grid,
                                                          state, dvars);
   tend_to_n_vector(tend, ydot);
   return 0;
