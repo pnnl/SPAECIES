@@ -16,7 +16,6 @@
 #include "sedimentation.hpp"
 #include "self_collision.hpp"
 #include "sequential_split_integrator.hpp"
-#include "sundials/sundials_context.h"
 #include <iostream>
 #include <cmath>
 #include <chrono>
@@ -52,7 +51,6 @@ int main(int argc, char** argv)
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
   auto nlev = grid.nlev;
-  sundials::Context sun_ctxt = sundials::Context();
   // Set up initial condition.
   SaturationFormulae sat_form(constants);
   // Initial condition for nr and qr is just 0, and allocate t and q as well.
@@ -124,7 +122,7 @@ int main(int argc, char** argv)
   // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
   // FixedSubstepIntegrator intg(&micro_step, dt);
   // Pure Forward Euler Settings
-  ForwardEulerIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
+  ForwardEulerIntegrator micro_step(constants, grid, &all_micro);
   FixedSubstepIntegrator intg(&micro_step, dt);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);

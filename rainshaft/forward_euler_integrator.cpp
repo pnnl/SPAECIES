@@ -1,11 +1,11 @@
 #include "forward_euler_integrator.hpp"
 #include "arkode/arkode_erkstep.h"
+#include "nvector/nvector_serial.h"
 
-ForwardEulerIntegrator::ForwardEulerIntegrator(const RainshaftConstants* constants,
-                                               const RainshaftGrid* grid,
-                                               const RainshaftProcess* process,
-                                               sundials::Context *sun_ctxt)
-  : SundialsIntegrator(constants, grid, process, sun_ctxt) {
+ForwardEulerIntegrator::ForwardEulerIntegrator(const RainshaftConstants& constants,
+                                               const RainshaftGrid& grid,
+                                               const RainshaftProcess* const process)
+  : SundialsIntegrator(constants, grid, process) {
 }
 
 // SPS: Need to generalize this to get output states at arbitary times.
@@ -18,20 +18,20 @@ RainshaftSolution ForwardEulerIntegrator::integrate(double initial_time,
   // SPS: It should not assume 4 variables.
   sunindextype num_variables = nz * 4;
   N_Vector y0 = state_to_n_vector(sun_ctxt, initial_state);
-  void* arkode_mem = ERKStepCreate(rainshaft_f, initial_time, y0, *sun_ctxt);
+  void* arkode_mem = ERKStepCreate(rainshaft_f, initial_time, y0, sun_ctxt);
   N_VDestroy(y0);
   // Set step size.
   // SPS: Check return value.
   double step_size = final_time - initial_time;
   ERKStepSetFixedStep(arkode_mem, step_size);
-  realtype c(0.), a(0.), b(1.);
+  sunrealtype c(0.), a(0.), b(1.);
   ARKodeButcherTable fe_butcher = ARKodeButcherTable_Create(1, 1, 0, &c, &a, &b, NULL);
   // SPS: And this return value.
   ERKStepSetTable(arkode_mem, fe_butcher);
   // SPS: And this return value.
   ERKStepSetUserData(arkode_mem, (void*) &user_data);
-  N_Vector yout = N_VNew_Serial(num_variables, *sun_ctxt);
-  realtype tret = 0.;
+  N_Vector yout = N_VNew_Serial(num_variables, sun_ctxt);
+  sunrealtype tret = 0.;
   // SPS: And this return value (and/or returned time).
   ERKStepEvolve(arkode_mem, final_time, yout, &tret, ARK_ONE_STEP);
   RainshaftState new_state = n_vector_to_state(yout);
