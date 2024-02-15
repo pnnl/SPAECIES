@@ -43,7 +43,7 @@ int main(int argc, char** argv)
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
-  double dt = 1.e-1;
+  double dt = 1.e-3;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -119,10 +119,10 @@ int main(int argc, char** argv)
   // SequentialSplitIntegrator seq_step(seq_ints);
   // FixedSubstepIntegrator intg(&seq_step, dt);
   // ARKODE Settings
-  ExplicitIntegrator micro_step(constants, grid, &all_micro);
+  // ExplicitIntegrator micro_step(constants, grid, &all_micro);
   // FixedSubstepIntegrator intg(&micro_step, dt);
   // Pure Forward Euler Settings
-  // ForwardEulerIntegrator micro_step(constants, grid, &all_micro);
+  ForwardEulerIntegrator micro_step(constants, grid, &all_micro);
   FixedSubstepIntegrator intg(&micro_step, dt);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);
