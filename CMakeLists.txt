@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 project(SPAECIES LANGUAGES CXX VERSION 0.0.1)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+set(CMAKE_CXX_STANDARD 17)
 find_package(NetCDF REQUIRED)
 find_package(SUNDIALS REQUIRED)
 find_package(Boost REQUIRED)

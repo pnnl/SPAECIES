@@ -30,7 +30,7 @@ int main(int argc, char** argv)
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
                                0.62197, 1.e-14, 9.80616, 1.e-5, 5.e-3,
-                               0.988919555598356, 1.e3, 1.e-4};
+                               0.988919555598356, 1.e3, 1.e-4, true, 300};
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
   double model_top = 2.e3;
@@ -43,7 +43,7 @@ int main(int argc, char** argv)
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
-  double dt = 1.e-3;
+  double dt = 1.e-1;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -119,10 +119,10 @@ int main(int argc, char** argv)
   // SequentialSplitIntegrator seq_step(seq_ints);
   // FixedSubstepIntegrator intg(&seq_step, dt);
   // ARKODE Settings
-  // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
+  ExplicitIntegrator micro_step(constants, grid, &all_micro);
   // FixedSubstepIntegrator intg(&micro_step, dt);
   // Pure Forward Euler Settings
-  ForwardEulerIntegrator micro_step(constants, grid, &all_micro);
+  // ForwardEulerIntegrator micro_step(constants, grid, &all_micro);
   FixedSubstepIntegrator intg(&micro_step, dt);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);

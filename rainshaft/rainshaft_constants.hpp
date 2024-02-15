@@ -30,6 +30,10 @@ struct RainshaftConstants {
   double nr_top;
   // qr at top of column (kg/kg)
   double qr_top;
+  // flag for toggling uniform grid
+  bool uniform_grid_flag;
+  // number of uniform grid points
+  int num_uniform_grid_points;
 };
 
 #endif // RAINSHAFT_CONSTANTS_HPP
