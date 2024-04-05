@@ -10,7 +10,7 @@ do
 	printf -- "---------------------------------- RUN %u ----------------------------------\n" $k
 	for j in $(seq 0 ${#SLOWFAC[@]}) # number of different slow time step factors
 	do
-		for i in {10..10} # # number of fast time steps in convergence plot: time step is (1.28e-5) * pow(2,i)
+		for i in {0..11} # number of fast time steps in convergence plot: time step is (1.28e-3) * pow(2,i)
 		do
 		    ./rainshaft $i ${SLOWFAC[j]} $k
 		done
