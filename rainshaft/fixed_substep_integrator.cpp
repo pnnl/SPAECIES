@@ -35,7 +35,6 @@ RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
     RainshaftSolution solution = integrator->integrate(current_time,
                                                        next_time,
                                                        states.back());
-    std::cout << solution.states.size() << std::endl;
     // This class currently doesn't store constants/grid, so we rely
     // on the integrator down a level to calculate the initial dvars
     // for us.

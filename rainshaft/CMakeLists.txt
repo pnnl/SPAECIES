@@ -1,6 +1,6 @@
 add_executable(rainshaft
   evaporation.cpp
-  implicit_integrator.cpp
+  mri_integrator.cpp
   fixed_substep_integrator.cpp
   lookup_linear.cpp
   lookup_table.cpp

@@ -131,7 +131,7 @@ RainshaftGrid make_e3sm_like_grid(RainshaftConstants constants,
 
   if (uniform_grid_flag)
   {
-    num_e3sm_levs = 50;
+    num_e3sm_levs = 300;
   } else {
     num_e3sm_levs = 72;
   }

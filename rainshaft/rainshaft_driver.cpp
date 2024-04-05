@@ -1,7 +1,7 @@
 #include "spaecies.hpp"
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
-#include "implicit_integrator.hpp"
+#include "mri_integrator.hpp"
 #include "fixed_substep_integrator.hpp"
 #include "forward_euler_integrator.hpp"
 #include "nudging.hpp"
@@ -22,6 +22,7 @@
 #include <iostream>
 #include <cmath>
 #include <chrono>
+#include <math.h>
 
 // // Private function to check function return values
 // int check_flag(const int flag, const std::string funcname);
@@ -66,9 +67,15 @@ int main(int argc, char** argv)
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds for substepper i.e. after dt seconds, pass control back to rainshaft code.
-  double dt = 2000.0;
+  double dt = 1800.00;
   // Time step size in seconds for sundials integrator within each substep
-  double dt_fixedstep = 10.24;
+  // double dt_fixedstep = 2.62144;
+  double dt_fixedstep = 0.00128 * pow(2, atoi(argv[1]));
+  double dt_slowfac = atoi(argv[2]);
+  int run = atoi(argv[3]);
+  // order of the MRI integrators
+  int fastOrder = 3;
+  int slowOrder = 3;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -90,8 +97,6 @@ int main(int argc, char** argv)
   double rog = constants.rdry / constants.g;
   // std::cout << nlev << std::endl;
   std::vector<double> z_int(nlev+1, 0.);
-
-  std::cout << "lengths: " << nlev+1 << std::endl;
   
   for (int il = nlev - 1; il != -1; --il) {
     double pdel = grid.p_int[il+1]-grid.p_int[il];
@@ -140,12 +145,12 @@ int main(int argc, char** argv)
   RainshaftState initial_state(t, q, nr, qr);
   RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
   // Sedimentation process.
-  Sedimentation sed(constants, false, false);
+  Sedimentation sed(constants, true, false);
 
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(constants, &sat_form, false, false);
+  Evaporation evap(constants, &sat_form, true, false);
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
 
@@ -155,8 +160,11 @@ int main(int argc, char** argv)
   SumProcess all_micro = SumProcess(micro_processes);
 
   // Sum of local processes.
-  std::vector<const RainshaftProcess *> local_processes{&self_coll, &evap, &nudge};
+  std::vector<const RainshaftProcess *> local_processes{&evap, &self_coll, &nudge};
   SumProcess all_local = SumProcess(local_processes);
+
+  std::vector<const RainshaftProcess *> all_processes{&sed, &evap, &self_coll, &nudge};
+  SumProcess all_proc = SumProcess(all_processes);
 
   // Evolve state forward.
   // P3 Settings
@@ -191,7 +199,7 @@ int main(int argc, char** argv)
 
   // ARKODE Settings
   // ExplicitIntegrator micro_step(&constants, dt_fixedstep, &grid, &all_micro, &sun_ctxt);
-  ImplicitIntegrator micro_step(&constants, dt_fixedstep, &grid, &all_local, &all_micro, &sun_ctxt);
+  MRIIntegrator micro_step(&constants, fastOrder, slowOrder, dt_fixedstep, dt_slowfac, &grid, &all_local, &all_micro, &all_proc, &sun_ctxt);
   FixedSubstepIntegrator intg(&micro_step, dt);
 
   // // Pure Forward Euler Settings
@@ -204,12 +212,25 @@ int main(int argc, char** argv)
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_order5_test.nc");
+
+  // file name
+  std::string str1 = std::to_string(dt_fixedstep);
+  str1.erase(str1.find_first_of('.'), 1);
+  str1.erase(0, str1.find_first_not_of('0'));
+  str1.erase ( str1.find_last_not_of('0') + 1, std::string::npos );
+
+  std::string str2 = argv[2];
+  std::string str3 = argv[3];
+
+  NetcdfWriter writer("./rainshaft_mri_sedfast_t0-1800_order" + std::to_string(fastOrder) + std::to_string(slowOrder) + "_lookup_exp_dt" + str1 + "e-5_outerdt" + str2 + "_run" + str3 + ".nc");
+  // NetcdfWriter writer("./rainshaft_t0-1800_order5_exp_dt2e-5_reference.nc");
+  // NetcdfWriter writer("./rainshaft_t0-1800_order1_lookup_exp_dt" + str1 + "e-5.nc");
   writer.write_grid(grid);
   writer.write_states(solution.states);
   writer.write_derived_vars(solution.dvars);
   writer.write_num_rhs_evals(solution.num_rhs_evals);
   writer.write_walltime_ms(walltime_ms.count());
+
   // Ensure that the library is linked and greet the user.
   spaecies::do_nothing();
 

@@ -17,6 +17,7 @@ struct RainshaftUserData {
   const RainshaftGrid* grid;
   const RainshaftProcess* process_exp;
   const RainshaftProcess* process_imp;
+  const RainshaftProcess* process_all;
 };
 
 class SundialsIntegrator : public RainshaftIntegrator {
@@ -29,6 +30,7 @@ public:
                      const RainshaftGrid* grid,
                      const RainshaftProcess* process_exp,
                      const RainshaftProcess* process_imp,
+                     const RainshaftProcess* process_all,
                      sundials::Context *sun_ctxt);
 
   // SPS: Change pointer type to prevent use of a sun_ctxt that is destroyed.
@@ -54,6 +56,8 @@ void tend_jac_to_sun_matrix(const RainshaftTendencyJac& tend_jac, SUNMatrix J);
 int rainshaft_f_imp(realtype t, N_Vector y, N_Vector ydot, void* user_data);
 
 int rainshaft_f_exp(realtype t, N_Vector y, N_Vector ydot, void* user_data);
+
+int rainshaft_f_all(realtype t, N_Vector y, N_Vector ydot, void* user_data);
 
 int rainshaft_Jac(realtype t, N_Vector y, N_Vector fy, SUNMatrix J, void* user_data, 
                   N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);

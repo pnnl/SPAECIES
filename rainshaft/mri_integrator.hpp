@@ -1,18 +1,25 @@
-#ifndef IMPLICIT_INTEGRATOR_HPP
-#define IMPLICIT_INTEGRATOR_HPP
+#ifndef MRI_INTEGRATOR_HPP
+#define MRI_INTEGRATOR_HPP
 #include "sundials_integrator.hpp"
 
-class ImplicitIntegrator : public SundialsIntegrator {
+class MRIIntegrator : public SundialsIntegrator {
 
 public:
 
+  int fastOrder;
+  int slowOrder;
   double dt;
+  double dt_slowfac;
 
-  ImplicitIntegrator(const RainshaftConstants* constants,
+  MRIIntegrator(const RainshaftConstants* constants,
+                     const int fast_order,
+                     const int slow_order,
                      const double dt_in,
+                     const double dt_slowfacin,
                      const RainshaftGrid* grid,
                      const RainshaftProcess* process_exp,
                      const RainshaftProcess* process_imp,
+                     const RainshaftProcess* process_all,
                      sundials::Context *sun_ctxt);
 
 
@@ -23,4 +30,4 @@ public:
 
 };
 
-#endif // IMPLICIT_INTEGRATOR_HPP
+#endif // MRI_INTEGRATOR_HPP

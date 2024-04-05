@@ -15,36 +15,14 @@
 
 using namespace std;
 
-extern "C" {
-  int CFLStabilityFn(N_Vector y, realtype t, realtype *hstab, void *user_data) {
-    RainshaftState state = n_vector_to_state(y);
-    RainshaftUserData *cast_data = (RainshaftUserData*) user_data;
-    const RainshaftConstants *constants = cast_data->constants;
-    const RainshaftGrid *grid = cast_data->grid;
-    RainshaftDerivedVars dvars = RainshaftDerivedVars(*constants,
-                                                      *grid,
-                                                      state);
-    Sedimentation sed(*constants, false, false);
-    double lambdar_top = constants->pi * constants->rhow * constants->nr_top / constants->qr_top;
-    lambdar_top = cbrt(lambdar_top);
-    std::vector<double> speeds_top = sed.rain_fall_speeds(*constants, constants->rho_top, lambdar_top);
-    double cfl_time = dvars.dz[0] / speeds_top[1];
-    for (int il = 0; il != grid->nlev - 1; ++il) {
-      std::vector<double> speeds = sed.rain_fall_speeds(*constants, dvars.rho_dry[il], dvars.lambdar[il]);
-      cfl_time = std::max(cfl_time, dvars.dz[il+1] / speeds[1]);
-    }
-    *hstab = 0.99 * cfl_time;
-    return 0;
-  }
-}
-
 
 ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants* constants,
                                        const double dt_in,
                                        const RainshaftGrid* grid,
-                                       const RainshaftProcess* process,
+                                       const RainshaftProcess* process_exp,
+                                       const RainshaftProcess* process_imp,
                                        sundials::Context *sun_ctxt)
-  : SundialsIntegrator(constants, grid, process, sun_ctxt), dt(dt_in) {
+  : SundialsIntegrator(constants, grid, process_exp, process_imp, sun_ctxt), dt(dt_in) {
 }
 
 // SPS: Need to generalize this to get output states at arbitary times.
@@ -60,12 +38,12 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   std::cout << "num vars = " << num_variables << std::endl;
   N_Vector y0 = state_to_n_vector(sun_ctxt, initial_state);
 
-  void* arkode_mem = ERKStepCreate(rainshaft_f, initial_time, y0, *sun_ctxt);
+  void* arkode_mem = ERKStepCreate(rainshaft_f_exp, initial_time, y0, *sun_ctxt);
 
   N_VDestroy(y0);
 
   // SPS: And this return value.
-  int solverOrder = 4;
+  int solverOrder = 5;
   ERKStepSetOrder(arkode_mem, solverOrder);
 
   // SPS: And this return value.
@@ -140,6 +118,16 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   int i = 0;
 
   while (tret < final_time) {
+
+    // ReInit here is in case of switching to a different method
+    if (tret >= 317.07 & tret < 317.078 + 2*dt) { // probably a better way to do this range
+                                       // so that we don't call ReInit multiple times
+      // ARKStepReInit(arkode_mem, rainshaft_f_exp, NULL, tret, yout);
+
+      // ARKStepSetOrder(arkode_mem, 5);
+      ERKStepSetFixedStep(arkode_mem, dt);
+    }
+
 
     if (tret + last_step > final_time) {
       ERKStepEvolve(arkode_mem, final_time, yout, &tret, ARK_NORMAL);

@@ -10,8 +10,9 @@ SundialsIntegrator::SundialsIntegrator(const RainshaftConstants* constants,
                                        const RainshaftGrid* grid,
                                        const RainshaftProcess* process_exp,
                                        const RainshaftProcess* process_imp,
+                                       const RainshaftProcess* process_all,
                                        sundials::Context *sun_ctxt)
-  : sun_ctxt(sun_ctxt), user_data{constants, grid, process_exp, process_imp} {
+  : sun_ctxt(sun_ctxt), user_data{constants, grid, process_exp, process_imp, process_all} {
 }
 
 RainshaftDerivedVars SundialsIntegrator::calc_dvars(const RainshaftState& state) const {
@@ -82,13 +83,13 @@ void tend_jac_to_sun_matrix(const RainshaftTendencyJac& tend_jac, SUNMatrix J) {
   realtype* Jdata = SUNDenseMatrix_Data(J);
   for (sunindextype i = 0; i != nz; ++i) {
     for (sunindextype j = 0; j != nz; ++j) {
-      Jdata[j*nz + i] = tend_jac.t_tend_jac[i*nz + j];
+      Jdata[j*nz + i] = tend_jac.t_tend_jac[j*nz + i];
     }
   }
 
   for (sunindextype i = 0; i != nz; ++i) {
     for (sunindextype j = 0; j != nz; ++j) {
-      Jdata[j*nz + i] += tend_jac.q_tend_jac[i*nz + j];
+      Jdata[j*nz + i] += tend_jac.q_tend_jac[j*nz + i];
     }
   }
 
@@ -104,8 +105,8 @@ void tend_jac_to_sun_matrix(const RainshaftTendencyJac& tend_jac, SUNMatrix J) {
     }
   }
 
-  // for (sunindextype i = nz/2; i != nz; ++i) {
-  //   for (sunindextype j = nz/2; j != nz; ++j) {
+  // for (sunindextype i = 0; i != nz; ++i) {
+  //   for (sunindextype j = 0; j != nz; ++j) {
   //     std::cout << Jdata[j*nz + i]<< " ";
   //   }
   //   std::cout << std::endl;
@@ -137,6 +138,21 @@ int rainshaft_f_exp(realtype t, N_Vector y, N_Vector ydot, void* user_data) {
                                                     *cast_data->grid,
                                                     state);
   RainshaftTendency tend = cast_data->process_exp->calc_tend(*cast_data->constants,
+                                                         *cast_data->grid,
+                                                         state, dvars);
+  tend_to_n_vector(tend, ydot);
+  return 0;
+}
+
+
+int rainshaft_f_all(realtype t, N_Vector y, N_Vector ydot, void* user_data) {
+  // SPS: Should stop using std::vector to reduce copies and allocations.
+  RainshaftState state = n_vector_to_state(y);
+  RainshaftUserData *cast_data = (RainshaftUserData*) user_data;
+  RainshaftDerivedVars dvars = RainshaftDerivedVars(*cast_data->constants,
+                                                    *cast_data->grid,
+                                                    state);
+  RainshaftTendency tend = cast_data->process_all->calc_tend(*cast_data->constants,
                                                          *cast_data->grid,
                                                          state, dvars);
   tend_to_n_vector(tend, ydot);

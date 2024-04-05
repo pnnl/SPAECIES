@@ -80,8 +80,8 @@ Evaporation::Evaporation(const RainshaftConstants& constants,
                          bool use_numerical_integration)
   : sat_form(sat_form_in), use_numerical_integration(use_numerical_integration) {
   if (use_v_table) {
-    std::vector<double> range_bounds = {5., 195., 8595.};
-    std::vector<double> spacings = {1., 1.};
+    std::vector<double> range_bounds = {0.1, 195., 9595.};
+    std::vector<double> spacings = {0.001, 0.001};
     std::vector<double> d_microns = LookupTable::calc_x_values(range_bounds,
                                                                spacings);
     std::vector<double> v_values(d_microns.size(), 0.);
