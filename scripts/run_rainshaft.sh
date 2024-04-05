@@ -4,8 +4,8 @@ make -j
 
 # list of slow time step factors: dt_slow = SLOWFAC * dt_fast
 SLOWFAC=(4 10 100 300)
-NUMRUNS=0
-for k in $(seq 0 $NUMRUNS) # ensemble runs
+NUMRUNS=1
+for k in $(seq 1 $NUMRUNS) # ensemble runs
 do
 	printf -- "---------------------------------- RUN %u ----------------------------------\n" $k
 	for j in $(seq 0 ${#SLOWFAC[@]}) # number of different slow time step factors
