@@ -6,14 +6,9 @@ class ExplicitIntegrator : public SundialsIntegrator {
 
 public:
 
-  double dt;
-  
-  ExplicitIntegrator(const RainshaftConstants* constants,
-                     const double dt_in,
-                     const RainshaftGrid* grid,
-                     const RainshaftProcess* process_exp,
-                     const RainshaftProcess* process_imp,
-                     sundials::Context *sun_ctxt);
+  ExplicitIntegrator(const RainshaftConstants& constants,
+                     const RainshaftGrid& grid,
+                     const RainshaftProcess* const process);
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,

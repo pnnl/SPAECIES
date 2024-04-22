@@ -20,7 +20,7 @@ std::vector<double> calc_dz(const RainshaftConstants& constants,
 // Convert cell widths to interface heights.
 std::vector<double> dz_to_z_int(const std::vector<double> dz) {
   auto nlev = dz.size();
-  std::vector<double> z_int(nlev, 0.);
+  std::vector<double> z_int(nlev+1, 0.);
   // Construct z_int from bottom to top.
   for (int il = nlev-1; il != -1; --il) {
     z_int[il] = z_int[il+1] + dz[il];
