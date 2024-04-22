@@ -4,6 +4,6 @@
 namespace spaecies
 {
 void do_nothing() {
-  // std::cout << "Hi!" << std::endl;
+  std::cout << "Hi!" << std::endl;
 }
 }

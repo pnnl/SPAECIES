@@ -80,8 +80,8 @@ Evaporation::Evaporation(const RainshaftConstants& constants,
                          bool use_numerical_integration)
   : sat_form(sat_form_in), use_numerical_integration(use_numerical_integration) {
   if (use_v_table) {
-    std::vector<double> range_bounds = {0.1, 195., 9595.};
-    std::vector<double> spacings = {0.001, 0.001};
+    std::vector<double> range_bounds = {5., 195., 8595.};
+    std::vector<double> spacings = {1., 1.};
     std::vector<double> d_microns = LookupTable::calc_x_values(range_bounds,
                                                                spacings);
     std::vector<double> v_values(d_microns.size(), 0.);
@@ -129,30 +129,4 @@ RainshaftTendency Evaporation::calc_tend(const RainshaftConstants& constants,
     nr_tend[il] = - q_tend[il] * (state.nr[il] / state.qr[il]);
   }
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
-}
-
-// placeholder for Jacobian!
-RainshaftTendencyJac Evaporation::calc_tend_jac(const RainshaftConstants& constants,
-                                         const RainshaftGrid& grid,
-                                         const RainshaftState& state,
-                                         const RainshaftDerivedVars& dvars) const {
-  double* t_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
-  double* q_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
-  double* nr_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
-  double* qr_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
-
-  return RainshaftTendencyJac(t_tend_jac, q_tend_jac, nr_tend_jac, qr_tend_jac);
-}
-
-double Evaporation::calc_v_evap(const RainshaftConstants& constants, double lambdar) const {
-  if (v_table.has_value()) {
-    double d_micron = 1.e6 / lambdar;
-    return v_table->lookup_value(d_micron);
-  } else {
-    if (use_numerical_integration) {
-      return calc_v_evap_numerical(constants, lambdar);
-    } else {
-      return calc_v_evap_gamma(constants, lambdar);
-    }
-  }
 }
