@@ -130,3 +130,16 @@ RainshaftTendency Evaporation::calc_tend(const RainshaftConstants& constants,
   }
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
+
+double Evaporation::calc_v_evap(const RainshaftConstants& constants, double lambdar) const {
+  if (v_table.has_value()) {
+    double d_micron = 1.e6 / lambdar;
+    return v_table->lookup_value(d_micron);
+  } else {
+    if (use_numerical_integration) {
+      return calc_v_evap_numerical(constants, lambdar);
+    } else {
+      return calc_v_evap_gamma(constants, lambdar);
+    }
+  }
+}

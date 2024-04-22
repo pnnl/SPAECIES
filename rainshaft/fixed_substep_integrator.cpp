@@ -1,6 +1,5 @@
 #include "fixed_substep_integrator.hpp"
 #include <cmath>
-#include <iostream>
 
 FixedSubstepIntegrator::FixedSubstepIntegrator(const RainshaftIntegrator *inner_integrator,
                                                double dt_in)
@@ -13,7 +12,6 @@ RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
   double time_interval = final_time - initial_time;
   double approx_num_steps = time_interval / dt;
   double rounded_num_steps = std::round(approx_num_steps);
-  // double rounded_num_steps = 1006.;
   // Check if a partial time step is needed.
   std::size_t num_full_steps;
   bool need_partial_step = false;
@@ -45,18 +43,10 @@ RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
     } else {
       states.pop_back();
     }
-
-    for (int i = 0; i < solution.states.size(); ++i)
-    {
-      states.push_back(solution.states[i]);
-      dvars.push_back(solution.dvars[i]);
+    states.push_back(solution.states.back());
+    if ((it == num_full_steps - 1) && !need_partial_step) {
+      dvars.push_back(solution.dvars.back());
     }
-
-    // states.push_back(solution.states.back());
-    // if ((it == num_full_steps - 1) && !need_partial_step) {
-    //   dvars.push_back(solution.dvars.back());
-    // }
-
     num_rhs_evals += solution.num_rhs_evals;
     current_time = next_time;
   }

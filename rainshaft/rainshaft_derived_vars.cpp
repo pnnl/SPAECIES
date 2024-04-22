@@ -54,14 +54,8 @@ std::vector<double> calc_lambdar(const RainshaftConstants& constants,
       double lambda_cubed = constants.pi * constants.rhow * state.nr[i]
         / state.qr[i];
       lambdar.push_back(std::cbrt(lambda_cubed));
-      // if (lambda_cubed == 0.0) {
-      //   lambdar.push_back(1.e-10);
-      // } else {
-      //   lambdar.push_back(std::cbrt(lambda_cubed));
-      // }
     } else {
       lambdar.push_back(0.);
-      // lambdar.push_back(1.e-10);
     }
   }
   return lambdar;

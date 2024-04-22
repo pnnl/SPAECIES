@@ -23,34 +23,3 @@ RainshaftTendency Nudging::calc_tend(const RainshaftConstants& constants,
   }
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
-
-// placeholder for Jacobian!
-RainshaftTendencyJac Nudging::calc_tend_jac(const RainshaftConstants& constants,
-                                     const RainshaftGrid& grid,
-                                     const RainshaftState& state,
-                                     const RainshaftDerivedVars& dvars) const {
-  double* t_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
-  double* q_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
-  double* nr_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
-  double* qr_tend_jac = new double[4*grid.nlev * 4*grid.nlev] {0};
-
-  // d(nudge_T)/dT
-  for (std::size_t il = 0; il < grid.nlev; ++il) {
-    for (std::size_t jl = 0; jl < grid.nlev; ++jl) {
-      if (il == jl) {
-        t_tend_jac[jl*4*grid.nlev + il] = -1.0 / time_scale;
-      }
-    }
-  }
-
-  // d(nudge_q)/dT
-  for (std::size_t il = grid.nlev; il < 2*grid.nlev; ++il) {
-    for (std::size_t jl = grid.nlev; jl < 2*grid.nlev; ++jl) {
-      if (il == jl) {
-        q_tend_jac[jl*4*grid.nlev + il] = -1.0 / time_scale;
-      }
-    }
-  }
-
-  return RainshaftTendencyJac(t_tend_jac, q_tend_jac, nr_tend_jac, qr_tend_jac);
-}

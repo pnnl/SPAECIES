@@ -18,8 +18,6 @@ struct RainshaftConstants {
   double epsilon_h2o;
   // Minimum hydrometeor mass mixing ratio (kg/kg)
   double qsmall;
-  // Minimum number of particles
-  double nrsmall;
   // Acceleration due to gravity at earth's surface (m/s^2)
   double g;
   // Minimum allowed mean rain diameter (m)

@@ -38,16 +38,16 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
   const auto nz = initial_state.t.size();
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[j] = 1.e-1;
+    tol_data[j] = fac * 1.e-1;
   }
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[nz + j] = 1.e-5;
+    tol_data[nz + j] = fac * 1.e-5;
   }
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[2*nz + j] = 1.e-1;
+    tol_data[2*nz + j] = fac * 1.e-1;
   }
   for (sunindextype j = 0; j != nz; ++j) {
-    tol_data[3*nz + j] = 1.e-8;
+    tol_data[3*nz + j] = fac * 1.e-8;
   }
   ERKStepSVtolerances(arkode_mem, reltol, abstol);
   N_VDestroy(abstol);
