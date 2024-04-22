@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.22)
 project(SPAECIES LANGUAGES CXX VERSION 0.0.1)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
-set(CMAKE_CXX_STANDARD 17)
 find_package(NetCDF REQUIRED)
 find_package(SUNDIALS REQUIRED)
 find_package(Boost REQUIRED)
 
+if (BUILD_TESTING)
+  find_package(Catch2 3)
+  include(CTest)
+  include(Catch)
+  add_subdirectory(tests)
+endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS_DEBUG "-Wall -fbounds-check")
