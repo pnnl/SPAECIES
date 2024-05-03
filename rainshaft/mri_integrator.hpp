@@ -6,8 +6,8 @@ class MRIIntegrator : public SundialsIntegrator<3>
 {
 
 private:
+  const double dt_fast;
   const double dt_slow;
-  const double multirate_ratio;
   const int order;
 
 public:
@@ -16,8 +16,8 @@ public:
                 const RainshaftProcess * const process_fast,
                 const RainshaftProcess * const process_slow_exp,
                 const RainshaftProcess *const process_slow_imp,
+                const double dt_fast,
                 const double dt_slow,
-                const int multirate_ratio,
                 const int order,
                 const int steps_per_output = -1);
 

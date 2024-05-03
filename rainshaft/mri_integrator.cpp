@@ -9,7 +9,6 @@
 #include "sundials/sundials_context.h"
 #include "sunlinsol/sunlinsol_dense.h"
 #include "sunmatrix/sunmatrix_dense.h"
-// #include "sunadaptcontroller/sunadaptcontroller_soderlind.h"
 
 #include "sedimentation.hpp"
 #include <algorithm>
@@ -17,54 +16,55 @@
 
 MRIIntegrator::MRIIntegrator(const RainshaftConstants &constants,
                              const RainshaftGrid &grid,
-                             const RainshaftProcess * const process_fast,
-                             const RainshaftProcess * const process_slow_exp,
-                             const RainshaftProcess * const process_slow_imp,
+                             const RainshaftProcess *const process_fast,
+                             const RainshaftProcess *const process_slow_exp,
+                             const RainshaftProcess *const process_slow_imp,
+                             const double dt_fast,
                              const double dt_slow,
-                             const int multirate_ratio,
                              const int order,
                              const int steps_per_output)
-  : SundialsIntegrator(constants, grid, {process_fast, process_slow_exp, process_slow_imp}, steps_per_output),
-    dt_slow(dt_slow), multirate_ratio(multirate_ratio), order(order)
-  {
-  }
+    : SundialsIntegrator(constants, grid, {process_fast, process_slow_exp, process_slow_imp}, steps_per_output),
+      dt_slow(dt_slow), dt_fast(dt_fast), order(order)
+{
+}
 
-  // SPS: Need to generalize this to get output states at arbitary times.
-  RainshaftSolution MRIIntegrator::integrate(double initial_time,
-                                             double final_time,
-                                             const RainshaftState &initial_state) const
-  {
-    auto y = state_to_n_vector(sun_ctxt, initial_state);
+// SPS: Need to generalize this to get output states at arbitary times.
+RainshaftSolution MRIIntegrator::integrate(double initial_time,
+                                           double final_time,
+                                           const RainshaftState &initial_state) const
+{
+  auto y = state_to_n_vector(sun_ctxt, initial_state);
 
-    /* create an ARKStep object, setting fast (inner) right-hand side
-       functions and the initial condition */
-    auto inner_arkode_mem = ARKStepCreate(create_f<0>(), nullptr, initial_time, y, sun_ctxt);
-    ARKStepSetOrder(inner_arkode_mem, order);
-    ARKStepSetUserData(inner_arkode_mem, (void *)&user_data);
-    ARKStepSetMaxNumSteps(inner_arkode_mem, -1);
+  /* create an ARKStep object, setting fast (inner) right-hand side
+     functions and the initial condition */
+  auto inner_arkode_mem = ARKStepCreate(create_f<0>(), nullptr, initial_time, y, sun_ctxt);
+  ARKStepSetOrder(inner_arkode_mem, order);
+  ARKStepSetUserData(inner_arkode_mem, (void *)&user_data);
+  ARKStepSetMaxNumSteps(inner_arkode_mem, -1);
 
-    // fixed step for fast solver
-    ARKStepSetFixedStep(inner_arkode_mem, dt_slow / multirate_ratio);
+  // fixed step for fast solver
+  ARKStepSetFixedStep(inner_arkode_mem, dt_fast);
 
-    /* create MRIStepInnerStepper wrapper for the ARKStep memory block */
-    MRIStepInnerStepper stepper = nullptr;
-    ARKStepCreateMRIStepInnerStepper(inner_arkode_mem, &stepper);
+  /* create MRIStepInnerStepper wrapper for the ARKStep memory block */
+  MRIStepInnerStepper stepper = nullptr;
+  ARKStepCreateMRIStepInnerStepper(inner_arkode_mem, &stepper);
 
-    /* create an MRIStep object, setting the slow (outer) right-hand side
-       functions and the initial condition */
-    void *outer_arkode_mem = MRIStepCreate(create_f<1>(), create_f<2>(), initial_time, y, stepper, sun_ctxt);
+  /* create an MRIStep object, setting the slow (outer) right-hand side
+     functions and the initial condition */
+  void *outer_arkode_mem = MRIStepCreate(create_f<1>(), create_f<2>(), initial_time, y, stepper, sun_ctxt);
 
-    /* Pass udata to user functions */
-    MRIStepSetUserData(outer_arkode_mem, (void *)&user_data);
-    // ARKStepSetMaxNumSteps(outer_arkode_mem, -1);
-    MRIStepSetStopTime(outer_arkode_mem, final_time);
+  /* Pass udata to user functions */
+  MRIStepSetUserData(outer_arkode_mem, (void *)&user_data);
+  ARKStepSetMaxNumSteps(outer_arkode_mem, -1);
+  MRIStepSetStopTime(outer_arkode_mem, final_time);
 
-    /* Set the slow step size */
-    MRIStepSetFixedStep(outer_arkode_mem, dt_slow);
+  /* Set the slow step size */
+  MRIStepSetFixedStep(outer_arkode_mem, dt_slow);
 
-    auto solution = evolve(
+  auto solution = evolve(
       MRIStepEvolve,
-      [outer_arkode_mem, inner_arkode_mem] () {
+      [outer_arkode_mem, inner_arkode_mem]()
+      {
         long int nfse = 0;
         long int nfsi = 0;
         MRIStepGetNumRhsEvals(outer_arkode_mem, &nfse, &nfsi);
@@ -78,13 +78,12 @@ MRIIntegrator::MRIIntegrator(const RainshaftConstants &constants,
       final_time,
       y,
       ARK_NORMAL,
-      ARK_ONE_STEP
-    );
+      ARK_ONE_STEP);
 
-    N_VDestroy(y);
-    MRIStepInnerStepper_Free(&stepper);
-    ARKStepFree(&inner_arkode_mem);
-    ARKStepFree(&outer_arkode_mem);
+  N_VDestroy(y);
+  MRIStepInnerStepper_Free(&stepper);
+  ARKStepFree(&inner_arkode_mem);
+  MRIStepFree(&outer_arkode_mem);
 
-    return solution;
-  }
+  return solution;
+}

@@ -42,6 +42,17 @@ private:
     return 0;
   }
 
+  static void handle_error(int line,
+                           const char *func,
+                           const char *file,
+                           const char *msg,
+                           SUNErrCode err_code,
+                           void *err_user_data,
+                           SUNContext ctx)
+  {
+    throw std::logic_error(msg);
+  }
+
 public:
   SundialsIntegrator(const RainshaftConstants &constants,
                      const RainshaftGrid &grid,
@@ -49,10 +60,7 @@ public:
                      const int steps_per_output)
       : user_data{constants, grid, processes}, steps_per_output(steps_per_output)
   {
-    SUNContext_PushErrHandler(
-        sun_ctxt, [](int line, const char *func, const char *file, const char *msg, SUNErrCode err_code, void *err_user_data, SUNContext ctx)
-        { throw std::logic_error(msg); },
-        nullptr);
+    SUNContext_PushErrHandler(sun_ctxt, SundialsIntegrator::handle_error, nullptr);
   }
 
 protected:
