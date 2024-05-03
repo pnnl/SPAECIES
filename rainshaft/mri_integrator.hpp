@@ -13,8 +13,8 @@ private:
 public:
   MRIIntegrator(const RainshaftConstants &constants,
                 const RainshaftGrid &grid,
-                const RainshaftProcess * const process_fast,
-                const RainshaftProcess * const process_slow_exp,
+                const RainshaftProcess *const process_fast,
+                const RainshaftProcess *const process_slow_exp,
                 const RainshaftProcess *const process_slow_imp,
                 const double dt_fast,
                 const double dt_slow,
