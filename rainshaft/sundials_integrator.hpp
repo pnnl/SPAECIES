@@ -101,8 +101,8 @@ protected:
         if (i % steps_per_output == 0)
         {
           const auto new_state = n_vector_to_state(y);
+          dvars.emplace_back(user_data.constants, user_data.grid, new_state);
           states.push_back(new_state);
-          dvars.push_back(RainshaftDerivedVars(user_data.constants, user_data.grid, new_state));
         }
         evolveFun(mem, final_time, y, &tret, one_step);
       }
@@ -113,8 +113,8 @@ protected:
     }
 
     const auto new_state = n_vector_to_state(y);
+    dvars.emplace_back(user_data.constants, user_data.grid, new_state);
     states.push_back(new_state);
-    dvars.push_back({user_data.constants, user_data.grid, new_state});
 
     return RainshaftSolution(states, dvars, countFun());
   }
