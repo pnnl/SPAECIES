@@ -6,8 +6,11 @@
 ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants &constants,
                                        const RainshaftGrid &grid,
                                        const RainshaftProcess *const process,
+                                       const double dt,
+                                       const int order,
                                        const int steps_per_output)
-    : SundialsIntegrator(constants, grid, {process}, steps_per_output)
+    : SundialsIntegrator(constants, grid, {process}, steps_per_output),
+      dt(dt), order(order)
 {
 }
 
@@ -19,6 +22,8 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   auto y = state_to_n_vector(sun_ctxt, initial_state);
   void *arkode_mem = ERKStepCreate(create_f<0>(), initial_time, y, sun_ctxt);
   ERKStepSetUserData(arkode_mem, (void *)&user_data);
+  ERKStepSetFixedStep(arkode_mem, dt);
+  ERKStepSetOrder(arkode_mem, order);
   ERKStepSetMaxNumSteps(arkode_mem, -1); // Set no limit on the number of steps
   ERKStepSetStopTime(arkode_mem, final_time);
 

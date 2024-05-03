@@ -55,7 +55,8 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
 
   /* Pass udata to user functions */
   MRIStepSetUserData(outer_arkode_mem, (void *)&user_data);
-  ARKStepSetMaxNumSteps(outer_arkode_mem, -1);
+  MRIStepSetOrder(outer_arkode_mem, order);
+  MRIStepSetMaxNumSteps(outer_arkode_mem, -1);
   MRIStepSetStopTime(outer_arkode_mem, final_time);
 
   /* Set the slow step size */
