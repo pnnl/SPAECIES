@@ -5,7 +5,7 @@
 #include <limits>
 #include "rainshaft_integrator.hpp"
 #include "sundials/sundials_context.hpp"
-#include "nvector/nvector_serial.h"
+#include "nvector/sundials_nvector.h"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_state.hpp"
