@@ -83,5 +83,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   N_VDestroy(y);
   // SPS: Make RAII wrapper for this.
   ARKStepFree(&arkode_mem);
+  SUNMatDestroy(J);
+  SUNLinSolFree(LS);
   return solution;
 }
