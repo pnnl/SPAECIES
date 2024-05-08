@@ -30,7 +30,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
 
   SUNLinearSolver LS = nullptr; 
   SUNMatrix J = nullptr;
-  J = SUNDenseMatrix(initial_state.t.size()*4, initial_state.t.size()*4, sun_ctxt);
+  J = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
   LS = SUNLinSol_Dense(y, J, sun_ctxt);
   ARKStepSetLinearSolver(arkode_mem, LS, J);
   // ARKStepSetMaxNonlinIters(arkode_mem, 160);
