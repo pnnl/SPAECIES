@@ -24,6 +24,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   auto y = state_to_n_vector(sun_ctxt, initial_state);
   void *arkode_mem = ARKStepCreate(create_f<0>(), create_f<1>(), initial_time, y, sun_ctxt);
   ARKStepSetUserData(arkode_mem, (void *)&user_data);
+  ARKStepSetFixedStep(arkode_mem, dt);
   ARKStepSetOrder(arkode_mem, order);
   ARKStepSetMaxNumSteps(arkode_mem, -1); // Set no limit on the number of steps
   ARKStepSetStopTime(arkode_mem, final_time);
