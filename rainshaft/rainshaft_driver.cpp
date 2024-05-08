@@ -44,7 +44,7 @@ int main(int argc, char** argv)
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
-  double dt = 1.e-1;
+  double dt = 1.e-3;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
