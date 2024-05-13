@@ -1,17 +1,18 @@
-#ifndef EXPLICIT_INTEGRATOR_HPP
-#define EXPLICIT_INTEGRATOR_HPP
+#ifndef IMEX_INTEGRATOR_HPP
+#define IMEX_INTEGRATOR_HPP
 #include "sundials_integrator.hpp"
 
-class ExplicitIntegrator : public SundialsIntegrator<1>
+class IMEXIntegrator : public SundialsIntegrator<2>
 {
 private:
   const double dt;
   const int order;
 
 public:
-  ExplicitIntegrator(const RainshaftConstants &constants,
+  IMEXIntegrator(const RainshaftConstants &constants,
                      const RainshaftGrid &grid,
-                     const RainshaftProcess *const process,
+                     const RainshaftProcess *const process_exp,
+                     const RainshaftProcess *const process_imp,
                      const double dt = 0,
                      const int order = 4,
                      const int steps_per_output = -1);
@@ -21,4 +22,4 @@ public:
                               const RainshaftState &initial_state) const;
 };
 
-#endif // EXPLICIT_INTEGRATOR_HPP
+#endif // IMEX_INTEGRATOR_HPP

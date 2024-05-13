@@ -1,8 +1,9 @@
 add_executable(rainshaft
   evaporation.cpp
   explicit_integrator.cpp
+  imex_integrator.cpp
+  mri_integrator.cpp
   fixed_substep_integrator.cpp
-  forward_euler_integrator.cpp
   lookup_linear.cpp
   lookup_table.cpp
   nudging.cpp
@@ -19,7 +20,6 @@ add_executable(rainshaft
   sedimentation.cpp
   self_collision.cpp
   sequential_split_integrator.cpp
-  sundials_integrator.cpp
 )
 target_link_libraries(rainshaft
   NetCDF::NetCDF
