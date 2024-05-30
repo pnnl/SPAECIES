@@ -44,7 +44,7 @@ int main(int argc, char** argv)
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
-  double dt = 1.e-3;
+  double dt = 1.e0;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -106,11 +106,9 @@ int main(int argc, char** argv)
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.
-  std::vector<const RainshaftProcess *> micro_processes{&sed};
-  SumProcess all_micro = SumProcess(micro_processes);
+  SumProcess exp_processes = SumProcess{{&self_coll, &evap, &nudge}};
   // Sum of local processes.
-  std::vector<const RainshaftProcess *> local_processes{&self_coll, &evap, &nudge};
-  SumProcess all_local = SumProcess(local_processes);
+  SumProcess imp_processes = SumProcess{{&sed}};
   // Evolve state forward.
   // P3 Settings
   // ForwardEulerIntegrator sed_step(&constants, &grid, &sed, &sun_ctxt);
@@ -124,13 +122,13 @@ int main(int argc, char** argv)
   // FixedSubstepIntegrator intg(&micro_step, dt);
   // Pure Forward Euler Settings
   // ForwardEulerIntegrator micro_step(constants, grid, &all_micro);
-  IMEXIntegrator micro_step(constants, grid, &all_local, &all_micro, dt, 4, 1);
-  FixedSubstepIntegrator intg(&micro_step, dt);
+  IMEXIntegrator intg(constants, grid, &exp_processes, &imp_processes, dt, 3, 1);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);
   auto after_sol = high_resolution_clock::now();
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
+  std::cout << "Time: " << walltime_ms.count() << std::endl;
   // Write out grid and all states.
   NetcdfWriter writer("./rainshaft_1ms_no_table.nc");
   writer.write_grid(grid);

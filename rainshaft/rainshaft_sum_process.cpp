@@ -23,3 +23,15 @@ RainshaftTendency SumProcess::calc_tend(const RainshaftConstants& constants,
   }
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
+
+void SumProcess::calc_tend_jac_prod(const RainshaftConstants &constants,
+                                 const RainshaftGrid &grid,
+                                 const RainshaftState &state,
+                                 const RainshaftDerivedVars &dvars,
+                                 const double *const vec,
+                                 double *const prod) const
+{
+  for (std::size_t is = 0; is != nsub; ++is) {
+    sub_processes[is]->calc_tend_jac_prod(constants, grid, state, dvars, vec, prod);
+  }
+}

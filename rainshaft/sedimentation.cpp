@@ -67,6 +67,15 @@ RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants& constants,
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
 
+void Sedimentation::calc_tend_jac_prod(const RainshaftConstants &constants,
+                                 const RainshaftGrid &grid,
+                                 const RainshaftState &state,
+                                 const RainshaftDerivedVars &dvars,
+                                 const double *const vec,
+                                 double *const prod) const
+{
+}
+
 std::vector<double> Sedimentation::rain_fall_speeds(const RainshaftConstants& constants,
                                                     double rho_dry, double lambdar) const {
   // Catches case where there is no rain present.

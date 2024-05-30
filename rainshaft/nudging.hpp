@@ -17,6 +17,13 @@ public:
                               const RainshaftState& state,
                               const RainshaftDerivedVars& dvars) const;
 
+  void calc_tend_jac_prod(const RainshaftConstants &constants,
+                          const RainshaftGrid &grid,
+                          const RainshaftState &state,
+                          const RainshaftDerivedVars &dvars,
+                          const double *const vec,
+                          double *const prod) const;
+
   double time_scale;
   const std::vector<double> t0;
   const std::vector<double> q0;

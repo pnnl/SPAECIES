@@ -1,6 +1,8 @@
 #include "imex_integrator.hpp"
 #include "arkode/arkode_arkstep.h"
 #include "nvector/nvector_serial.h"
+#include "sunlinsol/sunlinsol_spbcgs.h"
+#include "sunlinsol/sunlinsol_sptfqmr.h"
 #include "sunlinsol/sunlinsol_dense.h"
 #include "sunmatrix/sunmatrix_dense.h"
 
@@ -29,11 +31,9 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   ARKStepSetMaxNumSteps(arkode_mem, -1); // Set no limit on the number of steps
   ARKStepSetStopTime(arkode_mem, final_time);
 
-  SUNLinearSolver LS = nullptr; 
-  SUNMatrix J = nullptr;
-  J = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
-  LS = SUNLinSol_Dense(y, J, sun_ctxt);
-  ARKStepSetLinearSolver(arkode_mem, LS, J);
+  // SUNLinearSolver LS = SUNLinSol_SPTFQMR(y, SUN_PREC_NONE, 0, sun_ctxt);
+  // ARKStepSetLinearSolver(arkode_mem, LS, nullptr);
+  // ARKStepSetJacTimes(arkode_mem, nullptr, create_jac_prod<1>());
   // ARKStepSetMaxNonlinIters(arkode_mem, 160);
   // ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(1.e-3));
   ARKStepSetSafetyFactor(arkode_mem, 0.8);
@@ -84,7 +84,6 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   N_VDestroy(y);
   // SPS: Make RAII wrapper for this.
   ARKStepFree(&arkode_mem);
-  SUNMatDestroy(J);
-  SUNLinSolFree(LS);
+  // SUNLinSolFree(LS);
   return solution;
 }

@@ -19,6 +19,13 @@ public:
                               const RainshaftState& state,
                               const RainshaftDerivedVars& dvars) const;
 
+  void calc_tend_jac_prod(const RainshaftConstants &constants,
+                          const RainshaftGrid &grid,
+                          const RainshaftState &state,
+                          const RainshaftDerivedVars &dvars,
+                          const double *const vec,
+                          double *const prod) const;
+
 private:
 
   // Number of subprocesses in this process.

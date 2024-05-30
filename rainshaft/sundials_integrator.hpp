@@ -30,15 +30,32 @@ private:
   static int rainshaft_f(sunrealtype t, N_Vector y, N_Vector ydot, void *user_data)
   {
     // SPS: Should stop using std::vector to reduce copies and allocations.
-    RainshaftState state = n_vector_to_state(y);
-    RainshaftUserData *cast_data = (RainshaftUserData *)user_data;
-    RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data->constants,
-                                                      cast_data->grid,
-                                                      state);
-    RainshaftTendency tend = cast_data->processes[PARTITION]->calc_tend(cast_data->constants,
-                                                                        cast_data->grid,
-                                                                        state, dvars);
+    auto state = n_vector_to_state(y);
+    auto *cast_data = static_cast<RainshaftUserData *>(user_data);
+    auto dvars = RainshaftDerivedVars(cast_data->constants,
+                                      cast_data->grid,
+                                      state);
+    auto tend = cast_data->processes[PARTITION]->calc_tend(cast_data->constants,
+                                                           cast_data->grid,
+                                                           state, dvars);
     tend_to_n_vector(tend, ydot);
+    return 0;
+  }
+
+  template <int PARTITION>
+  static int rainshaft_jac_prod(N_Vector v, N_Vector Jv, sunrealtype t, N_Vector y, N_Vector fy, void *user_data, N_Vector tmp)
+  {
+    N_VConst(0, Jv);
+    auto state = n_vector_to_state(y);
+    auto *cast_data = static_cast<RainshaftUserData *>(user_data);
+    auto dvars = RainshaftDerivedVars(cast_data->constants,
+                                      cast_data->grid,
+                                      state);
+    cast_data->processes[PARTITION]->calc_tend_jac_prod(cast_data->constants,
+                                                        cast_data->grid,
+                                                        state, dvars,
+                                                        N_VGetArrayPointer(v),
+                                                        N_VGetArrayPointer(Jv));
     return 0;
   }
 
@@ -71,14 +88,13 @@ protected:
   template <int PARTITION>
   decltype(&rainshaft_f<PARTITION>) create_f() const
   {
-    if (user_data.processes[PARTITION] == nullptr)
-    {
-      return nullptr;
-    }
-    else
-    {
-      return rainshaft_f<PARTITION>;
-    }
+    return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_f<PARTITION>;
+  }
+
+  template <int PARTITION>
+  decltype(&rainshaft_jac_prod<PARTITION>) create_jac_prod() const
+  {
+    return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_jac_prod<PARTITION>;
   }
 
   template <typename E, typename C, typename Mode>

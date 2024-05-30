@@ -131,6 +131,16 @@ RainshaftTendency Evaporation::calc_tend(const RainshaftConstants& constants,
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
 
+void Evaporation::calc_tend_jac_prod(const RainshaftConstants &constants,
+                                 const RainshaftGrid &grid,
+                                 const RainshaftState &state,
+                                 const RainshaftDerivedVars &dvars,
+                                 const double *const vec,
+                                 double *const prod) const
+{
+  throw "Not Implemented";
+}
+
 double Evaporation::calc_v_evap(const RainshaftConstants& constants, double lambdar) const {
   if (v_table.has_value()) {
     double d_micron = 1.e6 / lambdar;
