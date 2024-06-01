@@ -5,6 +5,12 @@
 #include "sunlinsol/sunlinsol_sptfqmr.h"
 #include "sunlinsol/sunlinsol_dense.h"
 #include "sunmatrix/sunmatrix_dense.h"
+#include "sunlinsol/sunlinsol_lapackdense.h"
+#include "sunlinsol/sunlinsol_band.h"
+#include "sunmatrix/sunmatrix_band.h"
+#include "sunlinsol/sunlinsol_lapackband.h"
+
+#include <iostream>
 
 IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
                                        const RainshaftGrid &grid,
@@ -34,8 +40,29 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   // SUNLinearSolver LS = SUNLinSol_SPTFQMR(y, SUN_PREC_NONE, 0, sun_ctxt);
   // ARKStepSetLinearSolver(arkode_mem, LS, nullptr);
   // ARKStepSetJacTimes(arkode_mem, nullptr, create_jac_prod<1>());
-  // ARKStepSetMaxNonlinIters(arkode_mem, 160);
-  // ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(1.e-3));
+
+  // SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
+  // SUNLinearSolver LS = SUNLinSol_Dense(y, jac, sun_ctxt);
+  // ARKStepSetLinearSolver(arkode_mem, LS, jac);
+  // ARKStepSetJacFn(arkode_mem, create_jac<1>());
+
+  SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
+  SUNLinearSolver LS = SUNLinSol_LapackDense(y, jac, sun_ctxt);
+  ARKStepSetLinearSolver(arkode_mem, LS, jac);
+  // ARKStepSetJacFn(arkode_mem, create_jac<1>());
+
+  // SUNMatrix jac = SUNBandMatrix(N_VGetLength(y), 0, 1, sun_ctxt);
+  // SUNLinearSolver LS = SUNLinSol_Band(y, jac, sun_ctxt);
+  // ARKStepSetLinearSolver(arkode_mem, LS, jac);
+  // ARKStepSetJacFn(arkode_mem, create_jac<1>());
+
+  // SUNMatrix jac = SUNBandMatrix(N_VGetLength(y), 0, 1, sun_ctxt);
+  // SUNLinearSolver LS = SUNLinSol_LapackBand(y, jac, sun_ctxt);
+  // ARKStepSetLinearSolver(arkode_mem, LS, jac);
+  // ARKStepSetJacFn(arkode_mem, create_jac<1>());
+
+  ARKStepSetMaxNonlinIters(arkode_mem, 160);
+  // ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(1.e-2));
   ARKStepSetSafetyFactor(arkode_mem, 0.8);
 
   // ARKODE currently approximates the optimal step size with (err)^(-1/(embedded order)), but it's more common to use
@@ -47,19 +74,19 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   auto abstol = N_VClone(y);
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
   const auto nz = initial_state.t.size();
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[j] = fac * 1.e-1;
   }
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[nz + j] = fac * 1.e-5;
   }
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[2 * nz + j] = fac * 1.e-1;
   }
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[3 * nz + j] = fac * 1.e-8;
   }

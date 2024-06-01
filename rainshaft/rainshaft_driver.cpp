@@ -44,7 +44,7 @@ int main(int argc, char** argv)
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
-  double dt = 1.e0;
+  double dt = 14;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -109,6 +109,8 @@ int main(int argc, char** argv)
   SumProcess exp_processes = SumProcess{{&self_coll, &evap, &nudge}};
   // Sum of local processes.
   SumProcess imp_processes = SumProcess{{&sed}};
+
+  SumProcess all_processes = SumProcess{{&sed, &self_coll, &evap, &nudge}};
   // Evolve state forward.
   // P3 Settings
   // ForwardEulerIntegrator sed_step(&constants, &grid, &sed, &sun_ctxt);
@@ -121,8 +123,8 @@ int main(int argc, char** argv)
   // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
   // FixedSubstepIntegrator intg(&micro_step, dt);
   // Pure Forward Euler Settings
-  // ForwardEulerIntegrator micro_step(constants, grid, &all_micro);
-  IMEXIntegrator intg(constants, grid, &exp_processes, &imp_processes, dt, 3, 1);
+  // ExplicitIntegrator intg(constants, grid, &all_processes, dt, 2);
+  IMEXIntegrator intg(constants, grid, &exp_processes, &imp_processes, dt, 2);
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);
   auto after_sol = high_resolution_clock::now();

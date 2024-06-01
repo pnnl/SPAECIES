@@ -21,6 +21,12 @@ public:
                           const double *const vec,
                           double *const prod) const;
 
+  void calc_tend_jac(const RainshaftConstants &constants,
+                             const RainshaftGrid &grid,
+                             const RainshaftState &state,
+                             const RainshaftDerivedVars &dvars,
+                             SUNMatrix jac) const;
+
   // For given rain variables, measure whether collisions typically end
   // up merging drops (breakup_fac \approx 1) or is there significant
   // breakup (breakup_fac < 1).

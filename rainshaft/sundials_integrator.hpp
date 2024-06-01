@@ -6,6 +6,7 @@
 #include "rainshaft_integrator.hpp"
 #include "sundials/sundials_context.hpp"
 #include "nvector/nvector_serial.h"
+#include "sundials/sundials_matrix.h"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_state.hpp"
@@ -59,6 +60,22 @@ private:
     return 0;
   }
 
+  template <int PARTITION>
+  static int rainshaft_jac(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix Jac, void *user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+  {
+    SUNMatZero(Jac);
+    auto state = n_vector_to_state(y);
+    auto *cast_data = static_cast<RainshaftUserData *>(user_data);
+    auto dvars = RainshaftDerivedVars(cast_data->constants,
+                                      cast_data->grid,
+                                      state);
+    cast_data->processes[PARTITION]->calc_tend_jac(cast_data->constants,
+                                                   cast_data->grid,
+                                                   state, dvars,
+                                                   Jac);
+    return 0;
+  }
+
   static void handle_error(int line,
                            const char *func,
                            const char *file,
@@ -81,9 +98,9 @@ public:
   }
 
 protected:
+  const RainshaftUserData user_data;
   const int steps_per_output;
   const sundials::Context sun_ctxt;
-  const RainshaftUserData user_data;
 
   template <int PARTITION>
   decltype(&rainshaft_f<PARTITION>) create_f() const
@@ -95,6 +112,12 @@ protected:
   decltype(&rainshaft_jac_prod<PARTITION>) create_jac_prod() const
   {
     return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_jac_prod<PARTITION>;
+  }
+
+  template <int PARTITION>
+  decltype(&rainshaft_jac<PARTITION>) create_jac() const
+  {
+    return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_jac<PARTITION>;
   }
 
   template <typename E, typename C, typename Mode>

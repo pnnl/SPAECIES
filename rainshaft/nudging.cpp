@@ -1,6 +1,7 @@
 #include "nudging.hpp"
 #include <cstddef>
 #include <stdexcept>
+#include "sunmatrix/sunmatrix_dense.h"
 
 Nudging::Nudging(double time_scale_in, const std::vector<double> &t, const std::vector<double> &q)
     : time_scale(time_scale_in), t0(t), q0(q)
@@ -38,5 +39,24 @@ void Nudging::calc_tend_jac_prod(const RainshaftConstants &constants,
   for (std::size_t il = 0; il != 2 * grid.nlev; ++il)
   {
     prod[il] -= vec[il] / time_scale;
+  }
+}
+
+void Nudging::calc_tend_jac(const RainshaftConstants &constants,
+                            const RainshaftGrid &grid,
+                            const RainshaftState &state,
+                            const RainshaftDerivedVars &dvars,
+                            SUNMatrix jac) const
+{
+  switch (SUNMatGetID(jac))
+  {
+  case SUNMATRIX_DENSE:
+    for (std::size_t il = 0; il != 2 * grid.nlev; ++il)
+    {
+      SM_ELEMENT_D(jac, il, il) -= 1.0 / time_scale;
+    }
+    break;
+  default:
+    throw std::logic_error("Unsupported matrix type");
   }
 }

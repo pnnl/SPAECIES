@@ -1,6 +1,7 @@
 #include "self_collision.hpp"
 #include <cstddef>
 #include <cmath>
+#include <stdexcept>
 using std::min, std::cbrt, std::exp;
 
 RainshaftTendency SelfCollision::calc_tend(const RainshaftConstants &constants,
@@ -25,7 +26,20 @@ void SelfCollision::calc_tend_jac_prod(const RainshaftConstants &constants,
                                        const double *const vec,
                                        double *const prod) const
 {
-  throw "Not implemented";
+  throw std::logic_error("Jacobian product not implemented");
+}
+
+void SelfCollision::calc_tend_jac(const RainshaftConstants &constants,
+                                  const RainshaftGrid &grid,
+                                  const RainshaftState &state,
+                                  const RainshaftDerivedVars &dvars,
+                                  SUNMatrix jac) const
+{
+  switch (SUNMatGetID(jac))
+  {
+  default:
+    throw std::logic_error("Unsupported matrix type");
+  }
 }
 
 double SelfCollision::breakup_fac(const RainshaftConstants &constants,

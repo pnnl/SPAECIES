@@ -7,6 +7,8 @@
 #include "rainshaft_state.hpp"
 #include "rainshaft_derived_vars.hpp"
 #include "rainshaft_tendency.hpp"
+#include "sundials/sundials_nvector.h"
+#include "sundials/sundials_matrix.h"
 
 class RainshaftProcess
 {
@@ -24,6 +26,12 @@ public:
                                   const RainshaftDerivedVars &dvars,
                                   const double *const vec,
                                   double *const prod) const = 0;
+
+  virtual void calc_tend_jac(const RainshaftConstants &constants,
+                             const RainshaftGrid &grid,
+                             const RainshaftState &state,
+                             const RainshaftDerivedVars &dvars,
+                             SUNMatrix jac) const = 0;
 
   // virtual void tend_jacobian_nnz(const RainshaftGrid& grid) const = 0;
 

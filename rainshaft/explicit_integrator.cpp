@@ -42,19 +42,19 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   auto abstol = N_VClone(y);
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
   const auto nz = initial_state.t.size();
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[j] = fac * 1.e-1;
   }
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[nz + j] = fac * 1.e-5;
   }
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[2 * nz + j] = fac * 1.e-1;
   }
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[3 * nz + j] = fac * 1.e-8;
   }

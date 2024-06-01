@@ -24,6 +24,8 @@ add_executable(rainshaft
 target_link_libraries(rainshaft
   NetCDF::NetCDF
   SUNDIALS::arkode
+  SUNDIALS::sunlinsollapackband
+  SUNDIALS::sunlinsollapackdense
   Boost::boost
   spaecies)
 target_include_directories(rainshaft PRIVATE
