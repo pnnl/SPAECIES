@@ -103,19 +103,19 @@ protected:
   const sundials::Context sun_ctxt;
 
   template <int PARTITION>
-  decltype(&rainshaft_f<PARTITION>) create_f() const
+  auto create_f() const
   {
     return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_f<PARTITION>;
   }
 
   template <int PARTITION>
-  decltype(&rainshaft_jac_prod<PARTITION>) create_jac_prod() const
+  auto create_jac_prod() const
   {
     return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_jac_prod<PARTITION>;
   }
 
   template <int PARTITION>
-  decltype(&rainshaft_jac<PARTITION>) create_jac() const
+  auto create_jac() const
   {
     return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_jac<PARTITION>;
   }
