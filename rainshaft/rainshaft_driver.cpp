@@ -19,9 +19,11 @@
 #include <iostream>
 #include <cmath>
 #include <chrono>
+#include <string>
 #include "imex_integrator.hpp"
+#include "mri_integrator.hpp"
 
-int main(int argc, char** argv)
+int main(int argc, char* argv[])
 {
   using std::chrono::high_resolution_clock;
   using std::chrono::duration;
@@ -44,7 +46,7 @@ int main(int argc, char** argv)
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
-  double dt = 8.25;
+  double dt = 15;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -111,22 +113,23 @@ int main(int argc, char** argv)
   SumProcess imp_processes = SumProcess{{&sed}};
 
   SumProcess all_processes = SumProcess{{&sed, &self_coll, &evap, &nudge}};
-  // Evolve state forward.
-  // P3 Settings
-  // ForwardEulerIntegrator sed_step(&constants, &grid, &sed, &sun_ctxt);
-  // SedCflIntegrator sed_loop(&constants, &grid, &sed, &sed_step);
-  // ForwardEulerIntegrator local_step(&constants, &grid, &all_local, &sun_ctxt);
-  // std::vector<const RainshaftIntegrator *> seq_ints{&local_step, &sed_loop};
-  // SequentialSplitIntegrator seq_step(seq_ints);
-  // FixedSubstepIntegrator intg(&seq_step, dt);
-  // ARKODE Settings
-  // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, &sun_ctxt);
-  // FixedSubstepIntegrator intg(&micro_step, dt);
-  // Pure Forward Euler Settings
-  ExplicitIntegrator intg(constants, grid, &all_processes, dt, 2);
-  // IMEXIntegrator intg(constants, grid, &exp_processes, &imp_processes, dt, 2);
+
+  RainshaftIntegrator *intg = nullptr;
+  auto name = std::string(argv[1]);
+  if (name == "ex") {
+    intg = new ExplicitIntegrator(constants, grid, &all_processes, std::stod(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]));
+  } else if (name == "imex") {
+    intg = new IMEXIntegrator(constants, grid, &exp_processes, &imp_processes, std::stod(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]));
+  } else if (name == "mri") {
+    intg = new MRIIntegrator(constants, grid, &imp_processes, &exp_processes, nullptr, std::stod(argv[2]), std::stod(argv[3]), std::stoi(argv[4]), std::stoi(argv[5]));
+  } else {
+    throw std::logic_error("Invalid name");
+  }
+
+  // ExplicitIntegrator intg(constants, grid, &all_processes, 0, 4, 1);
+  // IMEXIntegrator intg(constants, grid, nullptr, &all_processes, 40.9, 2);
   auto before_sol = high_resolution_clock::now();
-  RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);
+  RainshaftSolution solution = intg->integrate(0, final_time, initial_state);
   auto after_sol = high_resolution_clock::now();
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
@@ -140,5 +143,6 @@ int main(int argc, char** argv)
   writer.write_walltime_ms(walltime_ms.count());
   // Ensure that the library is linked and greet the user.
   spaecies::do_nothing();
+  delete intg;
   return 0;
 }

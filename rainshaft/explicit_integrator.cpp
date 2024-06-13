@@ -28,17 +28,18 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   ERKStepSetStopTime(arkode_mem, final_time);
 
   // Gustafsson’s explicit controller handles stability limited stepsizes well
-  auto controller = SUNAdaptController_ExpGus(sun_ctxt);
+  auto controller = SUNAdaptController_I(sun_ctxt);
   // Use no bias and instead rely on a safety factor. Shampine uses these values in the MATLAB ODE suite
   SUNAdaptController_SetErrorBias(controller, 1);
-  ERKStepSetSafetyFactor(arkode_mem, 0.8);
+  ERKStepSetSafetyFactor(arkode_mem, 0.9);
   // ARKODE currently approximates the optimal step size with (err)^(-1/(embedded order)), but it's more common to use
   // (err)^(-1/(min(embedded order, order) + 1)). This adjusts the exponent to use the latter.
   ERKStepSetAdaptivityAdjustment(arkode_mem, 0);
   ERKStepSetFixedStepBounds(arkode_mem, 1, 1); // Remove deadzone
+  ERKStepSetAdaptController(arkode_mem, controller);
 
-  const sunrealtype fac = 1.;
-  const sunrealtype reltol = fac * 1.e-2;
+  const sunrealtype fac = 1;
+  const sunrealtype reltol = fac * 1.e-14;
   auto abstol = N_VClone(y);
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
   const auto nz = initial_state.t.size();
@@ -75,6 +76,9 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
       ARK_NORMAL,
       ARK_ONE_STEP);
 
+  // ERKStepPrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
+
+  // N_VPrint(y);
   N_VDestroy(y);
   SUNAdaptController_Destroy(controller);
   // SPS: Make RAII wrapper for this.

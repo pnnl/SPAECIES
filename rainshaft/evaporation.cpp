@@ -163,11 +163,11 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
                                 const RainshaftDerivedVars &dvars,
                                 SUNMatrix jac) const
 {
-  switch (SUNMatGetID(jac))
-  {
-  default:
-    throw std::logic_error("Unsupported matrix type");
-  }
+  // switch (SUNMatGetID(jac))
+  // {
+  // default:
+  //   throw std::logic_error("Unsupported matrix type");
+  // }
 }
 
 double Evaporation::calc_v_evap(const RainshaftConstants &constants, double lambdar) const

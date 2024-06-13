@@ -35,11 +35,11 @@ void SelfCollision::calc_tend_jac(const RainshaftConstants &constants,
                                   const RainshaftDerivedVars &dvars,
                                   SUNMatrix jac) const
 {
-  switch (SUNMatGetID(jac))
-  {
-  default:
-    throw std::logic_error("Unsupported matrix type");
-  }
+  // switch (SUNMatGetID(jac))
+  // {
+  // default:
+  //   throw std::logic_error("Unsupported matrix type");
+  // }
 }
 
 double SelfCollision::breakup_fac(const RainshaftConstants &constants,

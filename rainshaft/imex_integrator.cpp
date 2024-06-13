@@ -9,6 +9,7 @@
 #include "sunlinsol/sunlinsol_band.h"
 #include "sunmatrix/sunmatrix_band.h"
 #include "sunlinsol/sunlinsol_lapackband.h"
+#include "sunlinsol/sunlinsol_spgmr.h"
 
 #include <iostream>
 
@@ -37,7 +38,11 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   ARKStepSetMaxNumSteps(arkode_mem, -1); // Set no limit on the number of steps
   ARKStepSetStopTime(arkode_mem, final_time);
 
-  // SUNLinearSolver LS = SUNLinSol_SPTFQMR(y, SUN_PREC_NONE, 0, sun_ctxt);
+  // SUNLinearSolver LS = SUNLinSol_SPTFQMR(y, SUN_PREC_NONE, 40, sun_ctxt);
+  // ARKStepSetLinearSolver(arkode_mem, LS, nullptr);
+  // ARKStepSetJacTimes(arkode_mem, nullptr, create_jac_prod<1>());
+
+  // SUNLinearSolver LS = SUNLinSol_SPGMR(y, SUN_PREC_NONE, 40, sun_ctxt);
   // ARKStepSetLinearSolver(arkode_mem, LS, nullptr);
   // ARKStepSetJacTimes(arkode_mem, nullptr, create_jac_prod<1>());
 
@@ -46,28 +51,29 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   // ARKStepSetLinearSolver(arkode_mem, LS, jac);
   // ARKStepSetJacFn(arkode_mem, create_jac<1>());
 
-  SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
-  SUNLinearSolver LS = SUNLinSol_LapackDense(y, jac, sun_ctxt);
-  ARKStepSetLinearSolver(arkode_mem, LS, jac);
-  // ARKStepSetJacFn(arkode_mem, create_jac<1>());
-
-  // SUNMatrix jac = SUNBandMatrix(N_VGetLength(y), 0, 1, sun_ctxt);
-  // SUNLinearSolver LS = SUNLinSol_Band(y, jac, sun_ctxt);
+  // SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
+  // SUNLinearSolver LS = SUNLinSol_LapackDense(y, jac, sun_ctxt);
   // ARKStepSetLinearSolver(arkode_mem, LS, jac);
   // ARKStepSetJacFn(arkode_mem, create_jac<1>());
+
+  SUNMatrix jac = SUNBandMatrix(N_VGetLength(y), 0, 1, sun_ctxt);
+  SUNLinearSolver LS = SUNLinSol_Band(y, jac, sun_ctxt);
+  ARKStepSetLinearSolver(arkode_mem, LS, jac);
+  ARKStepSetJacFn(arkode_mem, create_jac<1>());
 
   // SUNMatrix jac = SUNBandMatrix(N_VGetLength(y), 0, 1, sun_ctxt);
   // SUNLinearSolver LS = SUNLinSol_LapackBand(y, jac, sun_ctxt);
   // ARKStepSetLinearSolver(arkode_mem, LS, jac);
   // ARKStepSetJacFn(arkode_mem, create_jac<1>());
 
-  ARKStepSetMaxNonlinIters(arkode_mem, 160);
-  // ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(1.e-2));
-  ARKStepSetSafetyFactor(arkode_mem, 0.8);
+  ARKStepSetMaxNonlinIters(arkode_mem, 1000);
+  // ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(1.e-4));
+  // ARKStepSetSafetyFactor(arkode_mem, 0.8);
 
   // ARKODE currently approximates the optimal step size with (err)^(-1/(embedded order)), but it's more common to use
   // (err)^(-1/(min(embedded order, order) + 1)). This adjusts the exponent to use the latter.
   ARKStepSetAdaptivityAdjustment(arkode_mem, 0);
+  ARKStepSetFixedStepBounds(arkode_mem, 1, 1); // Remove deadzone
 
   const sunrealtype fac = 1.;
   const sunrealtype reltol = fac * 1.e-2;
@@ -107,6 +113,9 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
       y,
       ARK_NORMAL,
       ARK_ONE_STEP);
+
+  // N_VPrint(y);
+  // ARKStepPrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
 
   N_VDestroy(y);
   // SPS: Make RAII wrapper for this.
