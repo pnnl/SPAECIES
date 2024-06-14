@@ -126,10 +126,12 @@ int main(int argc, char* argv[])
     throw std::logic_error("Invalid name");
   }
 
-  // ExplicitIntegrator intg(constants, grid, &all_processes, 0, 4, 1);
-  // IMEXIntegrator intg(constants, grid, nullptr, &all_processes, 40.9, 2);
+  const auto t0 = 30;
+  ExplicitIntegrator intg_start(constants, grid, &all_processes, 0.01, 5, 0);
+  auto sol_start = intg_start.integrate(0, t0, initial_state);
+
   auto before_sol = high_resolution_clock::now();
-  RainshaftSolution solution = intg->integrate(0, final_time, initial_state);
+  RainshaftSolution solution = intg->integrate(t0, final_time, sol_start.states.back());
   auto after_sol = high_resolution_clock::now();
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
