@@ -55,10 +55,10 @@ void SelfCollision::calc_tend_jac(const RainshaftConstants &constants,
     const auto i_qr = i_nr + grid.nlev;
 
     const auto b = breakup_fac(constants, state.nr[il], state.qr[il]);
-    elem(i_qr, i_t) = 5.78 * b * state.nr[il] * state.qr[il] * grid.p_mid[il] /
+    elem(i_qr, i_t) += 5.78 * b * state.nr[il] * state.qr[il] * grid.p_mid[il] /
                       (pow(state.t[il], 2) * constants.rdry * (1.0 + state.q[il] / constants.epsilon_h2o));
 
-    elem(i_q, i_qr) = 5.78 * b * state.nr[il] * state.qr[il] * grid.p_mid[il] /
+    elem(i_q, i_qr) += 5.78 * b * state.nr[il] * state.qr[il] * grid.p_mid[il] /
                       (constants.rdry * state.t[il] * constants.epsilon_h2o * pow(1.0 + state.q[il] / constants.epsilon_h2o, 2));
 
     const auto mean_mass_diam = std::cbrt(state.qr[il] / (constants.pi * constants.rhow * state.nr[il]));
@@ -77,9 +77,9 @@ void SelfCollision::calc_tend_jac(const RainshaftConstants &constants,
       db = -std::exp(2300. * (2.8e-4 - 1.0 / dvars.lambdar[il])) * -2300. / (3.0 * dvars.lambdar[il] * state.nr[il]);
     }
 
-    elem(i_nr, i_qr) = -5.78 * state.qr[il] * dvars.rho_dry[il] * (db * state.nr[il] + b);
+    elem(i_nr, i_qr) += -5.78 * state.qr[il] * dvars.rho_dry[il] * (db * state.nr[il] + b);
 
-    elem(i_qr, i_qr) = -5.78 * state.nr[il] * dvars.rho_dry[il] * (-db * state.qr[il] + b);
+    elem(i_qr, i_qr) += -5.78 * state.nr[il] * dvars.rho_dry[il] * (-db * state.qr[il] + b);
   }
 }
 
