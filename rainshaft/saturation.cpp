@@ -24,3 +24,24 @@ double SaturationFormulae::q_sat_dry(double temperature, double pressure_dry) co
   double esl = svp_liquid(temperature);
   return wv_pressure_to_q_dry(esl, pressure_dry);
 }
+
+/* derivative functions */
+double SaturationFormulae::svp_liquid_dT(double temperature) const {
+  double log_t = std::log(temperature);
+  double recip_t = 1./temperature;
+  double tanh_fac = std::tanh(0.0415 * (temperature - 218.8));
+  double tanh_term = (53.878 - 1331.22 * recip_t - 9.44523 * log_t
+                      + 0.014025 * temperature) * tanh_fac;
+  double log_esl = 54.842763 - 6763.22*recip_t - 4.21 * log_t
+    + 0.000367*temperature + tanh_term;
+
+  return std::exp(log_esl) * (6762.33*pow(recip_t, 2) - 4.21*recip_t + 0.000367 +
+                              (1331.22*pow(recip_t, 2) - 9.445523*recip_t + 0.014025) * tanh_fac +
+                              (53.878 - 1331.22 * recip_t - 9.44523 * log_t + 0.014025 * temperature) * (1.0 - pow(tanh_fac, 2)) * 0.0415);
+}
+
+
+double SaturationFormulae::q_sat_dry_dT(double temperature, double pressure_dry) const {
+  double esl_dT = svp_liquid_dT(temperature);
+  return epsilon_h2o * esl_dT / pressure_dry;
+}

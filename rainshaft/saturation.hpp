@@ -24,6 +24,12 @@ public:
   // temperature and dry pressure.
   double q_sat_dry(double temperature, double pressure_dry) const;
 
+  // derivative of esl wrt T
+  double svp_liquid_dT(double temperature) const;
+
+  // derivative of q_sl wrt T
+  double q_sat_dry_dT(double temperature, double pressure_dry) const;
+
 private:
 
   // Copy of ratio of water vapor molecular mass to that of dry air.

@@ -47,6 +47,10 @@ public:
   // Calculate characteristic velocity using numerical integration.
   double calc_v_evap_numerical(const RainshaftConstants &constants, double lambdar) const;
 
+  double calc_v_evap_dlambda(const RainshaftConstants& constants, double lambdar) const;
+
+  double calc_v_evap_dlambda_gamma(const RainshaftConstants& constants, double lambdar) const;
+
   const bool use_numerical_integration;
 
 private:
@@ -58,6 +62,7 @@ private:
   // for values every 10 microns between 5 and 195 micron, and 280 entries for
   // values every 30 microns between 195 and 8595 micron.
   std::optional<LookupLinear> v_table;
+  std::optional<LookupLinear> dv_table;
 };
 
 #endif // EVAPORATION_HPP
