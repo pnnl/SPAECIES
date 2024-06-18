@@ -261,10 +261,10 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
     elem(i_q, i_nr) += dqdnr;
     elem(i_q, i_qr) += dqdqr;
 
-    elem(i_nr, i_t) += dqdt * state.nr[il] / state.qr[il];
-    elem(i_nr, i_q) += dqdq * state.nr[il] / state.qr[il];
-    elem(i_nr, i_nr) += (q_sat_dry - state.q[il]) * inv_tau / (abl * state.qr[il]) + (state.nr[il] / state.qr[il]) * dqdnr;
-    elem(i_nr, i_qr) += -(q_sat_dry - state.q[il]) * inv_tau * state.nr[il] / (abl * pow(state.qr[il], 2)) + (state.nr[il] / state.qr[il]) * dqdqr;
+    elem(i_nr, i_t) -= dqdt * state.nr[il] / state.qr[il];
+    elem(i_nr, i_q) -= dqdq * state.nr[il] / state.qr[il];
+    elem(i_nr, i_nr) -= (q_sat_dry - state.q[il]) * inv_tau / (abl * state.qr[il]) + (state.nr[il] / state.qr[il]) * dqdnr;
+    elem(i_nr, i_qr) -= -(q_sat_dry - state.q[il]) * inv_tau * state.nr[il] / (abl * pow(state.qr[il], 2)) + (state.nr[il] / state.qr[il]) * dqdqr;
 
     elem(i_qr, i_t) -= dqdt;
     elem(i_qr, i_q) -= dqdq;
