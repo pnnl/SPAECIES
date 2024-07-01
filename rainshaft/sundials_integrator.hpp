@@ -64,9 +64,9 @@ public:
   }
 
 protected:
+  const RainshaftUserData user_data;
   const int steps_per_output;
   const sundials::Context sun_ctxt;
-  const RainshaftUserData user_data;
 
   template <int PARTITION>
   decltype(&rainshaft_f<PARTITION>) create_f() const
