@@ -23,51 +23,51 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
 {
   auto y = state_to_n_vector(sun_ctxt, initial_state);
   void *arkode_mem = ARKStepCreate(create_f<0>(), create_f<1>(), initial_time, y, sun_ctxt);
-  ARKStepSetUserData(arkode_mem, (void *)&user_data);
-  ARKStepSetFixedStep(arkode_mem, dt);
-  ARKStepSetOrder(arkode_mem, order);
-  ARKStepSetMaxNumSteps(arkode_mem, -1); // Set no limit on the number of steps
-  ARKStepSetStopTime(arkode_mem, final_time);
+  ARKodeSetUserData(arkode_mem, (void *)&user_data);
+  ARKodeSetFixedStep(arkode_mem, dt);
+  ARKodeSetOrder(arkode_mem, order);
+  ARKodeSetMaxNumSteps(arkode_mem, -1); // Set no limit on the number of steps
+  ARKodeSetStopTime(arkode_mem, final_time);
 
   SUNLinearSolver LS = nullptr; 
   SUNMatrix J = nullptr;
   J = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
   LS = SUNLinSol_Dense(y, J, sun_ctxt);
-  ARKStepSetLinearSolver(arkode_mem, LS, J);
-  // ARKStepSetMaxNonlinIters(arkode_mem, 160);
-  // ARKStepSetNonlinConvCoef(arkode_mem, SUN_RCONST(1.e-3));
-  ARKStepSetSafetyFactor(arkode_mem, 0.8);
+  ARKodeSetLinearSolver(arkode_mem, LS, J);
+  // ARKodeSetMaxNonlinIters(arkode_mem, 160);
+  // ARKodeSetNonlinConvCoef(arkode_mem, SUN_RCONST(1.e-3));
+  ARKodeSetSafetyFactor(arkode_mem, 0.8);
 
   // ARKODE currently approximates the optimal step size with (err)^(-1/(embedded order)), but it's more common to use
   // (err)^(-1/(min(embedded order, order) + 1)). This adjusts the exponent to use the latter.
-  ARKStepSetAdaptivityAdjustment(arkode_mem, 0);
+  ARKodeSetAdaptivityAdjustment(arkode_mem, 0);
 
   const sunrealtype fac = 1.;
   const sunrealtype reltol = fac * 1.e-2;
   auto abstol = N_VClone(y);
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
   const auto nz = initial_state.t.size();
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[j] = fac * 1.e-1;
   }
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[nz + j] = fac * 1.e-5;
   }
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[2 * nz + j] = fac * 1.e-1;
   }
-  for (sunindextype j = 0; j != nz; ++j)
+  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[3 * nz + j] = fac * 1.e-8;
   }
-  ARKStepSVtolerances(arkode_mem, reltol, abstol);
+  ARKodeSVtolerances(arkode_mem, reltol, abstol);
   N_VDestroy(abstol);
 
   auto solution = evolve(
-      ARKStepEvolve,
+      ARKodeEvolve,
       [arkode_mem]()
       {
         long int nfe = 0;
@@ -83,7 +83,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
 
   N_VDestroy(y);
   // SPS: Make RAII wrapper for this.
-  ARKStepFree(&arkode_mem);
+  ARKodeFree(&arkode_mem);
   SUNMatDestroy(J);
   SUNLinSolFree(LS);
   return solution;
