@@ -21,14 +21,12 @@ RainshaftSolution SedCflIntegrator::integrate(double initial_time,
   while (time_remaining > 0) {
     double lambdar_top = std::cbrt(constants->pi * constants->rhow
                                    * constants->nr_top / constants->qr_top);
-    auto speeds = sed->rain_fall_speeds(*constants, dvars[it].rho_dry[0],
+    const auto [v0, v3] = sed->rain_fall_speeds(*constants, dvars[it].rho_dry[0],
                                         lambdar_top);
-    double v3 = speeds[1];
     double max_cfl_num = time_remaining * v3 / dvars[it].dz[0];
     for (std::size_t il = 0; il != grid->nlev; ++il) {
-      speeds = sed->rain_fall_speeds(*constants, dvars[it].rho_dry[il],
+      const auto [v0, v3] = sed->rain_fall_speeds(*constants, dvars[it].rho_dry[il],
                                      dvars[it].lambdar[il]);
-      v3 = speeds[1];
       max_cfl_num = std::max(max_cfl_num,
                              time_remaining * v3 / dvars[it].dz[il]);
     }
