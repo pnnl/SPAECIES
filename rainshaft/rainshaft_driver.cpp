@@ -106,11 +106,9 @@ int main(int argc, char** argv)
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.
-  std::vector<const RainshaftProcess *> micro_processes{&sed};
-  SumProcess all_micro = SumProcess(micro_processes);
+  SumProcess all_micro{&sed};
   // Sum of local processes.
-  std::vector<const RainshaftProcess *> local_processes{&self_coll, &evap, &nudge};
-  SumProcess all_local = SumProcess(local_processes);
+  SumProcess all_local{&self_coll, &evap, &nudge};
   // Evolve state forward.
   // P3 Settings
   // ForwardEulerIntegrator sed_step(&constants, &grid, &sed, &sun_ctxt);
