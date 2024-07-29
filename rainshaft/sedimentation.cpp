@@ -17,11 +17,9 @@ Sedimentation::Sedimentation(const RainshaftConstants& constants, bool use_v_tab
     std::vector<double> v3_values(d_microns.size(), 0.);
     for (std::size_t i = 0; i != d_microns.size(); ++i) {
       double lambdar = 1.e6 / d_microns[i];
-      auto speeds = use_numerical_integration ?
+      std::tie(v0_values[i], v3_values[i]) = use_numerical_integration ?
         rain_fall_speeds_stp_numerical(constants, lambdar)
         :  rain_fall_speeds_stp_gamma(constants, lambdar);
-      v0_values[i] = speeds[0];
-      v3_values[i] = speeds[1];
     }
     v0_table.emplace(range_bounds, spacings, v0_values);
     v3_table.emplace(range_bounds, spacings, v3_values);
@@ -36,15 +34,15 @@ RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants &constants,
   std::vector<double> t_tend(grid.nlev, 0.0), q_tend(grid.nlev, 0.0), nr_tend(grid.nlev), qr_tend(grid.nlev);
 
   const auto lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
-  const auto speeds_top = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
-  auto nr_prev_flux = speeds_top[0] * constants.nr_top * constants.rho_top;
-  auto qr_prev_flux = speeds_top[1] * constants.qr_top * constants.rho_top;
+  const auto [speeds_top0, speeds_top3] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
+  auto nr_prev_flux = speeds_top0 * constants.nr_top * constants.rho_top;
+  auto qr_prev_flux = speeds_top3 * constants.qr_top * constants.rho_top;
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
-    const auto speeds = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
-    const auto nr_flux = speeds[0] * state.nr[il] * dvars.rho_dry[il];
-    const auto qr_flux = speeds[1] * state.qr[il] * dvars.rho_dry[il];
+    const auto [speeds0, speeds3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
+    const auto nr_flux = speeds0 * state.nr[il] * dvars.rho_dry[il];
+    const auto qr_flux = speeds3 * state.qr[il] * dvars.rho_dry[il];
 
     nr_tend[il] = (nr_prev_flux - nr_flux) / (dvars.dz[il] * dvars.rho_dry[il]);
     qr_tend[il] = (qr_prev_flux - qr_flux) / (dvars.dz[il] * dvars.rho_dry[il]);
@@ -55,28 +53,23 @@ RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants &constants,
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
 
-std::vector<double> Sedimentation::rain_fall_speeds(const RainshaftConstants& constants,
+Sedimentation::Speeds Sedimentation::rain_fall_speeds(const RainshaftConstants& constants,
                                                     double rho_dry, double lambdar) const {
   // Catches case where there is no rain present.
   if (lambdar == 0.) {
-    std::vector<double> speeds = {0., 0.};
-    return speeds;
+    return {0.0, 0.0};
   }
-  auto speeds = rain_fall_speeds_stp(constants, lambdar);
+  const auto [v0, v3] = rain_fall_speeds_stp(constants, lambdar);
   // Calculate correction for air density, with reference state at 1000 hPa and 273.15 K.
-  double rf = rho_fac(constants, rho_dry);
-  speeds[0] *= rf;
-  speeds[1] *= rf;
-  return speeds;
+  const auto rf = rho_fac(constants, rho_dry);
+  return {v0 * rf, v3 * rf};
 }
 
-std::vector<double> Sedimentation::rain_fall_speeds_stp(const RainshaftConstants& constants,
+Sedimentation::Speeds Sedimentation::rain_fall_speeds_stp(const RainshaftConstants& constants,
                                                         double lambdar) const {
   if (v0_table.has_value()) {
-    double d_micron = 1.e6 / lambdar;
-    double v0 = v0_table->lookup_value(d_micron);
-    double v3 = v3_table->lookup_value(d_micron);
-    return std::vector<double>{v0, v3};
+    const auto d_micron = 1.e6 / lambdar;
+    return {v0_table->lookup_value(d_micron), v3_table->lookup_value(d_micron)};
   } else {
     if (use_numerical_integration) {
       return rain_fall_speeds_stp_numerical(constants, lambdar);
@@ -86,12 +79,11 @@ std::vector<double> Sedimentation::rain_fall_speeds_stp(const RainshaftConstants
   }
 }
 
-std::vector<double> Sedimentation::rain_fall_speeds_stp_gamma(const RainshaftConstants& constants,
+Sedimentation::Speeds Sedimentation::rain_fall_speeds_stp_gamma(const RainshaftConstants& constants,
                                                               double lambdar) const {
   // Catches case where there is no rain present.
   if (lambdar == 0.) {
-    std::vector<double> speeds = {0., 0.};
-    return speeds;
+    return {0.0, 0.0};
   }
   // Number and mass fall speeds in m/s.
   double v0(0.), v3(0.);
@@ -123,16 +115,14 @@ std::vector<double> Sedimentation::rain_fall_speeds_stp_gamma(const RainshaftCon
   v3 += 9.17 * tgamma(4, lambdar * 3.47784e-3);
   // Include the normalization gamma(3) for v3.
   v3 /= 6.;
-  std::vector<double> speeds = {v0, v3};
-  return speeds;
+  return {v0, v3};
 }
 
-std::vector<double> Sedimentation::rain_fall_speeds_stp_numerical(const RainshaftConstants& constants,
+Sedimentation::Speeds Sedimentation::rain_fall_speeds_stp_numerical(const RainshaftConstants& constants,
                                                                   double lambdar) const {
   // Catches case where there is no rain present.
   if (lambdar == 0.) {
-    std::vector<double> speeds = {0., 0.};
-    return speeds;
+    return {0., 0.};
   }
   double dd = 2.; // micron
   std::size_t low_k = 1;
@@ -173,8 +163,7 @@ std::vector<double> Sedimentation::rain_fall_speeds_stp_numerical(const Rainshaf
   // Number and mass fall speeds in m/s.
   double v0 = v0_numer / v0_denom;
   double v3 = v3_numer / v3_denom;
-  std::vector<double> speeds = {v0, v3};
-  return speeds;
+  return {v0, v3};
 }
 
 double Sedimentation::rho_fac(const RainshaftConstants& constants, double rho_dry) const {
