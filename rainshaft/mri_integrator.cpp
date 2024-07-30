@@ -38,12 +38,12 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
   /* create an ARKStep object, setting fast (inner) right-hand side
      functions and the initial condition */
   auto inner_arkode_mem = ARKStepCreate(create_f<0>(), nullptr, initial_time, y, sun_ctxt);
-  ARKStepSetOrder(inner_arkode_mem, order);
-  ARKStepSetUserData(inner_arkode_mem, (void *)&user_data);
-  ARKStepSetMaxNumSteps(inner_arkode_mem, -1);
+  ARKodeSetOrder(inner_arkode_mem, order);
+  ARKodeSetUserData(inner_arkode_mem, (void *)&user_data);
+  ARKodeSetMaxNumSteps(inner_arkode_mem, -1);
 
   // fixed step for fast solver
-  ARKStepSetFixedStep(inner_arkode_mem, dt_fast);
+  ARKodeSetFixedStep(inner_arkode_mem, dt_fast);
 
   /* create MRIStepInnerStepper wrapper for the ARKStep memory block */
   MRIStepInnerStepper stepper = nullptr;
@@ -54,16 +54,16 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
   void *outer_arkode_mem = MRIStepCreate(create_f<1>(), create_f<2>(), initial_time, y, stepper, sun_ctxt);
 
   /* Pass udata to user functions */
-  MRIStepSetUserData(outer_arkode_mem, (void *)&user_data);
-  MRIStepSetOrder(outer_arkode_mem, order);
-  MRIStepSetMaxNumSteps(outer_arkode_mem, -1);
-  MRIStepSetStopTime(outer_arkode_mem, final_time);
+  ARKodeSetUserData(outer_arkode_mem, (void *)&user_data);
+  ARKodeSetOrder(outer_arkode_mem, order);
+  ARKodeSetMaxNumSteps(outer_arkode_mem, -1);
+  ARKodeSetStopTime(outer_arkode_mem, final_time);
 
   /* Set the slow step size */
-  MRIStepSetFixedStep(outer_arkode_mem, dt_slow);
+  ARKodeSetFixedStep(outer_arkode_mem, dt_slow);
 
   auto solution = evolve(
-      MRIStepEvolve,
+      ARKodeEvolve,
       [outer_arkode_mem, inner_arkode_mem]()
       {
         long int nfse = 0;
@@ -83,8 +83,8 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
 
   N_VDestroy(y);
   MRIStepInnerStepper_Free(&stepper);
-  ARKStepFree(&inner_arkode_mem);
-  MRIStepFree(&outer_arkode_mem);
+  ARKodeFree(&inner_arkode_mem);
+  ARKodeFree(&outer_arkode_mem);
 
   return solution;
 }

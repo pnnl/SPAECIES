@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 project(SPAECIES LANGUAGES CXX VERSION 0.0.1)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(NetCDF REQUIRED)
-find_package(SUNDIALS REQUIRED)
+find_package(SUNDIALS 7.1.0 REQUIRED)
 find_package(Boost REQUIRED)
 
 if (BUILD_TESTING)

@@ -2,6 +2,7 @@
 #define SEDIMENTATION_HPP
 #include <vector>
 #include <optional>
+#include <tuple>
 
 #include "lookup_linear.hpp"
 #include "rainshaft_process.hpp"
@@ -9,6 +10,7 @@
 class Sedimentation : public RainshaftProcess {
 
 public:
+  using Speeds = std::tuple<double, double>;
 
   // Constructor allowing use of lookup table.
   Sedimentation(const RainshaftConstants& constants, bool use_v_table,
@@ -34,26 +36,26 @@ public:
                              SUNMatrix jac) const;
 
   // For a given value of lambdar, what are the rain number and mass fall speeds?
-  std::vector<double> rain_fall_speeds(const RainshaftConstants& constants,
+  Speeds rain_fall_speeds(const RainshaftConstants& constants,
                                        double rho, double lambdar) const;
 
   // What would the speeds for a given lambdar be at standard temperature and
   // pressure?
-  std::vector<double> rain_fall_speeds_stp(const RainshaftConstants& constants,
+  Speeds rain_fall_speeds_stp(const RainshaftConstants& constants,
                                            double lambdar) const;
 
   // What would the speeds for a given lambdar be at standard temperature and
   // pressure?
   // This version ignores any lookup table, if present, and always returns fall
   // speeds calculated with incomplete gamma functions.
-  std::vector<double> rain_fall_speeds_stp_gamma(const RainshaftConstants& constants,
+  Speeds rain_fall_speeds_stp_gamma(const RainshaftConstants& constants,
                                                  double lambdar) const;
 
   // What would the speeds for a given lambdar be at standard temperature and
   // pressure?
   // This version ignores any lookup table, if present, and always returns fall
   // speeds calculated with numerical integration.
-  std::vector<double> rain_fall_speeds_stp_numerical(const RainshaftConstants& constants,
+  Speeds rain_fall_speeds_stp_numerical(const RainshaftConstants& constants,
                                                      double lambdar) const;
 
   // Conversion factor from STP fall speed to actual fall speed given air density.
