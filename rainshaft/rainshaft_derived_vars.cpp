@@ -76,10 +76,11 @@ RainshaftDerivedVars::RainshaftDerivedVars(const RainshaftConstants& constants,
 }
 
 Grad<2> RainshaftDerivedVars::lambdar_grad(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const {
-  return {
-    0,
-    0
-  };
+  if (state.qr[i] >= constants.qsmall) {
+    return {lambdar[i] / (3. * state.nr[i]), -lambdar[i] / (3. * state.qr[i])};
+  } else {
+    return {0, 0};
+  }
 }
 
 Grad<2> RainshaftDerivedVars::rho_dry_grad(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const {
