@@ -74,3 +74,17 @@ RainshaftDerivedVars::RainshaftDerivedVars(const RainshaftConstants& constants,
     throw std::invalid_argument("grid and state dimensions are mismatched");
   }
 }
+
+Grad<2> RainshaftDerivedVars::lambdar_grad(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const {
+  return {
+    0,
+    0
+  };
+}
+
+Grad<2> RainshaftDerivedVars::rho_dry_grad(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const {
+  return {
+    -rho_dry[i] / state.t[i],
+    -rho_dry[i] / (constants.epsilon_h2o + state.q[i])
+  };
+}

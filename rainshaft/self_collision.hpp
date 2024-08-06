@@ -31,7 +31,7 @@ public:
   // up merging drops (breakup_fac \approx 1) or is there significant
   // breakup (breakup_fac < 1).
   // Should not be called if nr is near 0.
-  double breakup_fac(const RainshaftConstants& constants,
+  ValGrad<2> breakup_fac(const RainshaftConstants& constants,
                      double nr, double qr) const;
 
 };

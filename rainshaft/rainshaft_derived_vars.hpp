@@ -1,10 +1,12 @@
 #ifndef RAINSHAFT_DERIVED_VARS_HPP
 #define RAINSHAFT_DERIVED_VARS_HPP
 #include <vector>
+#include <array>
 
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_state.hpp"
+#include "derivatives.hpp"
 
 class RainshaftDerivedVars {
 
@@ -23,6 +25,10 @@ public:
   const std::vector<double> rho_dry;
   // Rain size parameter (1/m)
   const std::vector<double> lambdar;
+
+  Grad<2> lambdar_grad(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const;
+
+  Grad<2> rho_dry_grad(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const;
 };
 
 // Convert cell widths to interface heights.
