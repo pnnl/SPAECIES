@@ -51,15 +51,15 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   // ARKodeSetLinearSolver(arkode_mem, LS, jac);
   // ARKodeSetJacFn(arkode_mem, create_jac<1>());
 
-  // SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
-  // SUNLinearSolver LS = SUNLinSol_LapackDense(y, jac, sun_ctxt);
-  // ARKodeSetLinearSolver(arkode_mem, LS, jac);
-  // ARKodeSetJacFn(arkode_mem, create_jac<1>());
-
-  SUNMatrix jac = SUNBandMatrix(N_VGetLength(y), 0, 1, sun_ctxt);
-  SUNLinearSolver LS = SUNLinSol_Band(y, jac, sun_ctxt);
+  SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
+  SUNLinearSolver LS = SUNLinSol_LapackDense(y, jac, sun_ctxt);
   ARKodeSetLinearSolver(arkode_mem, LS, jac);
   ARKodeSetJacFn(arkode_mem, create_jac<1>());
+
+  // SUNMatrix jac = SUNBandMatrix(N_VGetLength(y), 0, 1, sun_ctxt);
+  // SUNLinearSolver LS = SUNLinSol_Band(y, jac, sun_ctxt);
+  // ARKodeSetLinearSolver(arkode_mem, LS, jac);
+  // ARKodeSetJacFn(arkode_mem, create_jac<1>());
 
   // SUNMatrix jac = SUNBandMatrix(N_VGetLength(y), 0, 1, sun_ctxt);
   // SUNLinearSolver LS = SUNLinSol_LapackBand(y, jac, sun_ctxt);

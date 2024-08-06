@@ -3,8 +3,6 @@
 #include <cmath>
 #include <stdexcept>
 #include <boost/math/special_functions/gamma.hpp>
-#include "sunmatrix/sunmatrix_dense.h"
-#include "sunmatrix/sunmatrix_band.h"
 using boost::math::tgamma, boost::math::tgamma_lower;
 using std::pow, std::sqrt, std::cbrt, std::exp;
 
@@ -96,42 +94,30 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
                                   const RainshaftGrid &grid,
                                   const RainshaftState &state,
                                   const RainshaftDerivedVars &dvars,
-                                  SUNMatrix jac) const
+                                  Matrix jac) const
 {
-  const auto elem = [jac](const auto i, const auto j) -> auto& {
-    switch (SUNMatGetID(jac))
-    {
-    case SUNMATRIX_DENSE:
-      return SM_ELEMENT_D(jac, i, j);
-    case SUNMATRIX_BAND:
-      return SM_ELEMENT_B(jac, i, j);
-    default:
-      throw std::logic_error("Unsupported matrix type");
-    }
-  };
-
   const auto lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
   const auto [speeds_top0, speeds_top3] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
 
   // Boundary condition
-  elem(3 * grid.nlev, 3 * grid.nlev) += speeds_top3 * constants.qr_top * constants.rho_top * constants.rdry * state.t[0] / (dvars.dz[0] * grid.p_mid[0] * constants.epsilon_h2o);
+  jac(3 * grid.nlev, 3 * grid.nlev) += speeds_top3 * constants.qr_top * constants.rho_top * constants.rdry * state.t[0] / (dvars.dz[0] * grid.p_mid[0] * constants.epsilon_h2o);
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
     const auto [speeds0, speeds3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
 
     const auto i_nr = il + 2 * grid.nlev;
-    elem(i_nr, i_nr) -= speeds0 / dvars.dz[il];
+    jac(i_nr, i_nr) -= speeds0 / dvars.dz[il];
     if (il + 1 < grid.nlev)
     {
-      elem(i_nr + 1, i_nr) += speeds0 * dvars.rho_dry[il] / (dvars.dz[il + 1] * dvars.rho_dry[il + 1]);
+      jac(i_nr + 1, i_nr) += speeds0 * dvars.rho_dry[il] / (dvars.dz[il + 1] * dvars.rho_dry[il + 1]);
     }
 
     const auto i_qr = i_nr + grid.nlev;
-    elem(i_qr, i_qr) -= speeds3 / dvars.dz[il];
+    jac(i_qr, i_qr) -= speeds3 / dvars.dz[il];
     if (il + 1 < grid.nlev)
     {
-      elem(i_qr + 1, i_qr) += speeds3 * dvars.rho_dry[il] / (dvars.dz[il + 1] * dvars.rho_dry[il + 1]);
+      jac(i_qr + 1, i_qr) += speeds3 * dvars.rho_dry[il] / (dvars.dz[il + 1] * dvars.rho_dry[il + 1]);
     }
   }
 }

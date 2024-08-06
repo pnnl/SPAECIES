@@ -1,6 +1,7 @@
 #ifndef RAINSHAFT_PROCESS_HPP
 #define RAINSHAFT_PROCESS_HPP
 #include <vector>
+#include <functional>
 
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
@@ -14,6 +15,8 @@ class RainshaftProcess
 {
 
 public:
+  using Matrix = std::function<double &(std::size_t, std::size_t)>;
+
   // Calculate tendency from current state.
   virtual RainshaftTendency calc_tend(const RainshaftConstants &constants,
                                       const RainshaftGrid &grid,
@@ -31,11 +34,7 @@ public:
                              const RainshaftGrid &grid,
                              const RainshaftState &state,
                              const RainshaftDerivedVars &dvars,
-                             SUNMatrix jac) const = 0;
-
-  // virtual void tend_jacobian_nnz(const RainshaftGrid& grid) const = 0;
-
-  // virtual void tend_jacobian_sparsity(const RainshaftGrid& grid, const int *colptrs, const int *rowvals) const = 0;
+                             Matrix jac) const = 0;
 };
 
 #endif // RAINSHAFT_PROCESS_HPP

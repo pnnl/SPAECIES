@@ -33,7 +33,7 @@ public:
                              const RainshaftGrid &grid,
                              const RainshaftState &state,
                              const RainshaftDerivedVars &dvars,
-                             SUNMatrix jac) const;
+                             Matrix jac) const;
 
   // For a given value of lambdar, what are the rain number and mass fall speeds?
   Speeds rain_fall_speeds(const RainshaftConstants& constants,

@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cmath>
 #include <stdexcept>
-#include "sunmatrix/sunmatrix_dense.h"
 using std::min, std::cbrt, std::exp;
 
 RainshaftTendency SelfCollision::calc_tend(const RainshaftConstants &constants,
@@ -35,19 +34,8 @@ void SelfCollision::calc_tend_jac(const RainshaftConstants &constants,
                                   const RainshaftGrid &grid,
                                   const RainshaftState &state,
                                   const RainshaftDerivedVars &dvars,
-                                  SUNMatrix jac) const
+                                  Matrix jac) const
 {
-  const auto elem = [jac](const auto i, const auto j) -> auto &
-  {
-    switch (SUNMatGetID(jac))
-    {
-    case SUNMATRIX_DENSE:
-      return SM_ELEMENT_D(jac, i, j);
-    default:
-      throw std::logic_error("Unsupported matrix type");
-    }
-  };
-
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
     const auto i_t = il;
@@ -60,10 +48,10 @@ void SelfCollision::calc_tend_jac(const RainshaftConstants &constants,
 
     const auto [dr_dt, dr_dq] = dvars.rho_dry_grad(constants, state, il);
 
-    elem(i_nr, i_t) += -5.78 * b * state.nr[il] * state.qr[il] * dr_dt;
-    elem(i_nr, i_q) += -5.78 * b * state.nr[il] * state.qr[il] * dr_dq;
-    elem(i_nr, i_nr) += -5.78 * state.qr[il] * dvars.rho_dry[il] * (db_dnr * state.nr[il] + b);
-    elem(i_nr, i_qr) += -5.78 * state.nr[il] * dvars.rho_dry[il] * (db_dqr * state.qr[il] + b);
+    jac(i_nr, i_t) += -5.78 * b * state.nr[il] * state.qr[il] * dr_dt;
+    jac(i_nr, i_q) += -5.78 * b * state.nr[il] * state.qr[il] * dr_dq;
+    jac(i_nr, i_nr) += -5.78 * state.qr[il] * dvars.rho_dry[il] * (db_dnr * state.nr[il] + b);
+    jac(i_nr, i_qr) += -5.78 * state.nr[il] * dvars.rho_dry[il] * (db_dqr * state.qr[il] + b);
   }
 }
 

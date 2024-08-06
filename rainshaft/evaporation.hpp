@@ -34,7 +34,7 @@ public:
                              const RainshaftGrid &grid,
                              const RainshaftState &state,
                              const RainshaftDerivedVars &dvars,
-                             SUNMatrix jac) const;
+                             Matrix jac) const;
 
   // Calculate characteristic velocity used for velocity calculation.
   double calc_v_evap(const RainshaftConstants &constants, double lambdar) const;

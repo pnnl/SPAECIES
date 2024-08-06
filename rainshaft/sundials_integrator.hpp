@@ -6,7 +6,7 @@
 #include "rainshaft_integrator.hpp"
 #include "sundials/sundials_context.hpp"
 #include "nvector/nvector_serial.h"
-#include "sundials/sundials_matrix.h"
+#include "sunmatrix/sunmatrix_dense.h"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_state.hpp"
@@ -69,10 +69,15 @@ private:
     auto dvars = RainshaftDerivedVars(cast_data->constants,
                                       cast_data->grid,
                                       state);
+
+    RainshaftProcess::Matrix mat = [Jac](const auto i, const auto j) -> auto & {
+      return SM_ELEMENT_D(Jac, i, j);
+    };
+
     cast_data->processes[PARTITION]->calc_tend_jac(cast_data->constants,
                                                    cast_data->grid,
                                                    state, dvars,
-                                                   Jac);
+                                                   mat);
     return 0;
   }
 

@@ -45,7 +45,7 @@ void SumProcess::calc_tend_jac(const RainshaftConstants &constants,
                                const RainshaftGrid &grid,
                                const RainshaftState &state,
                                const RainshaftDerivedVars &dvars,
-                               SUNMatrix jac) const
+                               Matrix jac) const
 {
   for (const auto &p : sub_processes)
   {

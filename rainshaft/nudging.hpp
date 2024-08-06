@@ -28,7 +28,7 @@ public:
                              const RainshaftGrid &grid,
                              const RainshaftState &state,
                              const RainshaftDerivedVars &dvars,
-                             SUNMatrix jac) const;
+                             Matrix jac) const;
 
   double time_scale;
   const std::vector<double> t0;

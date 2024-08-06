@@ -25,7 +25,7 @@ public:
                              const RainshaftGrid &grid,
                              const RainshaftState &state,
                              const RainshaftDerivedVars &dvars,
-                             SUNMatrix jac) const;
+                             Matrix jac) const;
 
   // For given rain variables, measure whether collisions typically end
   // up merging drops (breakup_fac \approx 1) or is there significant

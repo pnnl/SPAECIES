@@ -2,7 +2,6 @@
 #include "saturation.hpp"
 #include <cstddef>
 #include <cmath>
-#include "sunmatrix/sunmatrix_dense.h"
 #include <boost/math/special_functions/gamma.hpp>
 using boost::math::tgamma, boost::math::tgamma_lower;
 using std::sqrt, std::pow;
@@ -171,19 +170,8 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
                                 const RainshaftGrid &grid,
                                 const RainshaftState &state,
                                 const RainshaftDerivedVars &dvars,
-                                SUNMatrix jac) const
+                                Matrix jac) const
 {
-  const auto elem = [jac](const auto i, const auto j) -> auto &
-  {
-    switch (SUNMatGetID(jac))
-    {
-    case SUNMATRIX_DENSE:
-      return SM_ELEMENT_D(jac, i, j);
-    default:
-      throw std::logic_error("Unsupported matrix type");
-    }
-  };
-
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
     const auto q_sat_dry = sat_form->q_sat_dry(state.t[il], grid.p_mid[il]);
@@ -251,25 +239,25 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
     const auto i_nr = i_q + grid.nlev;
     const auto i_qr = i_nr + grid.nlev;
 
-    elem(i_t, i_t) -= dqdt * constants.latvap / constants.cp;
-    elem(i_t, i_q) -= dqdq * constants.latvap / constants.cp;
-    elem(i_t, i_nr) -= dqdnr * constants.latvap / constants.cp;
-    elem(i_t, i_qr) -= dqdqr * constants.latvap / constants.cp;
+    jac(i_t, i_t) -= dqdt * constants.latvap / constants.cp;
+    jac(i_t, i_q) -= dqdq * constants.latvap / constants.cp;
+    jac(i_t, i_nr) -= dqdnr * constants.latvap / constants.cp;
+    jac(i_t, i_qr) -= dqdqr * constants.latvap / constants.cp;
 
-    elem(i_q, i_t) += dqdt;
-    elem(i_q, i_q) += dqdq;
-    elem(i_q, i_nr) += dqdnr;
-    elem(i_q, i_qr) += dqdqr;
+    jac(i_q, i_t) += dqdt;
+    jac(i_q, i_q) += dqdq;
+    jac(i_q, i_nr) += dqdnr;
+    jac(i_q, i_qr) += dqdqr;
 
-    elem(i_nr, i_t) -= dqdt * state.nr[il] / state.qr[il];
-    elem(i_nr, i_q) -= dqdq * state.nr[il] / state.qr[il];
-    elem(i_nr, i_nr) -= (q_sat_dry - state.q[il]) * inv_tau / (abl * state.qr[il]) + (state.nr[il] / state.qr[il]) * dqdnr;
-    elem(i_nr, i_qr) -= -(q_sat_dry - state.q[il]) * inv_tau * state.nr[il] / (abl * pow(state.qr[il], 2)) + (state.nr[il] / state.qr[il]) * dqdqr;
+    jac(i_nr, i_t) -= dqdt * state.nr[il] / state.qr[il];
+    jac(i_nr, i_q) -= dqdq * state.nr[il] / state.qr[il];
+    jac(i_nr, i_nr) -= (q_sat_dry - state.q[il]) * inv_tau / (abl * state.qr[il]) + (state.nr[il] / state.qr[il]) * dqdnr;
+    jac(i_nr, i_qr) -= -(q_sat_dry - state.q[il]) * inv_tau * state.nr[il] / (abl * pow(state.qr[il], 2)) + (state.nr[il] / state.qr[il]) * dqdqr;
 
-    elem(i_qr, i_t) -= dqdt;
-    elem(i_qr, i_q) -= dqdq;
-    elem(i_qr, i_nr) -= dqdnr;
-    elem(i_qr, i_qr) -= dqdqr;
+    jac(i_qr, i_t) -= dqdt;
+    jac(i_qr, i_q) -= dqdq;
+    jac(i_qr, i_nr) -= dqdnr;
+    jac(i_qr, i_qr) -= dqdqr;
   }
 }
 
