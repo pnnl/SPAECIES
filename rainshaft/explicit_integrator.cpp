@@ -19,9 +19,9 @@ ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants &constants,
 // SPS: Need to generalize this to get output states at arbitary times.
 RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
                                                 double final_time,
-                                                const spaecies::VariableArray<double>& initial_state) const
+                                                const spaecies::State<double>& initial_state) const
 {
-  auto y_init = view_to_n_vector(sun_ctxt, initial_state);
+  auto y_init = const_view_to_n_vector(sun_ctxt, initial_state);
   void *arkode_mem = ERKStepCreate(create_f<0>(), initial_time, y_init, sun_ctxt);
   ARKodeSetUserData(arkode_mem, (void *)&user_data);
   ARKodeSetFixedStep(arkode_mem, dt);

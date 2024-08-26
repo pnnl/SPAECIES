@@ -15,9 +15,9 @@ public:
   // Calculate tendency from current state.
   virtual void calc_tend(const RainshaftConstants& constants,
                          const RainshaftGrid& grid,
-                         const spaecies::VariableArrayView<double>& state,
+                         const spaecies::State<double>& state,
                          const RainshaftDerivedVars& dvars,
-                         spaecies::VariableArrayView<double>& tend) const = 0;
+                         spaecies::Tendency<double>& tend) const = 0;
 };
 
 #endif // RAINSHAFT_PROCESS_HPP

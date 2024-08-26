@@ -61,7 +61,7 @@ int main(int argc, char** argv)
   spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
   std::vector<spaecies::VarDescPtr> state_descs = {t_desc, q_desc, nr_desc, qr_desc};
   auto tend_descs = tend_descs_from_state_descs(dom, state_descs);
-  spaecies::VariableArray<double> initial_state(state_descs);
+  spaecies::State<double> initial_state(state_descs);
   auto t = initial_state.get_variable("T");
   auto q = initial_state.get_variable("q");
   auto nr = initial_state.get_variable("nr");
@@ -152,10 +152,15 @@ int main(int argc, char** argv)
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_ark2_1s.nc");
+  NetcdfWriter writer("./rainshaft_1s_imex_test.nc");
   writer.write_grid(grid);
-  writer.write_variable_arrays(solution.states);
-  writer.write_derived_vars(solution.dvars);
+  writer.write_states(solution.states);
+  std::vector<RainshaftDerivedVars> solution_dvars;
+  solution_dvars.reserve(solution.states.size());
+  for (spaecies::State<double> state : solution.states) {
+    solution_dvars.emplace_back(constants, grid, state);
+  }
+  writer.write_derived_vars(solution_dvars);
   writer.write_num_rhs_evals(solution.num_rhs_evals);
   writer.write_walltime_ms(walltime_ms.count());
   // Ensure that the library is linked and greet the user.

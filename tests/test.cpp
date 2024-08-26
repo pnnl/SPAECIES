@@ -249,158 +249,7 @@ TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariableView
 
 }
 
-TEST_CASE( "Holding memory for multiple variables in a variable array", "[VariableArray]" ) {
-  Domain dom;
-  DimensionPtr col_dim = dom.add_dimension("column", 8);
-  DimensionPtr lev_dim = dom.add_dimension("level", 10);
-  VarDescPtr t_desc = dom.add_var_desc("T", Float64Type, {col_dim, lev_dim}, "K");
-  VarDescPtr q_desc = dom.add_var_desc("q", Float64Type, {col_dim, lev_dim}, "kg/kg");
-  VarDescPtr p_surf_desc = dom.add_var_desc("p_surf", Float64Type, {col_dim}, "Pa");
-
-  SECTION( "variables can be accessed through a variable array" ) {
-    VariableArray<double> var_array{t_desc, q_desc, p_surf_desc};
-    REQUIRE( var_array.size == t_desc->size() + q_desc->size() + p_surf_desc->size() );
-    auto t = var_array.get_variable("T");
-    auto q = var_array.get_variable("q");
-    auto p_surf = var_array.get_variable("p_surf");
-    for (int i = 0; i != t.size(); ++i) {
-      t[i] = 2.*i;
-    }
-    for (int i = 0; i != q.size(); ++i) {
-      q[i] = i + 0.5;
-    }
-    for (int i = 0; i != p_surf.size(); ++i) {
-      p_surf[i] = -2. * i;
-    }
-    // The following checks that the writes worked without overlapping.
-    for (int i = 0; i != t.size(); ++i) {
-      REQUIRE( t[i] == 2.*i );
-    }
-    for (int i = 0; i != q.size(); ++i) {
-      REQUIRE( q[i] == i + 0.5 );
-    }
-    for (int i = 0; i != p_surf.size(); ++i) {
-      REQUIRE( p_surf[i] == -2. * i );
-    }
-  }
-
-  SECTION( "variable arrays can be constructed with vectors" ) {
-    std::vector<VarDescPtr> var_descs = {t_desc, q_desc, p_surf_desc};
-    VariableArray<double> var_array(var_descs);
-    REQUIRE( var_array.size == t_desc->size() + q_desc->size() + p_surf_desc->size() );
-    auto t = var_array.get_variable("T");
-    for (int i = 0; i != t.size(); ++i) {
-      t[i] = 2.*i;
-    }
-    for (int i = 0; i != t.size(); ++i) {
-      REQUIRE( t[i] == 2.*i );
-    }
-  }
-
-  SECTION( "getting a pointer to array data" ) {
-    VariableArray<double> var_array{t_desc};
-    auto t = var_array.get_variable("T");
-    double *data_ptr = var_array.data();
-    for (int i = 0; i != t.size(); ++i) {
-      data_ptr[i] = 2.*i;
-    }
-    for (int i = 0; i != t.size(); ++i) {
-      REQUIRE( t[i] == 2.*i );
-    }
-  }
-
-  SECTION( "getting a const variable from a const VariableArray" ) {
-    VariableArray<double> var_array = {t_desc, q_desc};
-    auto t = var_array.get_variable("T");
-    auto q = var_array.get_variable("q");
-    for (int i = 0; i != t.size(); ++i) {
-      t[i] = 2.*i;
-    }
-    for (int i = 0; i != q.size(); ++i) {
-      q[i] = i + 0.5;
-    }
-    const VariableArray<double> *var_ptr = &var_array;
-    const ContiguousVariableView<double> t_const = var_ptr->get_variable("T");
-    const ContiguousVariableView<double> q_const = var_ptr->get_variable("q");
-    REQUIRE( t.size() == t_const.size() );
-    for (int i = 0; i != t.size(); ++i) {
-      REQUIRE( t_const[i] == t[i] );
-    }
-    REQUIRE( q.size() == q_const.size() );
-    for (int i = 0; i != q.size(); ++i) {
-      REQUIRE( q_const[i] == q[i] );
-    }
-  }
-
-  SECTION( "getting a const pointer to const array data" ) {
-    VariableArray<double> var_array{t_desc};
-    auto t = var_array.get_variable("T");
-    for (int i = 0; i != t.size(); ++i) {
-      t[i] = 2.*i;
-    }
-    const VariableArray<double> const_var_array = var_array;
-    auto const_t = const_var_array.get_variable("T");
-    const double *data_ptr = const_var_array.data();
-    for (int i = 0; i != t.size(); ++i) {
-      REQUIRE( const_t[i] == 2.*i );
-      REQUIRE( data_ptr[i] == 2.*i );
-    }
-  }
-
-  SECTION( "variable arrays can be constructed by copying data from views" ) {
-    // Create "original" data.
-    VariableArray<double> var_array{t_desc, q_desc, p_surf_desc};
-    REQUIRE( var_array.size == t_desc->size() + q_desc->size() + p_surf_desc->size() );
-    auto t = var_array.get_variable("T");
-    auto q = var_array.get_variable("q");
-    auto p_surf = var_array.get_variable("p_surf");
-    for (int i = 0; i != t.size(); ++i) {
-      t[i] = 2.*i;
-    }
-    for (int i = 0; i != q.size(); ++i) {
-      q[i] = i + 0.5;
-    }
-    for (int i = 0; i != p_surf.size(); ++i) {
-      p_surf[i] = -2. * i;
-    }
-    // Const reference to the var_array.
-    const VariableArrayView<double>& view = var_array;
-    // Make new array.
-    VariableArray<double> new_array(view);
-    auto t_new = new_array.get_variable("T");
-    auto q_new = new_array.get_variable("q");
-    auto p_surf_new = new_array.get_variable("p_surf");
-    // Clear original array.
-    for (int i = 0; i != t.size(); ++i) {
-      t[i] = 0.;
-    }
-    for (int i = 0; i != q.size(); ++i) {
-      q[i] = 0.;
-    }
-    for (int i = 0; i != p_surf.size(); ++i) {
-      p_surf[i] = 0.;
-    }
-    // The following checks that the data was copied.
-    for (int i = 0; i != t_new.size(); ++i) {
-      REQUIRE( t_new[i] == 2.*i );
-    }
-    for (int i = 0; i != q_new.size(); ++i) {
-      REQUIRE( q_new[i] == i + 0.5 );
-    }
-    for (int i = 0; i != p_surf_new.size(); ++i) {
-      REQUIRE( p_surf_new[i] == -2. * i );
-    }
-  }
-
-  SECTION( "getting an error message when a variable is not in the array" ) {
-    VariableArray<double> var_array{t_desc, q_desc, p_surf_desc};
-    REQUIRE_THROWS_MATCHES( var_array.get_variable("invalid"), VariableNotFoundException,
-                            MessageMatches(ContainsSubstring("variable array") && ContainsSubstring("invalid")) );
-  }
-
-}
-
-TEST_CASE( "interacting with data through a non-owned array view", "[VariableArrayView]" ) {
+TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" ) {
   Domain dom;
   DimensionPtr col_dim = dom.add_dimension("column", 8);
   DimensionPtr lev_dim = dom.add_dimension("level", 10);
@@ -415,7 +264,7 @@ TEST_CASE( "interacting with data through a non-owned array view", "[VariableArr
   SECTION( "variables can be accessed through a variable array view" ) {
     double data[total_size];
     VariableArrayView<double> view({t_desc, q_desc, p_surf_desc}, &data[0]);
-    REQUIRE( view.size == total_size );
+    REQUIRE( view.size() == total_size );
     auto t = view.get_variable("T");
     auto q = view.get_variable("q");
     auto p_surf = view.get_variable("p_surf");
@@ -449,7 +298,7 @@ TEST_CASE( "interacting with data through a non-owned array view", "[VariableArr
     double data[total_size];
     VariableArrayView<double> view({t_desc, q_desc, p_surf_desc}, &data[0]);
     double *data_ptr = view.data();
-    for (int i = 0; i != view.size; ++i) {
+    for (int i = 0; i != view.size(); ++i) {
       data_ptr[i] = 2.*i;
     }
     for (int i = 0; i != total_size; ++i) {
@@ -457,44 +306,11 @@ TEST_CASE( "interacting with data through a non-owned array view", "[VariableArr
     }
   }
 
-  SECTION( "a VariableArrayView can be constructed with make_variable_array_view" ) {
-    double data[total_size];
-    VariableArrayView<double> view = make_variable_array_view({t_desc, q_desc, p_surf_desc}, &data[0]);
-    REQUIRE( view.size == total_size );
-    auto t = view.get_variable("T");
-    auto q = view.get_variable("q");
-    auto p_surf = view.get_variable("p_surf");
-    auto t_array = &data[t_idx];
-    auto q_array = &data[q_idx];
-    auto p_surf_array = &data[p_idx];
-    for (int i = 0; i != t.size(); ++i) {
-      t[i] = 2.*i;
-    }
-    for (int i = 0; i != q.size(); ++i) {
-      q[i] = i + 0.5;
-    }
-    for (int i = 0; i != p_surf.size(); ++i) {
-      p_surf[i] = -2. * i;
-    }
-    for (int i = 0; i != t.size(); ++i) {
-      REQUIRE( t[i] == 2.*i );
-      REQUIRE( t_array[i] == 2.*i );
-    }
-    for (int i = 0; i != q.size(); ++i) {
-      REQUIRE( q[i] == i + 0.5 );
-      REQUIRE( q_array[i] == i + 0.5 );
-    }
-    for (int i = 0; i != p_surf.size(); ++i) {
-      REQUIRE( p_surf[i] == -2. * i );
-      REQUIRE( p_surf_array[i] == -2. * i );
-    }
-  }
-
   SECTION( "getting a const variable from a const VariableArrayView" ) {
     double data[total_size];
     const double* construct_ptr = &data[0];
-    const VariableArrayView<double> view = make_variable_array_view({t_desc, q_desc, p_surf_desc}, construct_ptr);
-    REQUIRE( view.size == total_size );
+    const VariableArrayView<double> view = VariableArrayView<double>::make_const({t_desc, q_desc, p_surf_desc}, construct_ptr);
+    REQUIRE( view.size() == total_size );
     auto t = view.get_variable("T");
     auto q = view.get_variable("q");
     auto p_surf = view.get_variable("p_surf");
@@ -527,16 +343,267 @@ TEST_CASE( "interacting with data through a non-owned array view", "[VariableArr
   SECTION( "getting a const pointer to view data" ) {
     double data[total_size];
     const double* construct_ptr = &data[0];
-    const VariableArrayView<double> view = make_variable_array_view({t_desc, q_desc, p_surf_desc}, construct_ptr);
+    const VariableArrayView<double> view = VariableArrayView<double>::make_const({t_desc, q_desc, p_surf_desc}, construct_ptr);
     const double *data_ptr = view.data();
     for (int i = 0; i != total_size; ++i) {
       data[i] = 2.*i;
     }
-    for (int i = 0; i != view.size; ++i) {
+    for (int i = 0; i != view.size(); ++i) {
       REQUIRE( data_ptr[i] == 2.*i );
     }
   }
 
+  SECTION( "VariableArrayView can allocate and own its data" ) {
+    VariableArrayView<double> view{t_desc, q_desc, p_surf_desc};
+    REQUIRE( view.size() == t_desc->size() + q_desc->size() + p_surf_desc->size() );
+    auto t = view.get_variable("T");
+    auto q = view.get_variable("q");
+    auto p_surf = view.get_variable("p_surf");
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 2.*i;
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      q[i] = i + 0.5;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    // The following checks that the writes worked without overlapping.
+    for (int i = 0; i != t.size(); ++i) {
+      REQUIRE( t[i] == 2.*i );
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      REQUIRE( q[i] == i + 0.5 );
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+    }
+  }
+
+  SECTION( "owning views can be constructed with vectors" ) {
+    std::vector<VarDescPtr> var_descs = {t_desc, q_desc, p_surf_desc};
+    VariableArrayView<double> view(var_descs);
+    REQUIRE( view.size() == t_desc->size() + q_desc->size() + p_surf_desc->size() );
+    auto t = view.get_variable("T");
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 2.*i;
+    }
+    for (int i = 0; i != t.size(); ++i) {
+      REQUIRE( t[i] == 2.*i );
+    }
+  }
+
+  SECTION( "data can be copied into a new owning view" ) {
+    // Create "original" data.
+    VariableArrayView<double> view{t_desc, q_desc, p_surf_desc};
+    REQUIRE( view.size() == t_desc->size() + q_desc->size() + p_surf_desc->size() );
+    auto t = view.get_variable("T");
+    auto q = view.get_variable("q");
+    auto p_surf = view.get_variable("p_surf");
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 2.*i;
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      q[i] = i + 0.5;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    // Make new array.
+    VariableArrayView <double> new_view = view.deep_copy();
+    auto t_new = new_view.get_variable("T");
+    auto q_new = new_view.get_variable("q");
+    auto p_surf_new = new_view.get_variable("p_surf");
+    // Clear original array.
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 0.;
+    }
+    for (int i = 0; i != q.size(); ++i) {
+      q[i] = 0.;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = 0.;
+    }
+    // The following checks that the data was copied.
+    for (int i = 0; i != t_new.size(); ++i) {
+      REQUIRE( t_new[i] == 2.*i );
+    }
+    for (int i = 0; i != q_new.size(); ++i) {
+      REQUIRE( q_new[i] == i + 0.5 );
+    }
+    for (int i = 0; i != p_surf_new.size(); ++i) {
+      REQUIRE( p_surf_new[i] == -2. * i );
+    }
+  }
+
+  SECTION( "getting an error message when a variable is not in the array" ) {
+    VariableArrayView<double> view{t_desc, q_desc, p_surf_desc};
+    REQUIRE_THROWS_MATCHES( view.get_variable("invalid"), VariableNotFoundException,
+                            MessageMatches(ContainsSubstring("variable array") && ContainsSubstring("invalid")) );
+  }
+
+}
+
+TEST_CASE( "interacting with the model state", "[State]" ) {
+  Domain dom;
+  DimensionPtr col_dim = dom.add_dimension("column", 8);
+  VarDescPtr p_surf_desc = dom.add_var_desc("p_surf", Float64Type, {col_dim}, "Pa");
+  std::size_t p_idx = 0;
+  std::size_t total_size = p_idx + p_surf_desc->size();
+
+  SECTION( "construct and access data using the VariableArrayView interface" ) {
+    double data[total_size];
+    State<double> state({p_surf_desc}, &data[0]);
+    REQUIRE( state.size() == total_size );
+    auto p_surf = state.get_variable("p_surf");
+    auto p_surf_array = &data[p_idx];
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+      REQUIRE( p_surf_array[i] == -2. * i );
+    }
+  }
+
+  SECTION( "construct const State with make_const" ) {
+    double data[total_size];
+    const State<double> state = State<double>::make_const({p_surf_desc}, &data[0]);
+    REQUIRE( state.size() == total_size );
+    auto p_surf = state.get_variable("p_surf");
+    auto p_surf_array = &data[p_idx];
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+      REQUIRE( p_surf_array[i] == -2. * i );
+    }
+  }
+
+  SECTION( "construct owned State" ) {
+    State<double> state{p_surf_desc};
+    REQUIRE( state.size() == total_size );
+    auto p_surf = state.get_variable("p_surf");
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+    }
+  }
+
+  SECTION( "construct owned State from vector of VarDescPtr" ) {
+    std::vector<VarDescPtr> var_descs = {p_surf_desc};
+    State<double> state(var_descs);
+    REQUIRE( state.size() == total_size );
+    auto p_surf = state.get_variable("p_surf");
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+    }
+  }
+
+  SECTION( "copy State into a new owning object" ) {
+    State<double> state{p_surf_desc};
+    auto p_surf = state.get_variable("p_surf");
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    State<double> new_state = state.deep_copy();
+    auto new_p_surf = new_state.get_variable("p_surf");
+    // Clear original array to guarantee we aren't just pointing to it.
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = 0.;
+    }
+    REQUIRE( new_state.size() == total_size );
+    for (int i = 0; i != new_p_surf.size(); ++i) {
+      REQUIRE( new_p_surf[i] == -2. * i );
+    }
+  }
+}
+
+TEST_CASE( "interacting a tendency on the model state", "[Tendency]" ) {
+  Domain dom;
+  DimensionPtr col_dim = dom.add_dimension("column", 8);
+  VarDescPtr p_surf_desc = dom.add_var_desc("p_surf_tend", Float64Type, {col_dim}, "Pa");
+  std::size_t p_idx = 0;
+  std::size_t total_size = p_idx + p_surf_desc->size();
+
+  SECTION( "construct and access data using the VariableArrayView interface" ) {
+    double data[total_size];
+    Tendency<double> tend({p_surf_desc}, &data[0]);
+    REQUIRE( tend.size() == total_size );
+    auto p_surf = tend.get_variable("p_surf_tend");
+    auto p_surf_array = &data[p_idx];
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+      REQUIRE( p_surf_array[i] == -2. * i );
+    }
+  }
+
+  SECTION( "construct const Tendency with make_const" ) {
+    double data[total_size];
+    const Tendency<double> tend = Tendency<double>::make_const({p_surf_desc}, &data[0]);
+    REQUIRE( tend.size() == total_size );
+    auto p_surf = tend.get_variable("p_surf_tend");
+    auto p_surf_array = &data[p_idx];
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+      REQUIRE( p_surf_array[i] == -2. * i );
+    }
+  }
+
+  SECTION( "construct owned Tendency" ) {
+    Tendency<double> tend{p_surf_desc};
+    REQUIRE( tend.size() == total_size );
+    auto p_surf = tend.get_variable("p_surf_tend");
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+    }
+  }
+
+  SECTION( "construct owned Tendency from vector of VarDescPtr" ) {
+    std::vector<VarDescPtr> var_descs = {p_surf_desc};
+    Tendency<double> tend(var_descs);
+    REQUIRE( tend.size() == total_size );
+    auto p_surf = tend.get_variable("p_surf_tend");
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf[i] == -2. * i );
+    }
+  }
+
+  SECTION( "copy Tendency into a new owning object" ) {
+    Tendency<double> tend{p_surf_desc};
+    auto p_surf = tend.get_variable("p_surf_tend");
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    Tendency<double> new_tend = tend.deep_copy();
+    auto new_p_surf = new_tend.get_variable("p_surf_tend");
+    // Clear original array to guarantee we aren't just pointing to it.
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = 0.;
+    }
+    REQUIRE( new_tend.size() == total_size );
+    for (int i = 0; i != new_p_surf.size(); ++i) {
+      REQUIRE( new_p_surf[i] == -2. * i );
+    }
+  }
 }
 
 // Utility macro for testing the copy constructors of exceptions.

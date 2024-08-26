@@ -5,9 +5,11 @@
 #include "dimension.hpp"
 #include "domain.hpp"
 #include "exceptions.hpp"
-#include "variable_view.hpp"
-#include "variable_array.hpp"
+#include "state.hpp"
+#include "tendency.hpp"
+#include "variable_array_view.hpp"
 #include "variable_descriptor.hpp"
+#include "variable_view.hpp"
 
 namespace spaecies
 {

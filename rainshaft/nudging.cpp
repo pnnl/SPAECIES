@@ -13,9 +13,9 @@ Nudging::Nudging(double time_scale_in, const std::vector<double>& t, const std::
 
 void Nudging::calc_tend(const RainshaftConstants& constants,
                         const RainshaftGrid& grid,
-                        const spaecies::VariableArrayView<double>& state,
+                        const spaecies::State<double>& state,
                         const RainshaftDerivedVars& dvars,
-                        spaecies::VariableArrayView<double>& tend) const {
+                        spaecies::Tendency<double>& tend) const {
   auto t = state.get_variable("T");
   auto q = state.get_variable("q");
   auto t_tend = tend.get_variable("T_tend");

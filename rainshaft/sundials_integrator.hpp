@@ -34,13 +34,13 @@ private:
   static int rainshaft_f(sunrealtype t, N_Vector y, N_Vector ydot, void *user_data)
   {
     RainshaftUserData *cast_data = (RainshaftUserData *)user_data;
-    spaecies::VariableArrayView<double> state = n_vector_to_view(y, cast_data->state_descs);
+    const spaecies::State<double> state = n_vector_to_state(y, cast_data->state_descs);
     RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data->constants,
                                                       cast_data->grid,
                                                       state);
     // Zero out ydot so that we don't have to remember to zero every value in calc_tend.
     N_VConst(0., ydot);
-    auto tend = n_vector_to_view(ydot, cast_data->tend_descs);
+    spaecies::Tendency<double> tend = n_vector_to_tendency(ydot, cast_data->tend_descs);
     cast_data->processes[PARTITION]->calc_tend(cast_data->constants,
                                                cast_data->grid,
                                                state, dvars, tend);
@@ -97,14 +97,12 @@ protected:
                            const Mode normal,
                            const Mode one_step) const
   {
-    std::vector<spaecies::VariableArray<double>> states;
-    std::vector<RainshaftDerivedVars> dvars;
+    std::vector<spaecies::State<double>> states;
 
     sunrealtype tret = -std::numeric_limits<sunrealtype>::infinity();
     if (steps_per_output > 0)
     {
-      states.emplace_back(n_vector_to_view(y_init, user_data.state_descs));
-      dvars.emplace_back(user_data.constants, user_data.grid, states.back());
+      states.push_back(n_vector_to_state(y_init, user_data.state_descs).deep_copy());
       N_Vector y_out = N_VClone(y_init);
       bool output_this_iter = true;
       for (int i = 0; tret < final_time; i++)
@@ -113,15 +111,13 @@ protected:
         output_this_iter = (i+1) % steps_per_output == 0;
         if (output_this_iter)
         {
-          states.emplace_back(n_vector_to_view(y_out, user_data.state_descs));
-          dvars.emplace_back(user_data.constants, user_data.grid, states.back());
+          states.push_back(n_vector_to_state(y_out, user_data.state_descs).deep_copy());
         }
       }
       // Output only if there isn't already an output for the last iteration.
       if (!output_this_iter)
       {
-        states.emplace_back(n_vector_to_view(y_out, user_data.state_descs));
-        dvars.emplace_back(user_data.constants, user_data.grid, states.back());
+        states.push_back(n_vector_to_state(y_out, user_data.state_descs).deep_copy());
       }
       N_VDestroy(y_out);
     }
@@ -132,27 +128,41 @@ protected:
       states.emplace_back(user_data.state_descs); // empty state for output
       N_Vector y_out = view_to_n_vector(sun_ctxt, states.back());
       evolveFun(mem, final_time, y_out, &tret, normal);
-      dvars.emplace_back(user_data.constants, user_data.grid, states.back());
       N_VDestroy(y_out);
     }
 
-    return RainshaftSolution(std::move(states), std::move(dvars), countFun());
+    return RainshaftSolution(std::move(states), countFun());
   }
 
-  static N_Vector view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<double> &view)
+  static N_Vector view_to_n_vector(const sundials::Context &sun_ctxt, spaecies::VariableArrayView<double> &view)
   {
-    sunindextype num_variables = view.size;
-    // Unsafe cast is necessary because SUNDIALS does not have separate const
-    // types for input vectors it will not change; we have to trust that neither
-    // the caller nor SUNDIALS will change the result here.
+    sunindextype num_variables = view.size();
+    N_Vector y = N_VMake_Serial(num_variables, view.data(), sun_ctxt);
+    return y;
+  }
+
+  // There's no way to force SUNDIALS not to change the result of this function. Nonetheless,
+  // hopefully the name will inspire the user to ask whether they are really sure that
+  // SUNDIALS will not change the vector in question.
+  static N_Vector const_view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<double> &view)
+  {
+    sunindextype num_variables = view.size();
     N_Vector y = N_VMake_Serial(num_variables, const_cast<double*>(view.data()), sun_ctxt);
     return y;
   }
 
-  static const spaecies::VariableArrayView<double> n_vector_to_view(N_Vector y, const std::vector<spaecies::VarDescPtr>& var_descs)
+  // The state and tendency conversions below are currently duplicated, but
+  // in the future the arguments to the state and tendency constructors will be different...
+  static spaecies::State<double> n_vector_to_state(N_Vector y, const std::vector<spaecies::VarDescPtr>& var_descs)
   {
-    const sunrealtype* ydata = N_VGetArrayPointer(y);
-    return spaecies::make_variable_array_view(var_descs, &ydata[0]);
+    sunrealtype* ydata = N_VGetArrayPointer(y);
+    return spaecies::State<double>(var_descs, &ydata[0]);
+  }
+
+  static spaecies::Tendency<double> n_vector_to_tendency(N_Vector y, const std::vector<spaecies::VarDescPtr>& var_descs)
+  {
+    sunrealtype* ydata = N_VGetArrayPointer(y);
+    return spaecies::Tendency<double>(var_descs, &ydata[0]);
   }
 };
 

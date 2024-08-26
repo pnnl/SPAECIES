@@ -21,7 +21,7 @@ public:
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const spaecies::VariableArray<double> &initial_state) const;
+                              const spaecies::State<double> &initial_state) const;
 };
 
 #endif // IMEX_INTEGRATOR_HPP

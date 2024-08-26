@@ -28,9 +28,9 @@ Sedimentation::Sedimentation(const RainshaftConstants& constants, bool use_v_tab
 
 void Sedimentation::calc_tend(const RainshaftConstants &constants,
                               const RainshaftGrid &grid,
-                              const spaecies::VariableArrayView<double> &state,
+                              const spaecies::State<double> &state,
                               const RainshaftDerivedVars &dvars,
-                              spaecies::VariableArrayView<double>& tend) const
+                              spaecies::Tendency<double>& tend) const
 {
   const auto lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
   const auto [speeds_top0, speeds_top3] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);

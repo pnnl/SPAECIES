@@ -6,7 +6,7 @@
 // Calculation of cell widths.
 std::vector<double> calc_dz(const RainshaftConstants& constants,
                             const RainshaftGrid& grid,
-                            const spaecies::VariableArrayView<double>& state) {
+                            const spaecies::State<double>& state) {
   // Virtual temperature.
   std::vector<double> t_v;
   auto t = state.get_variable("T");
@@ -36,7 +36,7 @@ std::vector<double> dz_to_z_int(const std::vector<double> dz) {
 // but instead temperature times (1 + q/epsilon).
 std::vector<double> calc_rho_dry(const RainshaftConstants& constants,
                                  const RainshaftGrid& grid,
-                                 const spaecies::VariableArrayView<double>& state) {
+                                 const spaecies::State<double>& state) {
   std::vector<double> rho_dry;
   auto t = state.get_variable("T");
   auto q = state.get_variable("q");
@@ -50,7 +50,7 @@ std::vector<double> calc_rho_dry(const RainshaftConstants& constants,
 
 std::vector<double> calc_lambdar(const RainshaftConstants& constants,
                                  const RainshaftGrid& grid,
-                                 const spaecies::VariableArrayView<double>& state) {
+                                 const spaecies::State<double>& state) {
   // SPS: If not doing nr limiter here, do it somewhere?
   std::vector<double> lambdar;
   auto nr = state.get_variable("nr");
@@ -69,7 +69,7 @@ std::vector<double> calc_lambdar(const RainshaftConstants& constants,
 
 RainshaftDerivedVars::RainshaftDerivedVars(const RainshaftConstants& constants,
                                            const RainshaftGrid& grid,
-                                           const spaecies::VariableArrayView<double>& state)
+                                           const spaecies::State<double>& state)
   : dz(calc_dz(constants, grid,state)),
     z_int(dz_to_z_int(dz)),
     rho_dry(calc_rho_dry(constants, grid, state)),

@@ -5,9 +5,9 @@ using std::min, std::cbrt, std::exp;
 
 void SelfCollision::calc_tend(const RainshaftConstants& constants,
                               const RainshaftGrid& grid,
-                              const spaecies::VariableArrayView<double>& state,
+                              const spaecies::State<double>& state,
                               const RainshaftDerivedVars& dvars,
-                              spaecies::VariableArrayView<double>& tend) const {
+                              spaecies::Tendency<double>& tend) const {
   auto nr = state.get_variable("nr");
   auto qr = state.get_variable("qr");
   auto nr_tend = tend.get_variable("nr_tend");

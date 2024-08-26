@@ -39,6 +39,9 @@ private:
 
 };
 
+static_assert(std::is_copy_constructible_v<ContiguousVariableView<double>> && std::is_copy_assignable_v<ContiguousVariableView<double>>);
+static_assert(std::is_move_constructible_v<ContiguousVariableView<double>> && std::is_move_assignable_v<ContiguousVariableView<double>>);
+
 }
 
 #endif // SPAECIES_CONTIGUOUS_VARIABLE_VIEW_HPP

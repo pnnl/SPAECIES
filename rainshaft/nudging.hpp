@@ -16,9 +16,9 @@ public:
   // Calculate tendency from current state.
   void calc_tend(const RainshaftConstants& constants,
                  const RainshaftGrid& grid,
-                 const spaecies::VariableArrayView<double>& state,
+                 const spaecies::State<double>& state,
                  const RainshaftDerivedVars& dvars,
-                 spaecies::VariableArrayView<double>& tend) const;
+                 spaecies::Tendency<double>& tend) const;
 
   double time_scale;
   const std::vector<double> t0;
