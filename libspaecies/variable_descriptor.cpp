@@ -26,7 +26,7 @@ std::string spaecies_type_name(VariableType type) {
   throw UnreachableException("invalid VariableType in spaecies_type_name");
 }
 
-VariableDescriptor::VariableDescriptor(const std::string name,
+VariableDescriptor::VariableDescriptor(const std::string& name,
                                        VariableType type,
                                        const std::vector<DimensionPtr> dimensions,
                                        const std::string units,

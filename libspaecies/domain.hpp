@@ -19,7 +19,7 @@ public:
   std::vector<DimensionPtr> get_dimensions(const std::vector<std::string>& names);
   // Add a variable to this domain, returning a pointer to the constructed
   // variable descriptor.
-  VarDescPtr add_var_desc(const std::string name,
+  VarDescPtr add_var_desc(const std::string& name,
                           VariableType type,
                           const std::vector<DimensionPtr> dimensions,
                           const std::string units,

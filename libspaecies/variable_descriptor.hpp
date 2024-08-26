@@ -54,7 +54,7 @@ enum VariableConstantStatus {
 class VariableDescriptor {
 public:
 
-  VariableDescriptor(const std::string name,
+  VariableDescriptor(const std::string& name,
                      VariableType type,
                      const std::vector<DimensionPtr> dimensions,
                      const std::string units,

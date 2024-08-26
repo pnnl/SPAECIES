@@ -34,7 +34,7 @@ std::vector<DimensionPtr> Domain::get_dimensions(const std::vector<std::string>&
   return dim_ptrs;
 }
 
-VarDescPtr Domain::add_var_desc(const std::string name,
+VarDescPtr Domain::add_var_desc(const std::string& name,
                                 VariableType type,
                                 const std::vector<DimensionPtr> dimensions,
                                 const std::string units,
