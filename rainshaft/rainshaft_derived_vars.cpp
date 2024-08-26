@@ -8,13 +8,13 @@ std::vector<double> calc_dz(const RainshaftConstants& constants,
                             const RainshaftGrid& grid,
                             const spaecies::State<double>& state) {
   // Virtual temperature.
-  std::vector<double> t_v;
+  std::vector<double> t_v(grid.nlev);
   auto t = state.get_variable("T");
   auto q = state.get_variable("q");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     // Virtual temperature factor.
     double t_v_fac = 1. + ((1/constants.epsilon_h2o - 1.) * q[il]);
-    t_v.push_back(t[il] * t_v_fac);
+    t_v[il] = t[il] * t_v_fac;
   }
   return grid.calc_dz(constants, t_v);
 }
@@ -37,13 +37,12 @@ std::vector<double> dz_to_z_int(const std::vector<double> dz) {
 std::vector<double> calc_rho_dry(const RainshaftConstants& constants,
                                  const RainshaftGrid& grid,
                                  const spaecies::State<double>& state) {
-  std::vector<double> rho_dry;
+  std::vector<double> rho_dry(grid.nlev);
   auto t = state.get_variable("T");
   auto q = state.get_variable("q");
-  for (std::size_t i = 0; i != grid.nlev; ++i) {
-    rho_dry.push_back(grid.p_mid[i]
-                      / (constants.rdry * t[i] *
-                         (1 + q[i]/constants.epsilon_h2o)));
+  for (std::size_t il = 0; il != grid.nlev; ++il) {
+    rho_dry[il] = grid.p_mid[il] / (constants.rdry * t[il] *
+                                  (1 + q[il]/constants.epsilon_h2o));
   }
   return rho_dry;
 }
@@ -52,16 +51,14 @@ std::vector<double> calc_lambdar(const RainshaftConstants& constants,
                                  const RainshaftGrid& grid,
                                  const spaecies::State<double>& state) {
   // SPS: If not doing nr limiter here, do it somewhere?
-  std::vector<double> lambdar;
+  std::vector<double> lambdar(grid.nlev);
   auto nr = state.get_variable("nr");
   auto qr = state.get_variable("qr");
-  for (std::size_t i = 0; i != grid.nlev; ++i) {
-    if (qr[i] >= constants.qsmall) {
-      double lambda_cubed = constants.pi * constants.rhow * nr[i]
-        / qr[i];
-      lambdar.push_back(std::cbrt(lambda_cubed));
-    } else {
-      lambdar.push_back(0.);
+  for (std::size_t il = 0; il != grid.nlev; ++il) {
+    if (qr[il] >= constants.qsmall) {
+      double lambda_cubed = constants.pi * constants.rhow * nr[il]
+        / qr[il];
+      lambdar[il] = std::cbrt(lambda_cubed);
     }
   }
   return lambdar;
