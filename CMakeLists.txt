@@ -20,18 +20,10 @@ if (BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
-  set(CMAKE_CXX_FLAGS_DEBUG "-Wall -fbounds-check -g")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O2")
-endif()
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
-endif()
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -fbounds-check")
 endif()
 
 add_subdirectory(libspaecies)
