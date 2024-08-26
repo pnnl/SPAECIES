@@ -13,27 +13,43 @@ private:
   // breakup (breakup_fac < 1).
   // Should not be called if nr is near 0.
   template<bool WithGrad = false>
-  auto breakup_fac(const RainshaftConstants& constants,
+  Val<WithGrad, 2> breakup_fac(const RainshaftConstants& constants,
                      const double nr, const double qr) const
   {
     const auto mean_mass_diam = std::cbrt(qr / (constants.pi * constants.rhow * nr));
     const auto breakup_exp_term = std::exp(2300. * (2.8e-4 - mean_mass_diam));
-    const auto breakup = 2. - breakup_exp_term;
+    const auto breakup = std::min(1.0, 2. - breakup_exp_term);
 
     if constexpr (WithGrad) {
-      if (breakup <= 1.0) {
-        return ValGrad<2>{
-          breakup,
-          {
-            -2300. * breakup_exp_term * mean_mass_diam / (3. * nr),
-            2300. * breakup_exp_term * mean_mass_diam / (3. * qr)
-          }
-        };
-      } else {
-        return ValGrad<2>{1.0, {0.0, 0.0}};
-      }
+      return {breakup, {
+        breakup <= 1.0 ? -2300. * breakup_exp_term * mean_mass_diam / (3. * nr) : 0.0,
+        breakup <= 1.0 ? 2300. * breakup_exp_term * mean_mass_diam / (3. * qr) : 0.0
+      }};
     } else {
-      return std::min(1.0, breakup);
+      return breakup;
+    }
+  }
+
+  template<bool WithGrad = false>
+  Val<WithGrad, 4> calc_nr_tend(const double nr,
+                                const double qr,
+                                const Val<WithGrad, 2> breakup,
+                                const Val<WithGrad, 2> rho_dry) const
+  {
+    const auto nr_tend_fac =  -5.78 * get_val(breakup) * nr * qr;
+    const auto nr_tend = nr_tend_fac * get_val(rho_dry);
+
+    if constexpr (WithGrad) {
+      const auto [rho_dry_dT, rho_dry_dq] = get_grad(rho_dry);
+      const auto [breakup_dnr, breakup_dqr] = get_grad(breakup);
+      return {nr_tend, {
+        nr_tend_fac * rho_dry_dT,
+        nr_tend_fac * rho_dry_dq,
+        -5.78 * qr * get_val(rho_dry) * (breakup_dnr * nr + get_val(breakup)),
+        -5.78 * nr * get_val(rho_dry) * (breakup_dqr * qr + get_val(breakup))
+      }};
+    } else {
+      return nr_tend;
     }
   }
 

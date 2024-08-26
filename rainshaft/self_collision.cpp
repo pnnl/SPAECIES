@@ -11,8 +11,8 @@ RainshaftTendency SelfCollision::calc_tend(const RainshaftConstants &constants,
   std::vector<double> nr_tend(grid.nlev, 0.), qr_tend(grid.nlev, 0.);
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
-    const auto b = breakup_fac(constants, state.nr[il], state.qr[il]);
-    nr_tend[il] = -5.78 * b * state.nr[il] * state.qr[il] * dvars.rho_dry[il];
+    const auto breakup = breakup_fac(constants, state.nr[il], state.qr[il]);
+    nr_tend[il] = calc_nr_tend(state.nr[il], state.qr[il], breakup, dvars.rho_dry[il]);
   }
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
@@ -40,14 +40,14 @@ void SelfCollision::calc_tend_jac(const RainshaftConstants &constants,
     const auto i_nr = i_q + grid.nlev;
     const auto i_qr = i_nr + grid.nlev;
 
-    const auto [b, b_grad] = breakup_fac<true>(constants, state.nr[il], state.qr[il]);
-    const auto [db_dnr, db_dqr] = b_grad;
+    const auto breakup = breakup_fac<true>(constants, state.nr[il], state.qr[il]);
+    const auto rho_dry = dvars.get_rho_dry<true>(constants, state, il);
+    const auto nr_tend = calc_nr_tend<true>(state.nr[il], state.qr[il], breakup, rho_dry);
+    const auto [nr_tend_T, nr_tend_q, nr_tend_nr, nr_tend_qr] = get_grad(nr_tend);
 
-    const auto [dr_dt, dr_dq] = dvars.rho_dry_grad(constants, state, il);
-
-    jac(i_nr, i_t) += -5.78 * b * state.nr[il] * state.qr[il] * dr_dt;
-    jac(i_nr, i_q) += -5.78 * b * state.nr[il] * state.qr[il] * dr_dq;
-    jac(i_nr, i_nr) += -5.78 * state.qr[il] * dvars.rho_dry[il] * (db_dnr * state.nr[il] + b);
-    jac(i_nr, i_qr) += -5.78 * state.nr[il] * dvars.rho_dry[il] * (db_dqr * state.qr[il] + b);
+    jac(i_nr, i_t) += nr_tend_T;
+    jac(i_nr, i_q) += nr_tend_q;
+    jac(i_nr, i_nr) += nr_tend_nr;
+    jac(i_nr, i_qr) += nr_tend_qr;
   }
 }

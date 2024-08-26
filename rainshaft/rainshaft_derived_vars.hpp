@@ -26,9 +26,33 @@ public:
   // Rain size parameter (1/m)
   const std::vector<double> lambdar;
 
-  Grad<2> lambdar_grad(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const;
+  template <bool WithGrad=false>
+  Val<WithGrad, 2> get_lambdar(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const {
+    const auto lam = lambdar[i];
 
-  Grad<2> rho_dry_grad(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const;
+    if constexpr (WithGrad) {
+      return {lam, {
+        state.qr[i] >= constants.qsmall ? lam / (3. * state.nr[i]) : 0.0,
+        state.qr[i] >= constants.qsmall ? -lam / (3. * state.qr[i]) : 0.0
+      }};
+    } else {
+      return lam;
+    }
+  }
+
+  template <bool WithGrad=false>
+  Val<WithGrad, 2> get_rho_dry(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const {
+    const auto rho = rho_dry[i];
+
+    if constexpr (WithGrad) {
+      return {rho, {
+        -rho / state.t[i],
+        -rho / (constants.epsilon_h2o + state.q[i])
+      }};
+    } else {
+      return rho;
+    }
+  }
 };
 
 // Convert cell widths to interface heights.
