@@ -2,6 +2,8 @@
 #define EVAPORATION_HPP
 #include <vector>
 #include <optional>
+#include <boost/math/special_functions/gamma.hpp>
+using boost::math::tgamma, boost::math::tgamma_lower;
 
 #include "lookup_linear.hpp"
 #include "rainshaft_process.hpp"
@@ -12,10 +14,12 @@ class Evaporation : public RainshaftProcess
 private:
   template <bool WithGrad = false>
   Val<WithGrad, 1> calc_diffusivity(const double t, const double p) const {
-    const auto diffusivity = 8.794e-5 * pow(t, 1.81) / p;
+    const auto fac = 8.794e-5 / p;
+    const auto diffusivity = fac * pow(t, 1.81);
 
     if constexpr (WithGrad) {
-      return {diffusivity, {1.81 * diffusivity / t}};
+      // Derivative with respect to t
+      return {diffusivity, {1.81 * fac * pow(t, 0.81)}};
     } else {
       return diffusivity;
     }
@@ -28,6 +32,7 @@ private:
     if constexpr (WithGrad) {
       return {
         viscosity,
+        // Derivative with respect to t
         {1.496e-6 * sqrt(t) * (t + 360.) / (2. * (t + 120.))}
       };
     } else {
@@ -44,7 +49,9 @@ private:
       const auto [visc_dT] = get_grad(visc);
       const auto [rho_dry_dT, rho_dry_dq] = get_grad(rho_dry);
       return {visc_over_rho, {
+        // Derivative with respect to t
         (visc_dT - get_val(visc) * rho_dry_dT / get_val(rho_dry)) / get_val(rho_dry),
+        // Derivative with respect to q
          -get_val(visc) / pow(get_val(rho_dry), 2) * rho_dry_dq
       }};
     } else {
@@ -60,7 +67,9 @@ private:
       const auto [dv_dT] = get_grad(diffusivity);
       const auto [visc_over_rho_dT, visc_over_rho_dq] = get_grad(visc_over_rho);
       return {schmidt_num, {
+        // Derivative with respect to t
         (visc_over_rho_dT - get_val(visc_over_rho) * dv_dT / get_val(diffusivity)) / get_val(diffusivity),
+        // Derivative with respect to q
         visc_over_rho_dq / get_val(diffusivity)
       }};
     } else {
@@ -76,6 +85,7 @@ private:
 
     if constexpr (WithGrad) {
       const auto [q_sat_dry_dT] = get_grad(q_sat_dry);
+      // Derivative with respect to t
       return {abl, {fac * l_over_t_2 * (q_sat_dry_dT - 2.0 * get_val(q_sat_dry) / t)}};
     } else {
       return abl;
@@ -123,10 +133,10 @@ private:
       const auto t2_dqr = (scale_lambdar_neg_two + t2_term * v_evap_lambdar) * lambdar_dqr;
 
       return {tau_inv, {
-        t1 * t2_dT + t2 * t1_dT,
-        t1 * t2_dq + t2 * t1_dq,
-        t1 * t2_dnr + t2 * t1_dnr,
-        t1 * t2_dqr
+        t1 * t2_dT + t2 * t1_dT, // Derivative with respect to t
+        t1 * t2_dq + t2 * t1_dq, // Derivative with respect to q
+        t1 * t2_dnr + t2 * t1_dnr, // Derivative with respect to nr
+        t1 * t2_dqr // Derivative with respect to qr
       }};
     } else {
       return tau_inv;
@@ -241,10 +251,78 @@ private:
   // Calculate characteristic velocity used for velocity calculation.
   // This version ignores the lookup table, if present, and always just
   // calculates using incomplete gamma functions.
-  static double calc_v_evap_gamma(const RainshaftConstants &constants, double lambdar);
+  template <bool WithGrad = false>
+  static Val<WithGrad, 1> calc_v_evap_gamma(const RainshaftConstants &constants, double lambdar)
+  {
+    // Skip function when no rain present.
+    if (lambdar == 0.)
+    {
+      if constexpr (WithGrad) {
+        return {0., {0.}};
+      } else {
+        return 0.;
+      }
+    }
+    double v_evap(0.);
+    // Factor converting D^3 to drop mass in grams.
+    double d3_to_gram = 1000. * constants.pi * constants.rhow / 6.;
+    // Gram conversion factor to various powers.
+    double d2g_2third = pow(d3_to_gram, 2. / 3.);
+    double d2g_1third = pow(d3_to_gram, 1. / 3.);
+    double d2g_1sixth = pow(d3_to_gram, 1. / 6.);
+    // Integral for D <= 134.43 micron.
+    v_evap = sqrt(4579.5 * d2g_2third) * tgamma_lower(3.5, lambdar * 1.3443e-4) * pow(lambdar, -2.5);
+    // Integral for 134.43 micron < D <= 1511.64 micron.
+    v_evap += sqrt(49.62 * d2g_1third) * (tgamma(3., lambdar * 1.3443e-4) - tgamma(3., lambdar * 1.51164e-3)) / (lambdar * lambdar);
+    // Integral for 1511.64 micron < D <= 3477.84 micron.
+    v_evap += sqrt(17.32 * d2g_1sixth) * (tgamma(2.75, lambdar * 1.51164e-3) - tgamma(2.75, lambdar * 3.47784e-3)) * pow(lambdar, -1.75);
+    // Integral for 3477.84 micron < D.
+    v_evap += sqrt(9.17) * tgamma(2.5, lambdar * 3.47784e-3) * pow(lambdar, -1.5);
+    return v_evap;
+  }
 
-  // Calculate characteristic velocity using numerical integration.
-  static double calc_v_evap_numerical(const RainshaftConstants &constants, double lambdar);
+  // Calculate characteristic velocity (v_evap) using Riemann sum over midpoints
+  template <bool WithGrad = false>
+  static Val<WithGrad, 1> calc_v_evap_numerical(const RainshaftConstants &constants, const double lambdar)
+  {
+    constexpr auto dd = 2.; // micron
+    constexpr std::size_t low_k = 1;
+    constexpr std::size_t high_k = 10000;
+    const auto amg_fac = 1000. * constants.pi * constants.rhow / 6.;
+    Val<WithGrad, 1> accum;
+    for (std::size_t kk = low_k; kk != high_k + 1; ++kk)
+    {
+      const auto dia_micron = (kk - 0.5) * dd;
+      const auto dia = dia_micron * 1.e-6;
+      const auto vt = [=] () {
+        const auto amg = amg_fac * pow(dia, 3);
+        if (dia_micron <= 134.43) {
+          return 4.5795e3 * pow(amg, 2. / 3.);
+        } else if (dia_micron <= 1511.64) {
+          return 4.962e1 * pow(amg, 1. / 3.);
+        } else if (dia_micron <= 3477.84) {
+          return 1.732e1 * pow(amg, 1. / 6.);
+        } else {
+          return 9.17;
+        }
+      }();
+      
+      const auto integrand = sqrt(vt * dia) * dia * exp(-lambdar * dia);
+      get_val(accum) += integrand;
+      if constexpr (WithGrad) {
+        get_grad(accum)[0] += -dia * integrand;
+      }
+    }
+    
+    // Multiply by the grid cell width, convert units, and include lambda factored out of the integral
+    const auto scale = dd * 1.e-6 * lambdar;
+    get_val(accum) *= scale;
+    if constexpr (WithGrad) {
+      // Apply product rule to lambda * int_0^inf f(lambda, D) dD
+      get_grad(accum)[0] = scale * get_grad(accum)[0] + get_val(accum);
+    }
+    return accum;
+  }
 };
 
 #endif // EVAPORATION_HPP
