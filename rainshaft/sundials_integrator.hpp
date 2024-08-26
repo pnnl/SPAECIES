@@ -134,6 +134,8 @@ protected:
     return RainshaftSolution(std::move(states), countFun());
   }
 
+  // Note that the N_Vector does not take ownership of the data and will not free it.
+  // The N_Vector must not be permitted to live longer than the view.
   static N_Vector view_to_n_vector(const sundials::Context &sun_ctxt, spaecies::VariableArrayView<double> &view)
   {
     sunindextype num_variables = view.size();
@@ -141,9 +143,14 @@ protected:
     return y;
   }
 
-  // There's no way to force SUNDIALS not to change the result of this function. Nonetheless,
-  // hopefully the name will inspire the user to ask whether they are really sure that
-  // SUNDIALS will not change the vector in question.
+  // Note (as above) that the N_Vector will not own the data, but rather will have a
+  // non-const pointer to data that should be treated as const.
+  //
+  // There's no way to force SUNDIALS to respect this const-ness, but it should be safe
+  // for sending initial conditions to SUNDIALS...
+  //
+  // Open question: Should we just accept the cost of making a copy wherever this is used,
+  // and get rid of this function?
   static N_Vector const_view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<double> &view)
   {
     sunindextype num_variables = view.size();
@@ -153,6 +160,10 @@ protected:
 
   // The state and tendency conversions below are currently duplicated, but
   // in the future the arguments to the state and tendency constructors will be different...
+  // Note that in both cases the N_Vector is treated as the owner of the data, and must
+  // outlive the state/tendency objects (unless the deep_copy method is used to get a newly
+  // allocated copy).
+
   static spaecies::State<double> n_vector_to_state(N_Vector y, const std::vector<spaecies::VarDescPtr>& var_descs)
   {
     sunrealtype* ydata = N_VGetArrayPointer(y);
