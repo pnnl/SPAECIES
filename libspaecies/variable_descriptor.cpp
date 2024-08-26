@@ -38,12 +38,8 @@ VariableDescriptor::VariableDescriptor(const std::string& name,
 }
 
 std::size_t VariableDescriptor::size() {
-  // Folding not available until C++23, so have to write loop explicitly.
-  std::size_t var_size = 1;
-  for (DimensionPtr d : dimensions) {
-    var_size *= d->size;
-  }
-  return var_size;
+  return std::accumulate(dimensions.begin(), dimensions.end(), 1,
+                         [](std::size_t acc, std::shared_ptr<Dimension> dim) { return acc * dim->size; });
 }
 
 }
