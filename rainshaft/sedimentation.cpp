@@ -10,24 +10,24 @@ Sedimentation::Sedimentation(const RainshaftConstants &constants, bool use_v_tab
                              bool use_numerical_integration)
     : use_numerical_integration(use_numerical_integration)
 {
-  if (use_v_table)
-  {
-    std::vector<double> range_bounds = {5., 195., 8595.};
-    std::vector<double> spacings = {1., 1.};
-    std::vector<double> d_microns = LookupTable::calc_x_values(range_bounds,
-                                                               spacings);
-    std::vector<double> v0_values(d_microns.size(), 0.);
-    std::vector<double> v3_values(d_microns.size(), 0.);
-    for (std::size_t i = 0; i != d_microns.size(); ++i)
-    {
-      double lambdar = 1.e6 / d_microns[i];
-      std::tie(v0_values[i], v3_values[i]) = use_numerical_integration ?
-        rain_fall_speeds_stp_numerical(constants, lambdar)
-        :  rain_fall_speeds_stp_gamma(constants, lambdar);
-    }
-    v0_table.emplace(range_bounds, spacings, v0_values);
-    v3_table.emplace(range_bounds, spacings, v3_values);
-  }
+  // if (use_v_table)
+  // {
+  //   std::vector<double> range_bounds = {5., 195., 8595.};
+  //   std::vector<double> spacings = {1., 1.};
+  //   std::vector<double> d_microns = LookupTable::calc_x_values(range_bounds,
+  //                                                              spacings);
+  //   std::vector<double> v0_values(d_microns.size(), 0.);
+  //   std::vector<double> v3_values(d_microns.size(), 0.);
+  //   for (std::size_t i = 0; i != d_microns.size(); ++i)
+  //   {
+  //     double lambdar = 1.e6 / d_microns[i];
+  //     std::tie(v0_values[i], v3_values[i]) = use_numerical_integration ?
+  //       rain_fall_speeds_stp_numerical(constants, lambdar)
+  //       :  rain_fall_speeds_stp_gamma(constants, lambdar);
+  //   }
+  //   v0_table.emplace(range_bounds, spacings, v0_values);
+  //   v3_table.emplace(range_bounds, spacings, v3_values);
+  // }
 }
 
 RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants &constants,
@@ -139,7 +139,7 @@ Sedimentation::Speeds Sedimentation::rain_fall_speeds_stp(const RainshaftConstan
                                                         double lambdar) const {
   if (v0_table.has_value()) {
     const auto d_micron = 1.e6 / lambdar;
-    return {v0_table->lookup_value(d_micron), v3_table->lookup_value(d_micron)};
+    return {get_val(v0_table->lookup_value(d_micron)), get_val(v3_table->lookup_value(d_micron))};
   } else {
     if (use_numerical_integration) {
       return rain_fall_speeds_stp_numerical(constants, lambdar);

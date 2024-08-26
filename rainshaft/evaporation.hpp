@@ -195,7 +195,7 @@ public:
   // SPS: Should use a different pointer type to guarantee this
   // does not outlast the sat_form object.
   Evaporation(const RainshaftConstants &constants,
-              const SaturationFormulae *sat_form_in, bool use_v_table,
+              const SaturationFormulae &sat_form_in, bool use_v_table,
               bool use_numerical_integration);
 
   // Calculate tendency from current state.
@@ -220,30 +220,31 @@ public:
   // Calculate characteristic velocity used for velocity calculation.
   double calc_v_evap(const RainshaftConstants &constants, double lambdar) const;
 
-  // Calculate characteristic velocity used for velocity calculation.
-  // This version ignores the lookup table, if present, and always just
-  // calculates using incomplete gamma functions.
-  double calc_v_evap_gamma(const RainshaftConstants &constants, double lambdar) const;
-
-  // Calculate characteristic velocity using numerical integration.
-  double calc_v_evap_numerical(const RainshaftConstants &constants, double lambdar) const;
-
-  double calc_v_evap_dlambda(const RainshaftConstants& constants, double lambdar) const;
-
-  double calc_v_evap_dlambda_gamma(const RainshaftConstants& constants, double lambdar) const;
-
   const bool use_numerical_integration;
 
 private:
   // Water vapor saturation formulae.
-  const SaturationFormulae *sat_form;
+  const SaturationFormulae &sat_form;
 
   // Particle velocity lookup table.
   // This is currently hard-coded to P3 settings, i.e. it contains 20 entries
   // for values every 10 microns between 5 and 195 micron, and 280 entries for
   // values every 30 microns between 195 and 8595 micron.
-  std::optional<LookupLinear> v_table;
-  std::optional<LookupLinear> dv_table;
+  const std::optional<LookupLinear> v_table;
+
+  static std::optional<LookupLinear> create_lookup(const RainshaftConstants &constants,
+                                      const bool use_v_table,
+                                      const bool use_numerical_integration);
+
+  static double calc_v_evap(const RainshaftConstants &constants, double lambdar, bool use_numerical_integration);
+
+  // Calculate characteristic velocity used for velocity calculation.
+  // This version ignores the lookup table, if present, and always just
+  // calculates using incomplete gamma functions.
+  static double calc_v_evap_gamma(const RainshaftConstants &constants, double lambdar);
+
+  // Calculate characteristic velocity using numerical integration.
+  static double calc_v_evap_numerical(const RainshaftConstants &constants, double lambdar);
 };
 
 #endif // EVAPORATION_HPP

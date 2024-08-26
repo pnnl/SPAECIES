@@ -1,34 +1,23 @@
 #include "lookup_linear.hpp"
-#include <cstddef>
-#include <stdexcept>
+#include <cmath>
+#include <algorithm>
 
-LookupLinear::LookupLinear(std::vector<double> x_range_bounds,
-                           std::vector<double> x_spacings,
-                           std::vector<double> y_values)
-  : range_bounds(x_range_bounds), spacings(x_spacings),
-    offsets(subrange_offsets(x_range_bounds, x_spacings)),
-    x_table(calc_x_values(x_range_bounds, x_spacings)),
-    y_table(y_values) {
-  // SPS: Different prerequisites to check:
-  //  - Size of x_range_bounds is one more than size of x_spacings.
-  //  - x_range_bounds is strictly monotonically increasing.
-  //  - Each difference between bounds is (within a narrow tolerance)
-  //    a multiple of the corresponding spacing.
-  //  - Number of y_values matches the number of x values.
-}
+ValGrad<1> LookupLinear::lookup_value(double x) const {
+  auto itr = std::lower_bound(range_bounds.cbegin(), range_bounds.cend(), x);
+  if (itr == range_bounds.begin()) {
+    return {y_table.front().front(), {0.0}};
+  }
+  if (itr == range_bounds.end()) {
+    return {y_table.back().back(), {0.0}};
+  }
 
-double LookupLinear::lookup_value(double x) const {
-  std::size_t num_subranges = spacings.size();
-  if (x < range_bounds[0]) {
-    return y_table[0];
-  }
-  for (std::size_t isr = 0; isr != num_subranges; ++isr) {
-    if (x < range_bounds[isr+1]) {
-      std::size_t low_ind = (x - range_bounds[isr]) / spacings[isr] + offsets[isr];
-      double frac_part = (x - x_table[low_ind]) / (x_table[low_ind+1] - x_table[low_ind]);
-      return y_table[low_ind]
-        + frac_part * (y_table[low_ind+1] - y_table[low_ind]);
-    }
-  }
-  return y_table[offsets[num_subranges]];
+  const auto range_idx = std::distance(spacings.cbegin(), std::prev(itr));
+  const auto spacing = spacings[range_idx];
+  double int_part;
+  const auto frac_part = std::modf((x - *std::prev(itr)) / spacing, &int_part);
+  const auto cell_idx = static_cast<std::vector<double>::size_type>(int_part);
+  const auto y_l = y_table[range_idx][cell_idx];
+  const auto y_r = y_table[range_idx][cell_idx + 1];
+  const auto slope = (y_r - y_l) / spacing;
+  return {y_l + slope * frac_part, {slope}};
 }

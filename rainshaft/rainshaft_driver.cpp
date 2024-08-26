@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(constants, &sat_form, false, false);
+  Evaporation evap(constants, sat_form, false, false);
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.
