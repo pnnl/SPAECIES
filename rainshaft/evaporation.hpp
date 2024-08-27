@@ -277,33 +277,39 @@ private:
   // This version ignores the lookup table, if present, and always just
   // calculates using incomplete gamma functions.
   template <bool WithGrad = false>
-  static Val<WithGrad, 1> calc_v_evap_gamma(const RainshaftConstants &constants, double lambdar)
+  static Val<WithGrad, 1> calc_v_evap_gamma(const RainshaftConstants &constants, const double lambdar)
   {
     // Skip function when no rain present.
     if (lambdar == 0.)
     {
-      if constexpr (WithGrad) {
-        return {0., {0.}};
-      } else {
-        return 0.;
-      }
+      // This returns 0 (and 0 derivative)
+      return {};
     }
-    double v_evap(0.);
     // Factor converting D^3 to drop mass in grams.
-    double d3_to_gram = 1000. * constants.pi * constants.rhow / 6.;
+    const auto d3_to_gram = 1000. * constants.pi * constants.rhow / 6.;
     // Gram conversion factor to various powers.
-    double d2g_2third = pow(d3_to_gram, 2. / 3.);
-    double d2g_1third = pow(d3_to_gram, 1. / 3.);
-    double d2g_1sixth = pow(d3_to_gram, 1. / 6.);
+    const auto d2g_2third = pow(d3_to_gram, 2. / 3.);
+    const auto d2g_1third = pow(d3_to_gram, 1. / 3.);
+    const auto d2g_1sixth = pow(d3_to_gram, 1. / 6.);
     // Integral for D <= 134.43 micron.
-    v_evap = sqrt(4579.5 * d2g_2third) * tgamma_lower(3.5, lambdar * 1.3443e-4) * pow(lambdar, -2.5);
+    const auto term1 = sqrt(4579.5 * d2g_2third) * tgamma_lower(3.5, lambdar * 1.3443e-4) * pow(lambdar, -2.5);
     // Integral for 134.43 micron < D <= 1511.64 micron.
-    v_evap += sqrt(49.62 * d2g_1third) * (tgamma(3., lambdar * 1.3443e-4) - tgamma(3., lambdar * 1.51164e-3)) / (lambdar * lambdar);
+    const auto term2 = sqrt(49.62 * d2g_1third) * (tgamma(3., lambdar * 1.3443e-4) - tgamma(3., lambdar * 1.51164e-3)) * pow(lambdar, -2);
     // Integral for 1511.64 micron < D <= 3477.84 micron.
-    v_evap += sqrt(17.32 * d2g_1sixth) * (tgamma(2.75, lambdar * 1.51164e-3) - tgamma(2.75, lambdar * 3.47784e-3)) * pow(lambdar, -1.75);
+    const auto term3 = sqrt(17.32 * d2g_1sixth) * (tgamma(2.75, lambdar * 1.51164e-3) - tgamma(2.75, lambdar * 3.47784e-3)) * pow(lambdar, -1.75);
     // Integral for 3477.84 micron < D.
-    v_evap += sqrt(9.17) * tgamma(2.5, lambdar * 3.47784e-3) * pow(lambdar, -1.5);
-    return v_evap;
+    const auto term4 = sqrt(9.17) * tgamma(2.5, lambdar * 3.47784e-3) * pow(lambdar, -1.5);
+    const auto v_evap = term1 + term2 + term3 + term4;
+
+    if constexpr (WithGrad) {
+      const auto term1_dl = 0.0;
+      const auto term2_dl = 0.0;
+      const auto term3_dl = 0.0;
+      const auto term4_dl = 0.0;
+      return {v_evap, {term1_dl + term2_dl + term3_dl + term4_dl}};
+    } else {
+      return v_evap;
+    }
   }
 
   // Calculate characteristic velocity (v_evap) using Riemann sum over midpoints
@@ -314,7 +320,7 @@ private:
     constexpr std::size_t low_k = 1;
     constexpr std::size_t high_k = 10000;
     const auto amg_fac = 1000. * constants.pi * constants.rhow / 6.;
-    Val<WithGrad, 1> accum = 0.;
+    Val<WithGrad, 1> accum{};
     for (std::size_t kk = low_k; kk != high_k + 1; ++kk) {
       const auto dia_micron = (kk - 0.5) * dd;
       const auto dia = dia_micron * 1.e-6;

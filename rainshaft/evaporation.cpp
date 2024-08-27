@@ -104,7 +104,7 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
     const auto schmidt_num = calc_schmidt_num<true>(diffusivity, visc_over_rho);
     const auto abl = calc_abl<true>(constants, state.t[il], q_sat_dry);
     const auto lambdar = dvars.get_lambdar<true>(constants, state, il);
-    const ValGrad<1> v_evap = {calc_v_evap(constants, dvars.lambdar[il]), {0.0}}; // TODO: fix deriv
+    const auto v_evap = calc_v_evap<true>(constants, dvars.lambdar[il]);
     const auto tau_inv = calc_tau_inv<true>(constants, state.nr[il], diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
     const auto q_evap = calc_q_evap<true>(state.q[il], q_sat_dry, abl, tau_inv);
     const auto n_evap = calc_n_evap<true>(state.nr[il], state.qr[il], q_evap);
