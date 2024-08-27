@@ -66,6 +66,10 @@ int main(int argc, char** argv)
   auto q = initial_state.get_variable("q");
   auto nr = initial_state.get_variable("nr");
   auto qr = initial_state.get_variable("qr");
+  for (std::size_t i = 0; i != nlev; ++i) {
+    nr[i] = 0.;
+    qr[i] = 0.;
+  }
 
   // Coming up with an initial condition for t and q is slightly tricky, because
   // we only have an implicit relationship between t, q, and dz. But since the

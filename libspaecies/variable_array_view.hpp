@@ -61,7 +61,7 @@ public:
 protected:
   std::vector<VarDescPtr> var_desc_vec;
   std::size_t data_size;
-  std::shared_ptr<T> owning_ptr;
+  std::shared_ptr<T[]> owning_ptr;
   T* data_ptr;
   inline void copy_data_to_location(T* dest) const {
     std::memcpy(dest, data_ptr, data_size * sizeof(T));
