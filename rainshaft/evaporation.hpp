@@ -287,25 +287,37 @@ private:
     }
     // Factor converting D^3 to drop mass in grams.
     const auto d3_to_gram = 1000. * constants.pi * constants.rhow / 6.;
-    // Gram conversion factor to various powers.
-    const auto d2g_2third = pow(d3_to_gram, 2. / 3.);
-    const auto d2g_1third = pow(d3_to_gram, 1. / 3.);
-    const auto d2g_1sixth = pow(d3_to_gram, 1. / 6.);
+    
     // Integral for D <= 134.43 micron.
-    const auto term1 = sqrt(4579.5 * d2g_2third) * tgamma_lower(3.5, lambdar * 1.3443e-4) * pow(lambdar, -2.5);
+    const auto int1_fac = sqrt(4579.5) * cbrt(d3_to_gram);
+    const auto lambdar_neg_2_5 = pow(lambdar, -2.5);
+    const auto lambdar_size1 = lambdar * 1.3443e-4;
+    const auto term1 = int1_fac * tgamma_lower(3.5, lambdar_size1) * lambdar_neg_2_5;
+
     // Integral for 134.43 micron < D <= 1511.64 micron.
-    const auto term2 = sqrt(49.62 * d2g_1third) * (tgamma(3., lambdar * 1.3443e-4) - tgamma(3., lambdar * 1.51164e-3)) * pow(lambdar, -2);
+    const auto int2_fac = sqrt(49.62) * pow(d3_to_gram, 1.0 / 6.0);
+    const auto lambdar_neg_2 = pow(lambdar, -2);
+    const auto lambdar_size2 = lambdar * 1.51164e-3;
+    const auto term2 = int2_fac * (tgamma(3., lambdar_size1) - tgamma(3., lambdar_size2)) * lambdar_neg_2;
+
     // Integral for 1511.64 micron < D <= 3477.84 micron.
-    const auto term3 = sqrt(17.32 * d2g_1sixth) * (tgamma(2.75, lambdar * 1.51164e-3) - tgamma(2.75, lambdar * 3.47784e-3)) * pow(lambdar, -1.75);
+    const auto int3_fac = sqrt(17.32) * pow(d3_to_gram, 1.0 / 12.0);
+    const auto lambdar_neg_1_75 = pow(lambdar, -1.75);
+    const auto lambdar_size3 = lambdar * 3.47784e-3;
+    const auto term3 = int3_fac * (tgamma(2.75, lambdar_size2) - tgamma(2.75, lambdar_size3)) * lambdar_neg_1_75;
+    
     // Integral for 3477.84 micron < D.
-    const auto term4 = sqrt(9.17) * tgamma(2.5, lambdar * 3.47784e-3) * pow(lambdar, -1.5);
+    const auto int4_fac = sqrt(9.17);
+    const auto lambdar_neg_1_5 = pow(lambdar, -1.5);
+    const auto term4 = int4_fac * tgamma(2.5, lambdar_size3) * lambdar_neg_1_5;
+
     const auto v_evap = term1 + term2 + term3 + term4;
 
     if constexpr (WithGrad) {
-      const auto term1_dl = 0.0;
-      const auto term2_dl = 0.0;
-      const auto term3_dl = 0.0;
-      const auto term4_dl = 0.0;
+      const auto term1_dl = term1 / lambdar - int1_fac * tgamma_lower(4.5, lambdar_size1) * lambdar_neg_2_5;
+      const auto term2_dl = term2 / lambdar - int2_fac * (tgamma(4., lambdar_size1) - tgamma(4., lambdar_size2)) * lambdar_neg_2;
+      const auto term3_dl = term3 / lambdar - int3_fac * (tgamma(3.75, lambdar_size2) - tgamma(3.75, lambdar_size3)) * lambdar_neg_1_75;
+      const auto term4_dl = term4 / lambdar - int4_fac * tgamma(3.5, lambdar_size3) * lambdar_neg_1_5;
       return {v_evap, {term1_dl + term2_dl + term3_dl + term4_dl}};
     } else {
       return v_evap;
