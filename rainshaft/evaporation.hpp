@@ -228,7 +228,24 @@ public:
                              Matrix jac) const;
 
   // Calculate characteristic velocity used for velocity calculation.
-  double calc_v_evap(const RainshaftConstants &constants, double lambdar) const;
+  template <bool WithGrad = false>
+  Val<WithGrad, 1> calc_v_evap(const RainshaftConstants &constants, double lambdar) const
+  {
+    if (v_table.has_value())
+    {
+      const auto d_micron = 1.e6 / lambdar;
+      const auto v_evap = v_table->lookup_value(d_micron);
+      if constexpr (WithGrad) {
+        return v_evap;
+      } else {
+        return get_val(v_evap);
+      }
+    }
+    else
+    {
+      return calc_v_evap<WithGrad>(constants, lambdar, use_numerical_integration);
+    }
+  }
 
   const bool use_numerical_integration;
 
@@ -246,7 +263,15 @@ private:
                                       const bool use_v_table,
                                       const bool use_numerical_integration);
 
-  static double calc_v_evap(const RainshaftConstants &constants, double lambdar, bool use_numerical_integration);
+  template <bool WithGrad = false>
+  static Val<WithGrad, 1> calc_v_evap(const RainshaftConstants &constants, const double lambdar, const bool use_numerical_integration)
+  {
+    if (use_numerical_integration) {
+      return calc_v_evap_numerical<WithGrad>(constants, lambdar);
+    } else {
+      return calc_v_evap_gamma<WithGrad>(constants, lambdar);
+    }
+  }
 
   // Calculate characteristic velocity used for velocity calculation.
   // This version ignores the lookup table, if present, and always just

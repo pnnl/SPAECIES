@@ -3,15 +3,6 @@
 #include <cstddef>
 #include <cmath>
 
-double Evaporation::calc_v_evap(const RainshaftConstants &constants, const double lambdar, const bool use_numerical_integration)
-{
-  if (use_numerical_integration) {
-    return calc_v_evap_numerical(constants, lambdar);
-  } else {
-    return calc_v_evap_gamma(constants, lambdar);
-  }
-}
-
 std::optional<LookupLinear> Evaporation::create_lookup(const RainshaftConstants &constants,
                                       const bool use_v_table,
                                       const bool use_numerical_integration)
@@ -146,18 +137,5 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
     jac(i_qr, i_q) -= q_evap_dq;
     jac(i_qr, i_nr) -= q_evap_dnr;
     jac(i_qr, i_qr) -= q_evap_dqr;
-  }
-}
-
-double Evaporation::calc_v_evap(const RainshaftConstants &constants, double lambdar) const
-{
-  if (v_table.has_value())
-  {
-    double d_micron = 1.e6 / lambdar;
-    return get_val(v_table->lookup_value(d_micron));
-  }
-  else
-  {
-    return calc_v_evap(constants, lambdar, use_numerical_integration);
   }
 }

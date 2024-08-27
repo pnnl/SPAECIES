@@ -8,6 +8,8 @@
 class LookupTable {
 
 public:
+  // Ideally this would return Val<WithGrad, 1>, but virtual functions can't be
+  // templated. Is this base class even necessary?
   virtual ValGrad<1> lookup_value(double x) const = 0;
 };
 
