@@ -289,36 +289,34 @@ private:
     constexpr std::size_t low_k = 1;
     constexpr std::size_t high_k = 10000;
     const auto amg_fac = 1000. * constants.pi * constants.rhow / 6.;
-    Val<WithGrad, 1> accum;
-    for (std::size_t kk = low_k; kk != high_k + 1; ++kk)
-    {
+    Val<WithGrad, 1> accum = 0.;
+    for (std::size_t kk = low_k; kk != high_k + 1; ++kk) {
       const auto dia_micron = (kk - 0.5) * dd;
       const auto dia = dia_micron * 1.e-6;
       const auto vt = [=] () {
         const auto amg = amg_fac * pow(dia, 3);
         if (dia_micron <= 134.43) {
-          return 4.5795e3 * pow(amg, 2. / 3.);
+          return 4.5795e3 * pow(amg, 2./3.);
         } else if (dia_micron <= 1511.64) {
-          return 4.962e1 * pow(amg, 1. / 3.);
+          return 4.962e1 * pow(amg, 1./3.);
         } else if (dia_micron <= 3477.84) {
-          return 1.732e1 * pow(amg, 1. / 6.);
+          return 1.732e1 * pow(amg, 1./6.);
         } else {
           return 9.17;
         }
       }();
-      
-      const auto integrand = sqrt(vt * dia) * dia * exp(-lambdar * dia);
-      get_val(accum) += integrand;
+      get_val(accum) += sqrt(vt * dia) * dia * exp(-lambdar * dia);
+
       if constexpr (WithGrad) {
-        get_grad(accum)[0] += -dia * integrand;
+        get_grad(accum)[0] += -dia * get_val(accum);
       }
     }
-    
-    // Multiply by the grid cell width, convert units, and include lambda factored out of the integral
+
+    // Multiply by quadrature cell width, unit conversion, and lambdar factored out of integral
     const auto scale = dd * 1.e-6 * lambdar;
     get_val(accum) *= scale;
     if constexpr (WithGrad) {
-      // Apply product rule to lambda * int_0^inf f(lambda, D) dD
+      // Apply product rule to lambdar * int_0^inf f(D, lambdar) dD
       get_grad(accum)[0] = scale * get_grad(accum)[0] + get_val(accum);
     }
     return accum;

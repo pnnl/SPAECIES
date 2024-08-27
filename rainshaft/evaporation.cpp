@@ -32,7 +32,7 @@ Evaporation::Evaporation(const RainshaftConstants &constants,
                          const SaturationFormulae &sat_form_in,
                          const bool use_v_table,
                          const bool use_numerical_integration)
-    : sat_form(sat_form_in), use_numerical_integration(use_numerical_integration),
+    : use_numerical_integration(use_numerical_integration), sat_form(sat_form_in),
     v_table(create_lookup(constants, use_v_table, use_numerical_integration))
 {
 }
@@ -136,7 +136,7 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
     jac(i_q, i_nr) += q_evap_dnr;
     jac(i_q, i_qr) += q_evap_dqr;
 
-    const auto [n_evap_dT, n_evap_dq, n_evap_dnr, n_evap_dqr] = get_grad(q_evap);
+    const auto [n_evap_dT, n_evap_dq, n_evap_dnr, n_evap_dqr] = get_grad(n_evap);
     jac(i_nr, i_t) -= n_evap_dT;
     jac(i_nr, i_q) -= n_evap_dq;
     jac(i_nr, i_nr) -= n_evap_dnr;
