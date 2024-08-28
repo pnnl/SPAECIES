@@ -18,15 +18,23 @@ private:
   {
     const auto mean_mass_diam = std::cbrt(qr / (constants.pi * constants.rhow * nr));
     const auto breakup_exp_term = std::exp(2300. * (2.8e-4 - mean_mass_diam));
-    const auto breakup = std::min(1.0, 2. - breakup_exp_term);
+    const auto breakup = 2. - breakup_exp_term;
 
-    if constexpr (WithGrad) {
-      return {breakup, {
-        breakup <= 1.0 ? -2300. * breakup_exp_term * mean_mass_diam / (3. * nr) : 0.0,
-        breakup <= 1.0 ? 2300. * breakup_exp_term * mean_mass_diam / (3. * qr) : 0.0
-      }};
+    if (breakup <= 1.0) {
+      if constexpr (WithGrad) {
+        return {breakup, {
+          -2300. * breakup_exp_term * mean_mass_diam / (3. * nr),
+          2300. * breakup_exp_term * mean_mass_diam / (3. * qr)
+        }};
+      } else {
+        return breakup;
+      }
     } else {
-      return breakup;
+      if constexpr (WithGrad) {
+        return {1.0, {0.0, 0.0}};
+      } else {
+        return 1.0;
+      }
     }
   }
 
