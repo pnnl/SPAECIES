@@ -316,10 +316,10 @@ private:
     const auto v_evap = term1 + term2 + term3 + term4;
 
     if constexpr (WithGrad) {
-      const auto term1_dl = (1.5 * term1 - int1_fac * tgamma_lower(4.5, lambdar_size1) * lambdar_neg_2_5) / lambdar;
-      const auto term2_dl = (1.5 * term2 - int2_fac * (tgamma(4., lambdar_size1) - tgamma(4., lambdar_size2)) * lambdar_neg_2) / lambdar;
-      const auto term3_dl = (1.5 * term3 - int3_fac * (tgamma(3.75, lambdar_size2) - tgamma(3.75, lambdar_size3)) * lambdar_neg_1_75) / lambdar;
-      const auto term4_dl = (1.5 * term4 - int4_fac * tgamma(3.5, lambdar_size3) * lambdar_neg_1_5) / lambdar;
+      const auto term1_dl = (term1 - int1_fac * tgamma_lower(4.5, lambdar_size1) * lambdar_neg_2_5) / lambdar;
+      const auto term2_dl = (term2 - int2_fac * (tgamma(4., lambdar_size1) - tgamma(4., lambdar_size2)) * lambdar_neg_2) / lambdar;
+      const auto term3_dl = (term3 - int3_fac * (tgamma(3.75, lambdar_size2) - tgamma(3.75, lambdar_size3)) * lambdar_neg_1_75) / lambdar;
+      const auto term4_dl = (term4 - int4_fac * tgamma(3.5, lambdar_size3) * lambdar_neg_1_5) / lambdar;
       return {v_evap, {term1_dl + term2_dl + term3_dl + term4_dl}};
     } else {
       return v_evap;

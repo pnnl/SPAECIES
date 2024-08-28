@@ -101,9 +101,6 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
     }
 
     const auto diffusivity = calc_diffusivity<true>(state.t[il], grid.p_mid[il]);
-    const auto eps = 1.e-9;
-    const auto qqq = calc_diffusivity<true>(state.t[il]+eps, grid.p_mid[il]);
-    std::cout << "FD Error: " << (get_val(qqq) - get_val(diffusivity)) / eps - get_grad(diffusivity)[0] << std::endl;
     const auto rho_dry = dvars.get_rho_dry<true>(constants, state, il);
     const auto visc_over_rho = calc_visc_over_rho<true>(state.t[il], rho_dry);
     const auto schmidt_num = calc_schmidt_num<true>(diffusivity, visc_over_rho);
