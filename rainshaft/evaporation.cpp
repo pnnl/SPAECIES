@@ -77,6 +77,8 @@ void Evaporation::calc_tend_jac_prod(const RainshaftConstants &constants,
   throw std::logic_error("Jacobian product not implemented");
 }
 
+#include <iostream>
+
 void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
                                 const RainshaftGrid &grid,
                                 const RainshaftState &state,
@@ -99,12 +101,15 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
     }
 
     const auto diffusivity = calc_diffusivity<true>(state.t[il], grid.p_mid[il]);
+    const auto eps = 1.e-9;
+    const auto qqq = calc_diffusivity<true>(state.t[il]+eps, grid.p_mid[il]);
+    std::cout << "FD Error: " << (get_val(qqq) - get_val(diffusivity)) / eps - get_grad(diffusivity)[0] << std::endl;
     const auto rho_dry = dvars.get_rho_dry<true>(constants, state, il);
     const auto visc_over_rho = calc_visc_over_rho<true>(state.t[il], rho_dry);
     const auto schmidt_num = calc_schmidt_num<true>(diffusivity, visc_over_rho);
     const auto abl = calc_abl<true>(constants, state.t[il], q_sat_dry);
     const auto lambdar = dvars.get_lambdar<true>(constants, state, il);
-    const auto v_evap = calc_v_evap<true>(constants, dvars.lambdar[il]);
+    const auto v_evap = calc_v_evap<true>(constants, dvars.lambdar[il]);    
     const auto tau_inv = calc_tau_inv<true>(constants, state.nr[il], diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
     const auto q_evap = calc_q_evap<true>(state.q[il], q_sat_dry, abl, tau_inv);
     const auto n_evap = calc_n_evap<true>(state.nr[il], state.qr[il], q_evap);

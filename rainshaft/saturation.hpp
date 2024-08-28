@@ -22,7 +22,7 @@ public:
     const auto recip_t = 1. / temperature;
     const auto tanh_fac = std::tanh(0.0415 * (temperature - 218.8));
     const auto scaled_recip_t_1 = 1331.22 * recip_t;
-    const auto tanh_coeff = (53.878 - scaled_recip_t_1 - 9.44523 * log_t + 0.014025 * temperature);
+    const auto tanh_coeff = 53.878 - scaled_recip_t_1 - 9.44523 * log_t + 0.014025 * temperature;
     const auto tanh_term = tanh_coeff * tanh_fac;
     const auto scaled_recip_t_2 = 6763.22 * recip_t;
     const auto log_esl = 54.842763 - scaled_recip_t_2 - 4.21 * log_t
@@ -31,10 +31,9 @@ public:
 
     if constexpr (WithGrad) {
       const auto tanh_fac_grad = 0.0415 * tanh_coeff * (1.0 - pow(tanh_fac, 2)) + tanh_fac * (0.014025 + (scaled_recip_t_1 - 9.44523) * recip_t);
-      return {
-        svp,
-        {svp * ((scaled_recip_t_2 - 4.21) * recip_t + tanh_fac_grad)}
-      };
+      return {svp, {
+        svp * (0.000367 + (scaled_recip_t_2 - 4.21) * recip_t + tanh_fac_grad)
+      }};
     } else {
       return svp;
     }

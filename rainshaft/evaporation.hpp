@@ -27,13 +27,14 @@ private:
 
   template <bool WithGrad = false>
   Val<WithGrad, 1> calc_dynamic_viscosity(const double t) const {
-    const auto viscosity = 1.496e-6 * pow(t, 1.5) / (t + 120.);
+    const auto fac = 1.496e-6 / (t + 120.);
+    const auto viscosity = fac * pow(t, 1.5);
 
     if constexpr (WithGrad) {
       return {
         viscosity,
         // Derivative with respect to t
-        {1.496e-6 * sqrt(t) * (t + 360.) / (2. * (t + 120.))}
+        {0.5 * fac * sqrt(t) * (t + 360.) / (t + 120.)}
       };
     } else {
       return viscosity;
@@ -52,7 +53,7 @@ private:
         // Derivative with respect to t
         (visc_dT - get_val(visc) * rho_dry_dT / get_val(rho_dry)) / get_val(rho_dry),
         // Derivative with respect to q
-         -get_val(visc) / pow(get_val(rho_dry), 2) * rho_dry_dq
+         -get_val(visc) * pow(get_val(rho_dry), -2) * rho_dry_dq
       }};
     } else {
       return visc_over_rho;
@@ -123,8 +124,8 @@ private:
 
       const auto [schmidt_num_dT, schmidt_num_dq] = get_grad(schmidt_num);
       const auto [visc_over_rho_dT, visc_over_rho_dq] = get_grad(visc_over_rho);
-      const auto t2_dT = scaled_evap * (1.0 / (3.0 * get_val(schmidt_num)) * schmidt_num_dT - visc_over_rho_dT / (2.0 * get_val(visc_over_rho)));
-      const auto t2_dq = scaled_evap * (1.0 / (3.0 * get_val(schmidt_num)) * schmidt_num_dq - visc_over_rho_dq / (2.0 * get_val(visc_over_rho)));
+      const auto t2_dT = scaled_evap * (schmidt_num_dT / (3.0 * get_val(schmidt_num)) - visc_over_rho_dT / (2.0 * get_val(visc_over_rho)));
+      const auto t2_dq = scaled_evap * (schmidt_num_dq / (3.0 * get_val(schmidt_num)) - visc_over_rho_dq / (2.0 * get_val(visc_over_rho)));
 
       const auto [lambdar_dnr, lambdar_dqr] = get_grad(lambdar);
       const auto [v_evap_lambdar] = get_grad(v_evap);
@@ -152,8 +153,9 @@ private:
     if constexpr (WithGrad) {
       const auto [tau_inv_dT, tau_inv_dq, tau_inv_dnr, tau_inv_dqr] = get_grad(tau_inv);
       const auto [abl_dT] = get_grad(abl);
+      const auto [q_sat_dry_dT] = get_grad(q_sat_dry);
       return {q_evap, {
-        (q_diff * tau_inv_dT - q_evap_num * abl_dT / get_val(abl)) / get_val(abl),
+        (q_diff * (tau_inv_dT - get_val(tau_inv) * abl_dT / get_val(abl)) + get_val(tau_inv) * q_sat_dry_dT) / get_val(abl),
         (q_diff * tau_inv_dq - get_val(tau_inv)) / get_val(abl),
         q_diff * tau_inv_dnr / get_val(abl),
         q_diff * tau_inv_dqr / get_val(abl)
@@ -236,7 +238,7 @@ public:
       const auto d_micron = 1.e6 / lambdar;
       const auto v_evap = v_table->lookup_value(d_micron);
       if constexpr (WithGrad) {
-        return v_evap;
+        return {get_val(v_evap), {-get_grad(v_evap)[0] * d_micron / lambdar}};
       } else {
         return get_val(v_evap);
       }
