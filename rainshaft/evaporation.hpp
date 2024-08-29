@@ -353,7 +353,7 @@ private:
       get_val(accum) += sqrt(vt * dia) * dia * exp(-lambdar * dia);
 
       if constexpr (WithGrad) {
-        get_grad(accum)[0] += -dia * get_val(accum);
+        get_grad(accum)[0] -= dia * get_val(accum);
       }
     }
 
