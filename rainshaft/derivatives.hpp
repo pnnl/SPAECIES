@@ -36,4 +36,9 @@ constexpr Grad<I> get_grad(const ValGrad<I> &v) noexcept {
   return std::get<1>(v);
 }
 
+template <std::size_t I>
+constexpr Grad<I> &get_grad(ValGrad<I> &v) noexcept {
+  return std::get<1>(v);
+}
+
 #endif

@@ -350,20 +350,22 @@ private:
           return 9.17;
         }
       }();
-      get_val(accum) += sqrt(vt * dia) * dia * exp(-lambdar * dia);
+      const auto integrand = sqrt(vt * dia) * dia * exp(-lambdar * dia);
+      get_val(accum) += integrand;
 
       if constexpr (WithGrad) {
-        get_grad(accum)[0] -= dia * get_val(accum);
+        get_grad(accum)[0] -= dia * integrand;
       }
     }
 
-    // Multiply by quadrature cell width, unit conversion, and lambdar factored out of integral
-    const auto scale = dd * 1.e-6 * lambdar;
-    get_val(accum) *= scale;
+    // Multiply by quadrature cell width and unit conversion
+    const auto integral_scale = dd * 1.e-6;
     if constexpr (WithGrad) {
       // Apply product rule to lambdar * int_0^inf f(D, lambdar) dD
-      get_grad(accum)[0] = scale * get_grad(accum)[0] + get_val(accum);
+      get_grad(accum)[0] = integral_scale * (lambdar * get_grad(accum)[0] + get_val(accum));
     }
+    // Multiply by lambdar factored outside integral
+    get_val(accum) *= lambdar * integral_scale;
     return accum;
   }
 };
