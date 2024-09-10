@@ -56,11 +56,11 @@ public:
 
   VariableDescriptor(const std::string& name,
                      VariableType type,
-                     const std::vector<DimensionPtr> dimensions,
-                     const std::string units,
+                     const std::vector<DimensionPtr>& dimensions,
+                     const std::string& units,
                      VariableConstantStatus constant_status=IsNotConstant,
-                     const std::optional<const std::string>& description=std::optional<const std::string>(),
-                     const std::optional<const std::string>& standard_name=std::optional<const std::string>());
+                     const std::optional<const std::string>& description=std::nullopt,
+                     const std::optional<const std::string>& standard_name=std::nullopt);
   // Short (but unique) name identifying this variable.
   const std::string name;
   // Type of the variable.

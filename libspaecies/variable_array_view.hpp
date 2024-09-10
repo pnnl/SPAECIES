@@ -73,14 +73,11 @@ protected:
     for (VarDescPtr var_desc : var_descs) {
       if (var_desc->name == name) {
         var_desc_out = var_desc;
-        break;
+        return {var_desc_out, idx};
       }
       idx += var_desc->size();
     }
-    if (var_desc_out == nullptr) {
-      throw(VariableNotFoundException(name, "variable not found in variable array"));
-    }
-    return std::tuple(var_desc_out, idx);
+    throw(VariableNotFoundException(name, "variable not found in variable array"));
   }
   static std::size_t calc_size(const std::vector<VarDescPtr> var_descs) {
     std::size_t my_size = 0;

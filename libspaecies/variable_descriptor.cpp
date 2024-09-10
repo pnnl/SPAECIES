@@ -28,8 +28,8 @@ std::string spaecies_type_name(VariableType type) {
 
 VariableDescriptor::VariableDescriptor(const std::string& name,
                                        VariableType type,
-                                       const std::vector<DimensionPtr> dimensions,
-                                       const std::string units,
+                                       const std::vector<DimensionPtr>& dimensions,
+                                       const std::string& units,
                                        VariableConstantStatus constant_status,
                                        const std::optional<const std::string>& description,
                                        const std::optional<const std::string>& standard_name)

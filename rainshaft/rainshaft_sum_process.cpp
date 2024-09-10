@@ -1,7 +1,5 @@
 #include "rainshaft_sum_process.hpp"
 
-#include <cstring>
-
 SumProcess::SumProcess(const std::vector<const RainshaftProcess *>& processes)
   : nsub(processes.size()), sub_processes(processes) {
 }
@@ -16,7 +14,7 @@ void SumProcess::calc_tend(const RainshaftConstants& constants,
   double* sub_ptr = sub_tend.data();
   // Iterate through sub-processes and add up all their tendencies.
   for (std::size_t is = 0; is != nsub; ++is) {
-    std::memset(sub_ptr, 0, sub_tend.size() * sizeof(double));
+    std::fill_n(sub_ptr, sub_tend.size(), 0.);
     sub_processes[is]->calc_tend(constants, grid, state, dvars, sub_tend);
     for (std::size_t i = 0; i != tend.size(); ++i) {
       tend_ptr[i] += sub_ptr[i];
