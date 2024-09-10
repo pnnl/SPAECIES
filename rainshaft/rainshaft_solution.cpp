@@ -16,8 +16,6 @@ void RainshaftSolution::pop_back() {
 }
 
 void RainshaftSolution::move_last_to_other(RainshaftSolution& other) {
-  // Avoids copying the VarDescPtr objects, but might be premature optimization...
-  other.states.emplace_back(std::vector<spaecies::VarDescPtr>(), nullptr);
-  std::swap(other.states.back(), this->states.back());
+  other.states.emplace_back(std::move(this->states.back()));
   this->states.pop_back();
 }
