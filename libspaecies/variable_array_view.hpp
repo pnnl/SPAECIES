@@ -30,21 +30,11 @@ public:
       data_size(calc_size(var_descs)),
       data_ptr(data_ptr) {
   };
-  static const VariableArrayView<T> make_const(const std::vector<VarDescPtr>& var_descs, const T* data_ptr) {
-    return VariableArrayView(var_descs, const_cast<T*>(data_ptr));
-  }
-  ContiguousVariableView<T> get_variable(const std::string& name) {
+  ContiguousVariableView<T> get_variable(const std::string& name) const {
     auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs());
-    return make_contiguous_variable_view(var_desc, data_ptr + idx);
+    return ContiguousVariableView(var_desc, data_ptr + idx);
   };
-  const ContiguousVariableView<T> get_variable(const std::string& name) const {
-    auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs());
-    return make_contiguous_variable_view(var_desc, data_ptr + idx);
-  };
-  inline T* data() {
-    return data_ptr;
-  };
-  inline const T* data() const {
+  inline T* data() const {
     return data_ptr;
   };
   inline const std::vector<VarDescPtr>& var_descs() const {

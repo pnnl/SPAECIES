@@ -35,6 +35,8 @@ template <>
 inline constexpr VariableType SPAECIES_TYPE<int_least32_t> = Int32Type;
 template <>
 inline constexpr VariableType SPAECIES_TYPE<bool> = BoolType;
+template <class T>
+inline constexpr VariableType SPAECIES_TYPE<const T> = SPAECIES_TYPE<T>;
 
 const std::string FLOAT64NAME = "64-bit float";
 const std::string FLOAT32NAME = "32-bit float";

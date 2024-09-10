@@ -21,9 +21,6 @@ public:
   State(const std::vector<VarDescPtr>& var_descs, T* data_ptr)
     : VariableArrayView<T>(var_descs, data_ptr) {
   };
-  static const State<T> make_const(const std::vector<VarDescPtr>& var_descs, const T* data_ptr) {
-    return State(var_descs, const_cast<T*>(data_ptr));
-  }
   State<T> deep_copy() const {
     State<T> copy(this->var_descs());
     this->copy_data_to_location(copy.data());

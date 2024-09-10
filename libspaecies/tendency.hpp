@@ -21,9 +21,6 @@ public:
   Tendency(const std::vector<VarDescPtr>& var_descs, T* data_ptr)
     : VariableArrayView<T>(var_descs, data_ptr) {
   };
-  static const Tendency<T> make_const(const std::vector<VarDescPtr>& var_descs, const T* data_ptr) {
-    return Tendency(var_descs, const_cast<T*>(data_ptr));
-  }
   Tendency<T> deep_copy() const {
     Tendency<T> copy(this->var_descs());
     this->copy_data_to_location(copy.data());

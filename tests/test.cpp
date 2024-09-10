@@ -193,22 +193,11 @@ TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariableView
     REQUIRE( t_boil[0] == 373.15 );
   }
 
-  SECTION( "make_contiguous_variable_view can also create views" ) {
-    VarDescPtr boil_desc = domain.add_var_desc("BOILING_POINT", Float64Type, {}, "K");
-    double boiling_point = 373.16;
-    ContiguousVariableView<double> t_boil = make_contiguous_variable_view(boil_desc, &boiling_point);
-    REQUIRE( t_boil.size() == boil_desc->size() );
-    REQUIRE( t_boil[0] == boiling_point );
-    // Pretend we have a reason to change this. "Oops, we had the wrong value, fix it."
-    t_boil[0] = 373.15;
-    REQUIRE( t_boil[0] == 373.15 );
-  }
-
-  SECTION( "make_contiguous_variable_view can create const views" ) {
+  SECTION( "making const views" ) {
     VarDescPtr boil_desc = domain.add_var_desc("BOILING_POINT", Float64Type, {}, "K");
     double boiling_point = 373.16;
     const double* const_boil_ptr = &boiling_point;
-    const ContiguousVariableView<double> t_boil = make_contiguous_variable_view(boil_desc, const_boil_ptr);
+    const ContiguousVariableView<const double> t_boil(boil_desc, const_boil_ptr);
     REQUIRE( t_boil.size() == boil_desc->size() );
     REQUIRE( t_boil[0] == boiling_point );
     // External code changing pointed-to memory.
@@ -309,7 +298,7 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
   SECTION( "getting a const variable from a const VariableArrayView" ) {
     double data[total_size];
     const double* construct_ptr = &data[0];
-    const VariableArrayView<double> view = VariableArrayView<double>::make_const({t_desc, q_desc, p_surf_desc}, construct_ptr);
+    const VariableArrayView<const double> view({t_desc, q_desc, p_surf_desc}, construct_ptr);
     REQUIRE( view.size() == total_size );
     auto t = view.get_variable("T");
     auto q = view.get_variable("q");
@@ -343,7 +332,7 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
   SECTION( "getting a const pointer to view data" ) {
     double data[total_size];
     const double* construct_ptr = &data[0];
-    const VariableArrayView<double> view = VariableArrayView<double>::make_const({t_desc, q_desc, p_surf_desc}, construct_ptr);
+    const VariableArrayView<const double> view({t_desc, q_desc, p_surf_desc}, construct_ptr);
     const double *data_ptr = view.data();
     for (int i = 0; i != total_size; ++i) {
       data[i] = 2.*i;
@@ -466,14 +455,14 @@ TEST_CASE( "interacting with the model state", "[State]" ) {
     }
   }
 
-  SECTION( "construct const State with make_const" ) {
+  SECTION( "construct const State" ) {
     double data[total_size];
-    const State<double> state = State<double>::make_const({p_surf_desc}, &data[0]);
+    const State<const double> state({p_surf_desc}, &data[0]);
     REQUIRE( state.size() == total_size );
     auto p_surf = state.get_variable("p_surf");
-    auto p_surf_array = &data[p_idx];
+    double* p_surf_array = &data[p_idx];
     for (int i = 0; i != p_surf.size(); ++i) {
-      p_surf[i] = -2. * i;
+      p_surf_array[i] = -2. * i;
     }
     for (int i = 0; i != p_surf.size(); ++i) {
       REQUIRE( p_surf[i] == -2. * i );
@@ -547,14 +536,14 @@ TEST_CASE( "interacting a tendency on the model state", "[Tendency]" ) {
     }
   }
 
-  SECTION( "construct const Tendency with make_const" ) {
+  SECTION( "construct const Tendency" ) {
     double data[total_size];
-    const Tendency<double> tend = Tendency<double>::make_const({p_surf_desc}, &data[0]);
+    const Tendency<const double> tend({p_surf_desc}, &data[0]);
     REQUIRE( tend.size() == total_size );
     auto p_surf = tend.get_variable("p_surf_tend");
-    auto p_surf_array = &data[p_idx];
+    double* p_surf_array = &data[p_idx];
     for (int i = 0; i != p_surf.size(); ++i) {
-      p_surf[i] = -2. * i;
+      p_surf_array[i] = -2. * i;
     }
     for (int i = 0; i != p_surf.size(); ++i) {
       REQUIRE( p_surf[i] == -2. * i );

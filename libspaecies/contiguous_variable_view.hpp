@@ -10,16 +10,6 @@ namespace spaecies {
 template<class T> class ContiguousVariableView;
 
 template<class T>
-ContiguousVariableView<T> make_contiguous_variable_view(const VarDescPtr var_desc, T* data_ptr) {
-  return ContiguousVariableView(var_desc, data_ptr);
-}
-
-template<class T>
-const ContiguousVariableView<T> make_contiguous_variable_view(const VarDescPtr var_desc, const T* data_ptr) {
-  return ContiguousVariableView(var_desc, const_cast<T*>(data_ptr));
-}
-
-template<class T>
 class ContiguousVariableView : public VariableView<T> {
 public:
   // Construct a ContiguousVariableView from a description and pointer.
