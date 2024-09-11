@@ -35,3 +35,9 @@
 *.ipynb_checkpoints
 *.png
 *.gif
+
+# mac-specific files
+.DS_Store
+
+# build directory
+build/

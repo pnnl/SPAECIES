@@ -6,29 +6,34 @@
 using boost::math::tgamma, boost::math::tgamma_lower;
 using std::pow, std::sqrt, std::cbrt, std::exp;
 
+std::optional<LookupLinear> Sedimentation::create_lookup(const RainshaftConstants &constants,
+                                      const bool use_v_table,
+                                      const bool create_v0,
+                                      const bool use_numerical_integration)
+{
+  if (use_v_table) {
+    return std::make_optional<LookupLinear>(
+      std::vector{5., 195., 8595.},
+      std::vector{1., 1.},
+      [=] (const double x) {
+          const auto [v0, v3] = rain_fall_speeds(constants, 1.e6 / x, use_numerical_integration);
+        if (create_v0) {
+          return v0;
+        } else {
+          return v3;
+        }
+      });
+  } else {
+    return std::nullopt;
+  }
+}
+
 Sedimentation::Sedimentation(const RainshaftConstants &constants, bool use_v_table,
                              bool use_numerical_integration)
-    : use_numerical_integration(use_numerical_integration)
-{
-  // if (use_v_table)
-  // {
-  //   std::vector<double> range_bounds = {5., 195., 8595.};
-  //   std::vector<double> spacings = {1., 1.};
-  //   std::vector<double> d_microns = LookupTable::calc_x_values(range_bounds,
-  //                                                              spacings);
-  //   std::vector<double> v0_values(d_microns.size(), 0.);
-  //   std::vector<double> v3_values(d_microns.size(), 0.);
-  //   for (std::size_t i = 0; i != d_microns.size(); ++i)
-  //   {
-  //     double lambdar = 1.e6 / d_microns[i];
-  //     std::tie(v0_values[i], v3_values[i]) = use_numerical_integration ?
-  //       rain_fall_speeds_stp_numerical(constants, lambdar)
-  //       :  rain_fall_speeds_stp_gamma(constants, lambdar);
-  //   }
-  //   v0_table.emplace(range_bounds, spacings, v0_values);
-  //   v3_table.emplace(range_bounds, spacings, v3_values);
-  // }
-}
+    : use_numerical_integration(use_numerical_integration), 
+      v0_table(create_lookup(constants, use_v_table, true, use_numerical_integration)),
+      v3_table(create_lookup(constants, use_v_table, false, use_numerical_integration))
+{}
 
 RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants &constants,
                                            const RainshaftGrid &grid,
@@ -38,22 +43,27 @@ RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants &constants,
   std::vector<double> t_tend(grid.nlev, 0.0), q_tend(grid.nlev, 0.0), nr_tend(grid.nlev), qr_tend(grid.nlev);
 
   const auto lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
-  const auto [speeds_top0, speeds_top3] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
-  auto nr_prev_flux = speeds_top0 * constants.nr_top * constants.rho_top;
-  auto qr_prev_flux = speeds_top3 * constants.qr_top * constants.rho_top;
+  auto [v0_prev, v3_prev] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
+  auto nr_prev = constants.nr_top;
+  auto qr_prev = constants.qr_top;
+  auto rho_prev = constants.rho_top;
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
-    const auto [speeds0, speeds3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
-    const auto nr_flux = speeds0 * state.nr[il] * dvars.rho_dry[il];
-    const auto qr_flux = speeds3 * state.qr[il] * dvars.rho_dry[il];
+    const auto [v0, v3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
 
-    nr_tend[il] = (nr_prev_flux - nr_flux) / (dvars.dz[il] * dvars.rho_dry[il]);
-    qr_tend[il] = (qr_prev_flux - qr_flux) / (dvars.dz[il] * dvars.rho_dry[il]);
+    nr_tend[il] += calc_nr_tend(dvars.dz[il], state.nr[il], nr_prev, dvars.rho_dry[il], rho_prev,
+                               v0, v0_prev);
+    qr_tend[il] += calc_qr_tend(dvars.dz[il], state.qr[il], qr_prev, dvars.rho_dry[il], rho_prev,
+                               v3, v3_prev);
 
-    nr_prev_flux = nr_flux;
-    qr_prev_flux = qr_flux;
+    v0_prev = v0;
+    v3_prev = v3;
+    nr_prev = state.nr[il];
+    qr_prev = state.qr[il];
+    rho_prev = dvars.rho_dry[il];
   }
+
   return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }
 
@@ -97,154 +107,55 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
                                   Matrix jac) const
 {
   const auto lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
-  const auto [speeds_top0, speeds_top3] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
-
-  // Boundary condition
-  jac(3 * grid.nlev, 3 * grid.nlev) += speeds_top3 * constants.qr_top * constants.rho_top * constants.rdry * state.t[0] / (dvars.dz[0] * grid.p_mid[0] * constants.epsilon_h2o);
+  auto [v0_prev, v3_prev] = rain_fall_speeds<true>(constants, {constants.rho_top, {0., 0.}}, {lambdar_top, {0., 0.}});
+  auto nr_prev = constants.nr_top;
+  auto qr_prev = constants.qr_top;
+  Val<true, 2> rho_prev = {constants.rho_top, {0., 0.}};
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
-    const auto [speeds0, speeds3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
+    const auto rho = dvars.get_rho_dry<true>(constants, state, il);
+    const auto lambdar = dvars.get_lambdar<true>(constants, state, il);
+    const auto [v0, v3] = rain_fall_speeds<true>(constants, rho, lambdar);
 
-    const auto i_nr = il + 2 * grid.nlev;
-    jac(i_nr, i_nr) -= speeds0 / dvars.dz[il];
-    if (il + 1 < grid.nlev)
-    {
-      jac(i_nr + 1, i_nr) += speeds0 * dvars.rho_dry[il] / (dvars.dz[il + 1] * dvars.rho_dry[il + 1]);
-    }
+    const auto nr_tend = calc_nr_tend<true>(dvars.dz[il], state.nr[il], nr_prev, rho, rho_prev,
+                               v0, v0_prev);
+    const auto qr_tend = calc_qr_tend<true>(dvars.dz[il], state.qr[il], qr_prev, rho, rho_prev,
+                               v3, v3_prev);
+    const auto [nr_tend_dT_prev, nr_tend_dT, nr_tend_dq_prev, nr_tend_dq, nr_tend_dnr_prev, nr_tend_dnr, nr_tend_dqr_prev, nr_tend_dqr] = get_grad(nr_tend);
+    const auto [qr_tend_dT_prev, qr_tend_dT, qr_tend_dq_prev, qr_tend_dq, qr_tend_dnr_prev, qr_tend_dnr, qr_tend_dqr_prev, qr_tend_dqr] = get_grad(qr_tend);
 
+    const auto i_t = il;
+    const auto i_q = i_t + grid.nlev;
+    const auto i_nr = i_q + grid.nlev;
     const auto i_qr = i_nr + grid.nlev;
-    jac(i_qr, i_qr) -= speeds3 / dvars.dz[il];
-    if (il + 1 < grid.nlev)
-    {
-      jac(i_qr + 1, i_qr) += speeds3 * dvars.rho_dry[il] / (dvars.dz[il + 1] * dvars.rho_dry[il + 1]);
-    }
-  }
-}
 
-Sedimentation::Speeds Sedimentation::rain_fall_speeds(const RainshaftConstants &constants,
-                                                    double rho_dry, double lambdar) const
-{
-  // Catches case where there is no rain present.
-  if (lambdar == 0.) {
-    return {0.0, 0.0};
-  }
-  const auto [v0, v3] = rain_fall_speeds_stp(constants, lambdar);
-  // Calculate correction for air density, with reference state at 1000 hPa and 273.15 K.
-  const auto rf = rho_fac(constants, rho_dry);
-  return {v0 * rf, v3 * rf};
-}
+    jac(i_nr, i_t) += nr_tend_dT;
+    jac(i_nr, i_q) += nr_tend_dq;
+    jac(i_nr, i_nr) += nr_tend_dnr;
+    jac(i_nr, i_qr) += nr_tend_dqr;
 
-Sedimentation::Speeds Sedimentation::rain_fall_speeds_stp(const RainshaftConstants& constants,
-                                                        double lambdar) const {
-  if (v0_table.has_value()) {
-    const auto d_micron = 1.e6 / lambdar;
-    return {get_val(v0_table->lookup_value(d_micron)), get_val(v3_table->lookup_value(d_micron))};
-  } else {
-    if (use_numerical_integration) {
-      return rain_fall_speeds_stp_numerical(constants, lambdar);
-    }
-    else
-    {
-      return rain_fall_speeds_stp_gamma(constants, lambdar);
-    }
-  }
-}
+    jac(i_qr, i_t) += qr_tend_dT;
+    jac(i_qr, i_q) += qr_tend_dq;
+    jac(i_qr, i_nr) += qr_tend_dnr;
+    jac(i_qr, i_qr) += qr_tend_dqr;
 
-Sedimentation::Speeds Sedimentation::rain_fall_speeds_stp_gamma(const RainshaftConstants& constants,
-                                                              double lambdar) const {
-  // Catches case where there is no rain present.
-  if (lambdar == 0.) {
-    return {0.0, 0.0};
-  }
-  // Number and mass fall speeds in m/s.
-  double v0(0.), v3(0.);
-  // Factor converting D^3 to drop mass in grams.
-  double d3_to_gram = 1000. * constants.pi * constants.rhow / 6.;
-  // Gram conversion factor to various powers.
-  double d2g_2third = pow(d3_to_gram, 2. / 3.);
-  double d2g_1third = pow(d3_to_gram, 1. / 3.);
-  double d2g_1sixth = pow(d3_to_gram, 1. / 6.);
-  // Start with number term for D <= 134.43 micron.
-  v0 += 4579.5 * d2g_2third * tgamma_lower(3, lambdar * 1.3443e-4) / (lambdar * lambdar);
-  // Number term for 134.43 micron < D <= 1511.64 micron.
-  v0 += 49.62 * d2g_1third * (tgamma(2, lambdar * 1.3443e-4) - tgamma(2, lambdar * 1.51164e-3)) / lambdar;
-  // Number term for 1511.64 micron < D <= 3477.84 micron.
-  v0 += 17.32 * d2g_1sixth * (tgamma(1.5, lambdar * 1.51164e-3) - tgamma(1.5, lambdar * 3.47784e-3)) / sqrt(lambdar);
-  // Number term for 3477.84 micron < D.
-  v0 += 9.17 * exp(-lambdar * 3.47784e-3);
-  // Mass term for D <= 134.43 micron.
-  v3 += 4579.5 * d2g_2third * tgamma_lower(6, lambdar * 1.3443e-4) / (lambdar * lambdar);
-  // Mass term for 134.43 micron < D <= 1511.64 micron.
-  v3 += 49.62 * d2g_1third * (tgamma(5, lambdar * 1.3443e-4) - tgamma(5, lambdar * 1.51164e-3)) / lambdar;
-  // Mass term for 1511.64 micron < D <= 3477.84 micron.
-  v3 += 17.32 * d2g_1sixth * (tgamma(4.5, lambdar * 1.51164e-3) - tgamma(4.5, lambdar * 3.47784e-3)) / sqrt(lambdar);
-  // Mass term for 3477.84 micron < D.
-  v3 += 9.17 * tgamma(4, lambdar * 3.47784e-3);
-  // Include the normalization gamma(3) for v3.
-  v3 /= 6.;
-  return {v0, v3};
-}
+    if (il > 0) {
+      jac(i_nr, i_t - 1) += nr_tend_dT_prev;
+      jac(i_nr, i_q - 1) += nr_tend_dq_prev;
+      jac(i_nr, i_nr - 1) += nr_tend_dnr_prev;
+      jac(i_nr, i_qr - 1) += nr_tend_dqr_prev;
 
-Sedimentation::Speeds Sedimentation::rain_fall_speeds_stp_numerical(const RainshaftConstants& constants,
-                                                                  double lambdar) const {
-  // Catches case where there is no rain present.
-  if (lambdar == 0.) {
-    return {0., 0.};
-  }
-  double dd = 2.; // micron
-  std::size_t low_k = 1;
-  std::size_t high_k = 10000;
-  double amg_fac = 1000. * constants.pi * constants.rhow / 6.;
-  double v0_numer = 0., v0_denom = 0.;
-  double v3_numer = 0., v3_denom = 0.;
-  for (std::size_t kk = low_k; kk != high_k + 1; ++kk)
-  {
-    double real_kk = kk;
-    double dia_micron = (real_kk - 0.5) * dd;
-    double dia = dia_micron * 1.e-6;
-    double amg = amg_fac * pow(dia, 3);
-    double vt = 0;
-    if (dia_micron <= 134.43)
-    {
-      vt = 4.5795e3 * pow(amg, 2. / 3.);
+      jac(i_qr, i_t - 1) += qr_tend_dT_prev;
+      jac(i_qr, i_q - 1) += qr_tend_dq_prev;
+      jac(i_qr, i_nr - 1) += qr_tend_dnr_prev;
+      jac(i_qr, i_qr - 1) += qr_tend_dqr_prev;
     }
-    else if (dia_micron <= 1511.64)
-    {
-      vt = 4.962e1 * pow(amg, 1. / 3.);
-    }
-    else if (dia_micron <= 3477.84)
-    {
-      vt = 1.732e1 * pow(amg, 1. / 6.);
-    }
-    else
-    {
-      vt = 9.17;
-    }
-    v0_numer += vt * exp(-lambdar * dia);
-    v0_denom += exp(-lambdar * dia);
-    v3_numer += vt * pow(dia, 3.) * exp(-lambdar * dia);
-    v3_denom += pow(dia, 3.) * exp(-lambdar * dia);
-  }
-  v0_numer *= dd * 1.e-6;
-  v0_denom *= dd * 1.e-6;
-  v3_numer *= dd * 1.e-6;
-  v3_denom *= dd * 1.e-6;
-  if (v0_denom < 1.e-30)
-  {
-    v0_denom = 1.e-30;
-  }
-  if (v3_denom < 1.e-30)
-  {
-    v3_denom = 1.e-30;
-  }
-  // Number and mass fall speeds in m/s.
-  double v0 = v0_numer / v0_denom;
-  double v3 = v3_numer / v3_denom;
-  return {v0, v3};
-}
 
-double Sedimentation::rho_fac(const RainshaftConstants &constants, double rho_dry) const
-{
-  return pow(1.e5 / (rho_dry * constants.rdry * 273.15), 0.54);
+    v0_prev = v0;
+    v3_prev = v3;
+    nr_prev = state.nr[il];
+    qr_prev = state.qr[il];
+    rho_prev = rho;
+  }
 }
