@@ -206,7 +206,8 @@ private:
   // What would the speeds for a given lambdar be at standard temperature and
   // pressure?
   // This version ignores any lookup table, if present, and always returns fall
-  // speeds calculated with incomplete gamma functions.
+  // speeds calculated with incomplete gamma functions. Returns the derivative
+  // of speeds wrt lambdar only
   template <bool WithGrad = false>
   static Speeds<WithGrad, 1> rain_fall_speeds_gamma(const RainshaftConstants& constants,
                                                  double lambdar)
@@ -272,7 +273,8 @@ private:
   // What would the speeds for a given lambdar be at standard temperature and
   // pressure?
   // This version ignores any lookup table, if present, and always returns fall
-  // speeds calculated with numerical integration.
+  // speeds calculated with numerical integration. Returns the derivative
+  // of speeds wrt lambdar only
   template <bool WithGrad = false>
   static Speeds<WithGrad, 1> rain_fall_speeds_numerical(const RainshaftConstants& constants,
                                                      double lambdar)
@@ -305,12 +307,15 @@ private:
           return 9.17;
         }
       }();
-      get_val(accum0) += vt * exp(-lambdar * dia);
-      get_val(accum3) += vt * pow(dia, 3) * exp(-lambdar * dia);
+
+      const auto integrand0 = vt * exp(-lambdar * dia);
+      const auto integrand3 = vt * pow(dia, 3) * exp(-lambdar * dia);
+      get_val(accum0) += integrand0;
+      get_val(accum3) += integrand3;
 
       if constexpr (WithGrad) {
-        get_grad(accum0)[0] -= dia * get_val(accum0);
-        get_grad(accum3)[0] -= dia * get_val(accum3);
+        get_grad(accum0)[0] -= dia * integrand0;
+        get_grad(accum3)[0] -= dia * integrand3;
       } 
     }
 
