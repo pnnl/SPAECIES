@@ -136,15 +136,6 @@ protected:
     return RainshaftSolution(std::move(states), countFun());
   }
 
-  // Note that the N_Vector does not take ownership of the data and will not free it.
-  // The N_Vector must not be permitted to live longer than the view.
-  static N_Vector view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<double> &view)
-  {
-    sunindextype num_variables = view.size();
-    N_Vector y = N_VMake_Serial(num_variables, view.data(), sun_ctxt);
-    return y;
-  }
-
   // Note (as above) that the N_Vector will not own the data, but rather will have a
   // non-const pointer to data that should be treated as const.
   //
@@ -155,6 +146,17 @@ protected:
   {
     sunindextype num_variables = view.size();
     N_Vector y = N_VMake_Serial(num_variables, const_cast<double*>(view.data()), sun_ctxt);
+    return y;
+  }
+
+private:
+
+  // Note that the N_Vector does not take ownership of the data and will not free it.
+  // The N_Vector must not be permitted to live longer than the view.
+  static N_Vector view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<double> &view)
+  {
+    sunindextype num_variables = view.size();
+    N_Vector y = N_VMake_Serial(num_variables, view.data(), sun_ctxt);
     return y;
   }
 
