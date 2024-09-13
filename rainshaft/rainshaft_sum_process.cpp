@@ -6,11 +6,11 @@ SumProcess::SumProcess(const std::vector<const RainshaftProcess *>& processes)
 
 void SumProcess::calc_tend(const RainshaftConstants& constants,
                            const RainshaftGrid& grid,
-                           const spaecies::State<const double>& state,
+                           const StateConst& state,
                            const RainshaftDerivedVars& dvars,
-                           const spaecies::Tendency<double>& tend) const {
+                           const Tendency& tend) const {
   double* tend_ptr = tend.data();
-  spaecies::Tendency<double> sub_tend(tend.var_descs());
+  Tendency sub_tend(tend.var_descs());
   double* sub_ptr = sub_tend.data();
   // Iterate through sub-processes and add up all their tendencies.
   for (std::size_t is = 0; is != nsub; ++is) {

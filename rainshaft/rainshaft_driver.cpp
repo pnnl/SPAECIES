@@ -49,7 +49,7 @@ int main(int argc, char** argv)
   double final_time = 1800.;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
-  auto nlev = grid.nlev;
+  std::size_t nlev = grid.nlev;
   // Set up initial condition.
   SaturationFormulae sat_form(constants);
 
@@ -59,13 +59,13 @@ int main(int argc, char** argv)
   spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
   spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
   spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
-  std::vector<spaecies::VarDescPtr> state_descs = {t_desc, q_desc, nr_desc, qr_desc};
-  auto tend_descs = tend_descs_from_state_descs(dom, state_descs);
-  spaecies::State<double> initial_state(state_descs);
-  auto t = initial_state.get_variable("T");
-  auto q = initial_state.get_variable("q");
-  auto nr = initial_state.get_variable("nr");
-  auto qr = initial_state.get_variable("qr");
+  VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc};
+  VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
+  State initial_state(state_descs);
+  VarMut t = initial_state.get_variable("T");
+  VarMut q = initial_state.get_variable("q");
+  VarMut nr = initial_state.get_variable("nr");
+  VarMut qr = initial_state.get_variable("qr");
   for (std::size_t i = 0; i != nlev; ++i) {
     nr[i] = 0.;
     qr[i] = 0.;
@@ -161,7 +161,7 @@ int main(int argc, char** argv)
   writer.write_states(solution.states);
   std::vector<RainshaftDerivedVars> solution_dvars;
   solution_dvars.reserve(solution.states.size());
-  for (spaecies::State<const double> state : solution.states) {
+  for (StateConst state : solution.states) {
     solution_dvars.emplace_back(constants, grid, state);
   }
   writer.write_derived_vars(solution_dvars);

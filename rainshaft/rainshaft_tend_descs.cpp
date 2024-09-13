@@ -1,8 +1,8 @@
 #include "rainshaft_tend_descs.hpp"
 
-std::vector<spaecies::VarDescPtr> tend_descs_from_state_descs(spaecies::Domain dom,
-                                                              std::vector<spaecies::VarDescPtr> state_descs) {
-  std::vector<spaecies::VarDescPtr> tend_descs;
+VarDescList tend_descs_from_state_descs(spaecies::Domain dom,
+                                                              VarDescList state_descs) {
+  VarDescList tend_descs;
   for (spaecies::VarDescPtr var_desc : state_descs) {
     auto name = var_desc->name + "_tend";
     auto type = var_desc->type;

@@ -28,24 +28,24 @@ Sedimentation::Sedimentation(const RainshaftConstants& constants, bool use_v_tab
 
 void Sedimentation::calc_tend(const RainshaftConstants &constants,
                               const RainshaftGrid &grid,
-                              const spaecies::State<const double> &state,
+                              const StateConst &state,
                               const RainshaftDerivedVars &dvars,
-                              const spaecies::Tendency<double>& tend) const
+                              const Tendency& tend) const
 {
-  const auto lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
+  const double lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
   const auto [speeds_top0, speeds_top3] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
-  auto nr_prev_flux = speeds_top0 * constants.nr_top * constants.rho_top;
-  auto qr_prev_flux = speeds_top3 * constants.qr_top * constants.rho_top;
-  auto nr = state.get_variable("nr");
-  auto qr = state.get_variable("qr");
-  auto nr_tend = tend.get_variable("nr_tend");
-  auto qr_tend = tend.get_variable("qr_tend");
+  double nr_prev_flux = speeds_top0 * constants.nr_top * constants.rho_top;
+  double qr_prev_flux = speeds_top3 * constants.qr_top * constants.rho_top;
+  VarConst nr = state.get_variable("nr");
+  VarConst qr = state.get_variable("qr");
+  VarMut nr_tend = tend.get_variable("nr_tend");
+  VarMut qr_tend = tend.get_variable("qr_tend");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
     const auto [speeds0, speeds3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
-    const auto nr_flux = speeds0 * nr[il] * dvars.rho_dry[il];
-    const auto qr_flux = speeds3 * qr[il] * dvars.rho_dry[il];
+    const double nr_flux = speeds0 * nr[il] * dvars.rho_dry[il];
+    const double qr_flux = speeds3 * qr[il] * dvars.rho_dry[il];
 
     nr_tend[il] = (nr_prev_flux - nr_flux) / (dvars.dz[il] * dvars.rho_dry[il]);
     qr_tend[il] = (qr_prev_flux - qr_flux) / (dvars.dz[il] * dvars.rho_dry[il]);
@@ -63,14 +63,14 @@ Sedimentation::Speeds Sedimentation::rain_fall_speeds(const RainshaftConstants& 
   }
   const auto [v0, v3] = rain_fall_speeds_stp(constants, lambdar);
   // Calculate correction for air density, with reference state at 1000 hPa and 273.15 K.
-  const auto rf = rho_fac(constants, rho_dry);
+  const double rf = rho_fac(constants, rho_dry);
   return {v0 * rf, v3 * rf};
 }
 
 Sedimentation::Speeds Sedimentation::rain_fall_speeds_stp(const RainshaftConstants& constants,
                                                         double lambdar) const {
   if (v0_table.has_value()) {
-    const auto d_micron = 1.e6 / lambdar;
+    const double d_micron = 1.e6 / lambdar;
     return {v0_table->lookup_value(d_micron), v3_table->lookup_value(d_micron)};
   } else {
     if (use_numerical_integration) {

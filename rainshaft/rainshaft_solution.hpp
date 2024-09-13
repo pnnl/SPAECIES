@@ -2,24 +2,23 @@
 #define RAINSHAFT_SOLUTION_HPP
 #include <vector>
 
-#include "spaecies.hpp"
-
 #include "rainshaft_derived_vars.hpp"
+#include "rainshaft_types.hpp"
 
 class RainshaftSolution {
 
 public:
 
   // Constructor from state arrays.
-  RainshaftSolution(const std::vector<spaecies::State<const double>>& states,
+  RainshaftSolution(const std::vector<StateConst>& states,
                     int num_rhs_evals_in);
 
   // Move constructor from state arrays.
-  RainshaftSolution(const std::vector<spaecies::State<const double>>&& states,
+  RainshaftSolution(const std::vector<StateConst>&& states,
                     int num_rhs_evals_in);
 
   // State vector.
-  std::vector<spaecies::State<const double>> states;
+  std::vector<StateConst> states;
   // Number of evaluations of RHS function.
   int num_rhs_evals;
 

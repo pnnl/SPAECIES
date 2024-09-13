@@ -1,8 +1,6 @@
 #ifndef SEQUENTIAL_SPLIT_INTEGRATOR_HPP
 #define SEQUENTIAL_SPLIT_INTEGRATOR_HPP
 
-#include "spaecies.hpp"
-
 #include "rainshaft_integrator.hpp"
 
 class SequentialSplitIntegrator : public RainshaftIntegrator {
@@ -13,7 +11,7 @@ public:
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const spaecies::State<const double>& initial_state) const;
+                              const StateConst& initial_state) const;
 
 private:
 

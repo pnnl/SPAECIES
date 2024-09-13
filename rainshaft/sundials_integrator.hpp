@@ -7,13 +7,12 @@
 #include "sundials/sundials_context.hpp"
 #include "nvector/nvector_serial.h"
 
-#include "spaecies.hpp"
-
 #include "rainshaft_integrator.hpp"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_process.hpp"
 #include "rainshaft_solution.hpp"
+#include "rainshaft_types.hpp"
 
 template <int PARTITIONS>
 class SundialsIntegrator : public RainshaftIntegrator
@@ -26,21 +25,21 @@ private:
     const RainshaftConstants &constants;
     const RainshaftGrid &grid;
     const PartitionArray processes;
-    const std::vector<spaecies::VarDescPtr> state_descs;
-    const std::vector<spaecies::VarDescPtr> tend_descs;
+    const VarDescList state_descs;
+    const VarDescList tend_descs;
   };
 
   template <int PARTITION>
   static int rainshaft_f(sunrealtype t, N_Vector y, N_Vector ydot, void *user_data)
   {
     RainshaftUserData *cast_data = (RainshaftUserData *)user_data;
-    const spaecies::State<const double> state = n_vector_to_state(y, cast_data->state_descs);
+    const StateConst state = n_vector_to_state(y, cast_data->state_descs);
     RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data->constants,
                                                       cast_data->grid,
                                                       state);
     // Zero out ydot so that we don't have to remember to zero every value in calc_tend.
     N_VConst(0., ydot);
-    const spaecies::Tendency<double> tend = n_vector_to_tendency(ydot, cast_data->tend_descs);
+    const Tendency tend = n_vector_to_tendency(ydot, cast_data->tend_descs);
     cast_data->processes[PARTITION]->calc_tend(cast_data->constants,
                                                cast_data->grid,
                                                state, dvars, tend);
@@ -62,8 +61,8 @@ public:
   SundialsIntegrator(const RainshaftConstants &constants,
                      const RainshaftGrid &grid,
                      const PartitionArray processes,
-                     const std::vector<spaecies::VarDescPtr>& state_descs,
-                     const std::vector<spaecies::VarDescPtr>& tend_descs,
+                     const VarDescList& state_descs,
+                     const VarDescList& tend_descs,
                      const int steps_per_output)
       : user_data{constants, grid, processes, state_descs, tend_descs}, steps_per_output(steps_per_output)
   {
@@ -97,7 +96,7 @@ protected:
                            const Mode normal,
                            const Mode one_step) const
   {
-    std::vector<spaecies::State<const double>> states;
+    std::vector<StateConst> states;
 
     sunrealtype tret = -std::numeric_limits<sunrealtype>::infinity();
     if (steps_per_output > 0)
@@ -127,7 +126,7 @@ protected:
     {
       // If we're only evolving and saving output once, place output directly
       // into the state vector rather than copying.
-      spaecies::State<double> final_state(user_data.state_descs); // empty state for output
+      State final_state(user_data.state_descs); // empty state for output
       N_Vector y_out = view_to_n_vector(sun_ctxt, final_state); // y_out does not own memory
       evolveFun(mem, final_time, y_out, &tret, normal);
       states.emplace_back(std::move(final_state)); // Transfer owning state to solution vector.
@@ -167,16 +166,16 @@ protected:
   // outlive the state/tendency objects (unless the deep_copy method is used to get a newly
   // allocated copy).
 
-  static spaecies::State<double> n_vector_to_state(N_Vector y, const std::vector<spaecies::VarDescPtr>& var_descs)
+  static State n_vector_to_state(N_Vector y, const VarDescList& var_descs)
   {
     sunrealtype* ydata = N_VGetArrayPointer(y);
-    return spaecies::State<double>(var_descs, &ydata[0]);
+    return State(var_descs, &ydata[0]);
   }
 
-  static spaecies::Tendency<double> n_vector_to_tendency(N_Vector y, const std::vector<spaecies::VarDescPtr>& var_descs)
+  static Tendency n_vector_to_tendency(N_Vector y, const VarDescList& var_descs)
   {
     sunrealtype* ydata = N_VGetArrayPointer(y);
-    return spaecies::Tendency<double>(var_descs, &ydata[0]);
+    return Tendency(var_descs, &ydata[0]);
   }
 };
 

@@ -19,8 +19,8 @@ MRIIntegrator::MRIIntegrator(const RainshaftConstants &constants,
                              const RainshaftProcess *const process_fast,
                              const RainshaftProcess *const process_slow_exp,
                              const RainshaftProcess *const process_slow_imp,
-                             const std::vector<spaecies::VarDescPtr>& state_descs,
-                             const std::vector<spaecies::VarDescPtr>& tend_descs,
+                             const VarDescList& state_descs,
+                             const VarDescList& tend_descs,
                              const double dt_fast,
                              const double dt_slow,
                              const int order,
@@ -33,7 +33,7 @@ MRIIntegrator::MRIIntegrator(const RainshaftConstants &constants,
 // SPS: Need to generalize this to get output states at arbitary times.
 RainshaftSolution MRIIntegrator::integrate(double initial_time,
                                            double final_time,
-                                           const spaecies::State<const double> &initial_state) const
+                                           const StateConst &initial_state) const
 {
   auto y_init = const_view_to_n_vector(sun_ctxt, initial_state);
 

@@ -8,7 +8,7 @@ FixedSubstepIntegrator::FixedSubstepIntegrator(const RainshaftIntegrator *inner_
 
 RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
                                                     double final_time,
-                                                    const spaecies::State<const double>& initial_state) const {
+                                                    const StateConst& initial_state) const {
   double time_interval = final_time - initial_time;
   double approx_num_steps = time_interval / dt;
   double rounded_num_steps = std::round(approx_num_steps);

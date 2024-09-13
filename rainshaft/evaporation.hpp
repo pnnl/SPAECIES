@@ -1,12 +1,10 @@
 #ifndef EVAPORATION_HPP
 #define EVAPORATION_HPP
-#include <vector>
 #include <optional>
-
-#include "spaecies.hpp"
 
 #include "lookup_linear.hpp"
 #include "rainshaft_process.hpp"
+#include "rainshaft_types.hpp"
 #include "saturation.hpp"
 
 class Evaporation : public RainshaftProcess {
@@ -22,9 +20,9 @@ public:
   // Calculate tendency from current state.
   void calc_tend(const RainshaftConstants& constants,
                  const RainshaftGrid& grid,
-                 const spaecies::State<const double>& state,
+                 const StateConst& state,
                  const RainshaftDerivedVars& dvars,
-                 const spaecies::Tendency<double>& tend) const;
+                 const Tendency& tend) const;
 
   // Calculate characteristic velocity used for velocity calculation.
   double calc_v_evap(const RainshaftConstants& constants, double lambdar) const;

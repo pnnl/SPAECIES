@@ -6,11 +6,11 @@
 // Calculation of cell widths.
 std::vector<double> calc_dz(const RainshaftConstants& constants,
                             const RainshaftGrid& grid,
-                            const spaecies::State<const double>& state) {
+                            const StateConst& state) {
   // Virtual temperature.
   std::vector<double> t_v(grid.nlev);
-  auto t = state.get_variable("T");
-  auto q = state.get_variable("q");
+  VarConst t = state.get_variable("T");
+  VarConst q = state.get_variable("q");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     // Virtual temperature factor.
     double t_v_fac = 1. + ((1/constants.epsilon_h2o - 1.) * q[il]);
@@ -21,10 +21,10 @@ std::vector<double> calc_dz(const RainshaftConstants& constants,
 
 // Convert cell widths to interface heights.
 std::vector<double> dz_to_z_int(const std::vector<double> dz) {
-  auto nlev = dz.size();
+  std::size_t nlev = dz.size();
   std::vector<double> z_int(nlev+1, 0.);
   // Construct z_int from bottom to top.
-  for (int il = nlev-1; il != -1; --il) {
+  for (std::size_t il = nlev-1; il != -1; --il) {
     z_int[il] = z_int[il+1] + dz[il];
   }
   return z_int;
@@ -36,10 +36,10 @@ std::vector<double> dz_to_z_int(const std::vector<double> dz) {
 // but instead temperature times (1 + q/epsilon).
 std::vector<double> calc_rho_dry(const RainshaftConstants& constants,
                                  const RainshaftGrid& grid,
-                                 const spaecies::State<const double>& state) {
+                                 const StateConst& state) {
   std::vector<double> rho_dry(grid.nlev);
-  auto t = state.get_variable("T");
-  auto q = state.get_variable("q");
+  VarConst t = state.get_variable("T");
+  VarConst q = state.get_variable("q");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     rho_dry[il] = grid.p_mid[il] / (constants.rdry * t[il] *
                                   (1 + q[il]/constants.epsilon_h2o));
@@ -49,11 +49,11 @@ std::vector<double> calc_rho_dry(const RainshaftConstants& constants,
 
 std::vector<double> calc_lambdar(const RainshaftConstants& constants,
                                  const RainshaftGrid& grid,
-                                 const spaecies::State<const double>& state) {
+                                 const StateConst& state) {
   // SPS: If not doing nr limiter here, do it somewhere?
   std::vector<double> lambdar(grid.nlev);
-  auto nr = state.get_variable("nr");
-  auto qr = state.get_variable("qr");
+  VarConst nr = state.get_variable("nr");
+  VarConst qr = state.get_variable("qr");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     if (qr[il] >= constants.qsmall) {
       double lambda_cubed = constants.pi * constants.rhow * nr[il]
@@ -66,7 +66,7 @@ std::vector<double> calc_lambdar(const RainshaftConstants& constants,
 
 RainshaftDerivedVars::RainshaftDerivedVars(const RainshaftConstants& constants,
                                            const RainshaftGrid& grid,
-                                           const spaecies::State<const double>& state)
+                                           const StateConst& state)
   : dz(calc_dz(constants, grid,state)),
     z_int(dz_to_z_int(dz)),
     rho_dry(calc_rho_dry(constants, grid, state)),

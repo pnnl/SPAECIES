@@ -26,7 +26,7 @@ public:
   void write_grid(const RainshaftGrid& grid);
 
   // Write a series of States to file.
-  void write_states(const std::vector<spaecies::State<const double>>& arrays);
+  void write_states(const std::vector<StateConst>& arrays);
 
   // Write a series of RainshaftDerivedVars to file.
   void write_derived_vars(const std::vector<RainshaftDerivedVars>& dvars);

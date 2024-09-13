@@ -99,17 +99,17 @@ Evaporation::Evaporation(const RainshaftConstants& constants,
 
 void Evaporation::calc_tend(const RainshaftConstants& constants,
                             const RainshaftGrid& grid,
-                            const spaecies::State<const double>& state,
+                            const StateConst& state,
                             const RainshaftDerivedVars& dvars,
-                            const spaecies::Tendency<double>& tend) const {
-  auto t = state.get_variable("T");
-  auto q = state.get_variable("q");
-  auto nr = state.get_variable("nr");
-  auto qr = state.get_variable("qr");
-  auto t_tend = tend.get_variable("T_tend");
-  auto q_tend = tend.get_variable("q_tend");
-  auto nr_tend = tend.get_variable("nr_tend");
-  auto qr_tend = tend.get_variable("qr_tend");
+                            const Tendency& tend) const {
+  VarConst t = state.get_variable("T");
+  VarConst q = state.get_variable("q");
+  VarConst nr = state.get_variable("nr");
+  VarConst qr = state.get_variable("qr");
+  VarMut t_tend = tend.get_variable("T_tend");
+  VarMut q_tend = tend.get_variable("q_tend");
+  VarMut nr_tend = tend.get_variable("nr_tend");
+  VarMut qr_tend = tend.get_variable("qr_tend");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     // Skip the rest of this if no rain.
     if (qr[il] < constants.qsmall) {

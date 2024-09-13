@@ -5,12 +5,12 @@ using std::min, std::cbrt, std::exp;
 
 void SelfCollision::calc_tend(const RainshaftConstants& constants,
                               const RainshaftGrid& grid,
-                              const spaecies::State<const double>& state,
+                              const StateConst& state,
                               const RainshaftDerivedVars& dvars,
-                              const spaecies::Tendency<double>& tend) const {
-  auto nr = state.get_variable("nr");
-  auto qr = state.get_variable("qr");
-  auto nr_tend = tend.get_variable("nr_tend");
+                              const Tendency& tend) const {
+  VarConst nr = state.get_variable("nr");
+  VarConst qr = state.get_variable("qr");
+  VarMut nr_tend = tend.get_variable("nr_tend");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     double b = breakup_fac(constants, nr[il], qr[il]);
     nr_tend[il] = -5.78 * b * nr[il] * qr[il] * dvars.rho_dry[il];

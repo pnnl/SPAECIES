@@ -28,7 +28,7 @@ void NetcdfWriter::write_grid(const RainshaftGrid& grid) {
   nc_put_var(ncid, p_midid, grid.p_mid.data());
 }
 
-void NetcdfWriter::write_states(const std::vector<spaecies::State<const double>>& arrays) {
+void NetcdfWriter::write_states(const std::vector<StateConst>& arrays) {
   int levid, timeid;
   std::size_t nlev = arrays[0].get_variable("T").size();
   std::size_t ntimes = arrays.size();

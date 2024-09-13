@@ -1,8 +1,6 @@
 #ifndef FIXED_SUBSTEP_INTEGRATOR_HPP
 #define FIXED_SUBSTEP_INTEGRATOR_HPP
 
-#include "spaecies.hpp"
-
 #include "rainshaft_integrator.hpp"
 
 class FixedSubstepIntegrator : public RainshaftIntegrator {
@@ -15,7 +13,7 @@ public:
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const spaecies::State<const double>& initial_state) const;
+                              const StateConst& initial_state) const;
 
   const double dt;
 
