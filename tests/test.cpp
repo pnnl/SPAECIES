@@ -205,6 +205,19 @@ TEST_CASE( "accessing values of a contiguous variable", "[ContiguousVariableView
     REQUIRE( t_boil[0] == 373.15 );
   }
 
+  SECTION( "cast a ContiguousVariableView to a const view" ) {
+    VarDescPtr boil_desc = domain.add_var_desc("BOILING_POINT", Float64Type, {}, "K");
+    double boiling_point = 373.16;
+    ContiguousVariableView<double> t_boil(boil_desc, &boiling_point);
+    REQUIRE( t_boil.size() == boil_desc->size() );
+    REQUIRE( t_boil[0] == boiling_point );
+    ContiguousVariableView<const double> t_boil_const(t_boil);
+    REQUIRE( t_boil_const[0] == 373.16 );
+    // Pretend we have a reason to change this. "Oops, we had the wrong value, fix it."
+    t_boil[0] = 373.15;
+    REQUIRE( t_boil_const[0] == 373.15 );
+  }
+
   SECTION( "a vector variable's values can be accessed" ) {
     VarDescPtr t_desc = domain.add_var_desc("T", Float64Type, {col_dim}, "K");
     double t_buff[col_dim->size];
@@ -342,6 +355,19 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
     }
   }
 
+  SECTION( "casting VariableArrayView to a const view" ) {
+    double data[total_size];
+    const VariableArrayView<double> view({t_desc, q_desc, p_surf_desc}, data);
+    const VariableArrayView<const double> view_const(view);
+    const double *data_ptr = view_const.data();
+    for (int i = 0; i != total_size; ++i) {
+      data[i] = 2.*i;
+    }
+    for (int i = 0; i != view.size(); ++i) {
+      REQUIRE( data_ptr[i] == 2.*i );
+    }
+  }
+
   SECTION( "VariableArrayView can allocate and own its data" ) {
     VariableArrayView<double> view{t_desc, q_desc, p_surf_desc};
     REQUIRE( view.size() == t_desc->size() + q_desc->size() + p_surf_desc->size() );
@@ -425,6 +451,28 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
     }
   }
 
+  SECTION( "copying from a const view to a new non-const view" ) {
+    // Create "original" data.
+    VariableArrayView<double> view{t_desc};
+    auto t = view.get_variable("T");
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 2.*i;
+    }
+    // Const view
+    VariableArrayView<const double> view_const(view);
+    // Make new array.
+    VariableArrayView <double> new_view = view_const.deep_copy();
+    auto t_new = new_view.get_variable("T");
+    // Clear original array.
+    for (int i = 0; i != t.size(); ++i) {
+      t[i] = 0.;
+    }
+    // The following checks that the data was copied.
+    for (int i = 0; i != t_new.size(); ++i) {
+      REQUIRE( t_new[i] == 2.*i );
+    }
+  }
+
   SECTION( "getting an error message when a variable is not in the array" ) {
     VariableArrayView<double> view{t_desc, q_desc, p_surf_desc};
     REQUIRE_THROWS_MATCHES( view.get_variable("invalid"), VariableNotFoundException,
@@ -479,6 +527,20 @@ TEST_CASE( "interacting with the model state", "[State]" ) {
     }
     for (int i = 0; i != p_surf.size(); ++i) {
       REQUIRE( p_surf[i] == -2. * i );
+    }
+  }
+
+  SECTION( "cast State to const" ) {
+    State<double> state{p_surf_desc};
+    State<const double> state_const(state);
+    REQUIRE( state_const.size() == total_size );
+    auto p_surf = state.get_variable("p_surf");
+    auto p_surf_const = state_const.get_variable("p_surf");
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf_const[i] == -2. * i );
     }
   }
 
@@ -560,6 +622,20 @@ TEST_CASE( "interacting a tendency on the model state", "[Tendency]" ) {
     }
     for (int i = 0; i != p_surf.size(); ++i) {
       REQUIRE( p_surf[i] == -2. * i );
+    }
+  }
+
+  SECTION( "cast Tendency to const" ) {
+    Tendency<double> tend{p_surf_desc};
+    Tendency<const double> tend_const(tend);
+    REQUIRE( tend_const.size() == total_size );
+    auto p_surf = tend.get_variable("p_surf_tend");
+    auto p_surf_const = tend_const.get_variable("p_surf_tend");
+    for (int i = 0; i != p_surf.size(); ++i) {
+      p_surf[i] = -2. * i;
+    }
+    for (int i = 0; i != p_surf.size(); ++i) {
+      REQUIRE( p_surf_const[i] == -2. * i );
     }
   }
 

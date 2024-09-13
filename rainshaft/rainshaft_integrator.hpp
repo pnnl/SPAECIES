@@ -11,7 +11,7 @@ public:
 
   virtual RainshaftSolution integrate(double initial_time,
                                       double final_time,
-                                      const spaecies::State<double>& initial_state) const = 0;
+                                      const spaecies::State<const double>& initial_state) const = 0;
 
 };
 

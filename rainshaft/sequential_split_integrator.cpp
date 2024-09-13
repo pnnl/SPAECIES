@@ -6,7 +6,7 @@ SequentialSplitIntegrator::SequentialSplitIntegrator(const std::vector<const Rai
 
 RainshaftSolution SequentialSplitIntegrator::integrate(double initial_time,
                                                        double final_time,
-                                                       const spaecies::State<double>& initial_state) const {
+                                                       const spaecies::State<const double>& initial_state) const {
   int num_rhs_evals = 0;
   RainshaftSolution solution = integrators[0]->integrate(initial_time, final_time, initial_state);
   num_rhs_evals += solution.num_rhs_evals;

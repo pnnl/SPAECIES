@@ -99,9 +99,9 @@ Evaporation::Evaporation(const RainshaftConstants& constants,
 
 void Evaporation::calc_tend(const RainshaftConstants& constants,
                             const RainshaftGrid& grid,
-                            const spaecies::State<double>& state,
+                            const spaecies::State<const double>& state,
                             const RainshaftDerivedVars& dvars,
-                            spaecies::Tendency<double>& tend) const {
+                            const spaecies::Tendency<double>& tend) const {
   auto t = state.get_variable("T");
   auto q = state.get_variable("q");
   auto nr = state.get_variable("nr");

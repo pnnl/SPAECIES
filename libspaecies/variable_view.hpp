@@ -21,12 +21,10 @@ public:
     return var_desc()->size();
   }
 
-  VariableView(const VariableView& view) = default;
-
 protected:
   VarDescPtr var_desc_ptr;
 
-  VariableView(const VarDescPtr var_desc) : var_desc_ptr(var_desc) {
+  VariableView(const VarDescPtr& var_desc) : var_desc_ptr(var_desc) {
     VariableType expected_type = SPAECIES_TYPE<T>;
     if (var_desc_ptr->type != expected_type) {
       throw TypeMismatchException(spaecies_type_name(var_desc_ptr->type),

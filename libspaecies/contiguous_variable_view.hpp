@@ -13,8 +13,12 @@ template<class T>
 class ContiguousVariableView : public VariableView<T> {
 public:
   // Construct a ContiguousVariableView from a description and pointer.
-  ContiguousVariableView(const VarDescPtr var_desc, T* data_ptr)
+  ContiguousVariableView(const VarDescPtr& var_desc, T* data_ptr)
     : VariableView<T>(var_desc), data_ptr(data_ptr) {
+  }
+  // Allow conversion to const.
+  operator ContiguousVariableView<const T>() {
+    return ContiguousVariableView<const T>(this->var_desc(), data_ptr);
   }
   // Access a scalar value of the flattened variable.
   inline T& operator[](std::size_t idx) {

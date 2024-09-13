@@ -161,7 +161,7 @@ int main(int argc, char** argv)
   writer.write_states(solution.states);
   std::vector<RainshaftDerivedVars> solution_dvars;
   solution_dvars.reserve(solution.states.size());
-  for (spaecies::State<double> state : solution.states) {
+  for (spaecies::State<const double> state : solution.states) {
     solution_dvars.emplace_back(constants, grid, state);
   }
   writer.write_derived_vars(solution_dvars);

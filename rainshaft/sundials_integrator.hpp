@@ -34,13 +34,13 @@ private:
   static int rainshaft_f(sunrealtype t, N_Vector y, N_Vector ydot, void *user_data)
   {
     RainshaftUserData *cast_data = (RainshaftUserData *)user_data;
-    const spaecies::State<double> state = n_vector_to_state(y, cast_data->state_descs);
+    const spaecies::State<const double> state = n_vector_to_state(y, cast_data->state_descs);
     RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data->constants,
                                                       cast_data->grid,
                                                       state);
     // Zero out ydot so that we don't have to remember to zero every value in calc_tend.
     N_VConst(0., ydot);
-    spaecies::Tendency<double> tend = n_vector_to_tendency(ydot, cast_data->tend_descs);
+    const spaecies::Tendency<double> tend = n_vector_to_tendency(ydot, cast_data->tend_descs);
     cast_data->processes[PARTITION]->calc_tend(cast_data->constants,
                                                cast_data->grid,
                                                state, dvars, tend);
@@ -97,12 +97,12 @@ protected:
                            const Mode normal,
                            const Mode one_step) const
   {
-    std::vector<spaecies::State<double>> states;
+    std::vector<spaecies::State<const double>> states;
 
     sunrealtype tret = -std::numeric_limits<sunrealtype>::infinity();
     if (steps_per_output > 0)
     {
-      states.push_back(n_vector_to_state(y_init, user_data.state_descs).deep_copy());
+      states.emplace_back(n_vector_to_state(y_init, user_data.state_descs));
       N_Vector y_out = N_VClone(y_init);
       bool output_this_iter = true;
       for (int i = 0; tret < final_time; i++)
@@ -111,13 +111,15 @@ protected:
         output_this_iter = (i+1) % steps_per_output == 0;
         if (output_this_iter)
         {
-          states.push_back(n_vector_to_state(y_out, user_data.state_descs).deep_copy());
+          // Copy because (a) y_out is reused between iterations, and
+          // (b) it owns its data.
+          states.emplace_back(n_vector_to_state(y_out, user_data.state_descs).deep_copy());
         }
       }
-      // Output only if there isn't already an output for the last iteration.
+      // Output last iteration if this was not already done.
       if (!output_this_iter)
       {
-        states.push_back(n_vector_to_state(y_out, user_data.state_descs).deep_copy());
+        states.emplace_back(n_vector_to_state(y_out, user_data.state_descs).deep_copy());
       }
       N_VDestroy(y_out);
     }
@@ -125,9 +127,10 @@ protected:
     {
       // If we're only evolving and saving output once, place output directly
       // into the state vector rather than copying.
-      states.emplace_back(user_data.state_descs); // empty state for output
-      N_Vector y_out = view_to_n_vector(sun_ctxt, states.back());
+      spaecies::State<double> final_state(user_data.state_descs); // empty state for output
+      N_Vector y_out = view_to_n_vector(sun_ctxt, final_state); // y_out does not own memory
       evolveFun(mem, final_time, y_out, &tret, normal);
+      states.emplace_back(std::move(final_state)); // Transfer owning state to solution vector.
       N_VDestroy(y_out);
     }
 
@@ -136,7 +139,7 @@ protected:
 
   // Note that the N_Vector does not take ownership of the data and will not free it.
   // The N_Vector must not be permitted to live longer than the view.
-  static N_Vector view_to_n_vector(const sundials::Context &sun_ctxt, spaecies::VariableArrayView<double> &view)
+  static N_Vector view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<double> &view)
   {
     sunindextype num_variables = view.size();
     N_Vector y = N_VMake_Serial(num_variables, view.data(), sun_ctxt);
@@ -151,7 +154,7 @@ protected:
   //
   // Open question: Should we just accept the cost of making a copy wherever this is used,
   // and get rid of this function?
-  static N_Vector const_view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<double> &view)
+  static N_Vector const_view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<const double> &view)
   {
     sunindextype num_variables = view.size();
     N_Vector y = N_VMake_Serial(num_variables, const_cast<double*>(view.data()), sun_ctxt);

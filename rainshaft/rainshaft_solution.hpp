@@ -11,15 +11,15 @@ class RainshaftSolution {
 public:
 
   // Constructor from state arrays.
-  RainshaftSolution(const std::vector<spaecies::State<double>>& states,
+  RainshaftSolution(const std::vector<spaecies::State<const double>>& states,
                     int num_rhs_evals_in);
 
   // Move constructor from state arrays.
-  RainshaftSolution(const std::vector<spaecies::State<double>>&& states,
+  RainshaftSolution(const std::vector<spaecies::State<const double>>&& states,
                     int num_rhs_evals_in);
 
   // State vector.
-  std::vector<spaecies::State<double>> states;
+  std::vector<spaecies::State<const double>> states;
   // Number of evaluations of RHS function.
   int num_rhs_evals;
 

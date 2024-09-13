@@ -11,8 +11,8 @@ SedCflIntegrator::SedCflIntegrator(const RainshaftConstants* constants,
 
 RainshaftSolution SedCflIntegrator::integrate(double initial_time,
                                               double final_time,
-                                              const spaecies::State<double>& initial_state) const {
-  RainshaftSolution solution(std::vector<spaecies::State<double>>{initial_state}, 0);
+                                              const spaecies::State<const double>& initial_state) const {
+  RainshaftSolution solution({initial_state}, 0);
   int num_rhs_evals = 0;
   double current_time = initial_time;
   double time_remaining = final_time - current_time;

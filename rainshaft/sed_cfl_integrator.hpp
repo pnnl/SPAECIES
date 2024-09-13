@@ -17,7 +17,7 @@ public:
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const spaecies::State<double>& initial_state) const;
+                              const spaecies::State<const double>& initial_state) const;
 
 private:
 

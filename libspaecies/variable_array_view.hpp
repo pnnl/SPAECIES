@@ -5,6 +5,7 @@
 #include <initializer_list>
 #include <memory>
 #include <tuple>
+#include <type_traits>
 
 #include "contiguous_variable_view.hpp"
 #include "exceptions.hpp"
@@ -16,6 +17,7 @@ template<class T> class VariableArrayView;
 template <class T>
 class VariableArrayView {
 public:
+  typedef std::remove_const_t<T> NonConstT;
   VariableArrayView(std::initializer_list<VarDescPtr> var_descs)
     : VariableArrayView(std::vector<VarDescPtr>(var_descs)) {
   }
@@ -30,6 +32,12 @@ public:
       data_size(calc_size(var_descs)),
       data_ptr(data_ptr) {
   };
+  // Cast to const view.
+  operator VariableArrayView<const T>() const {
+    return VariableArrayView<const T>(var_desc_vec, data_size, owning_ptr, data_ptr);
+  }
+  // Required for access to private constructor used above.
+  friend class VariableArrayView<NonConstT>;
   ContiguousVariableView<T> get_variable(const std::string& name) const {
     auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs());
     return ContiguousVariableView(var_desc, data_ptr + idx);
@@ -43,8 +51,8 @@ public:
   inline std::size_t size() const {
     return data_size;
   }
-  VariableArrayView<T> deep_copy() const {
-    VariableArrayView<T> copy(var_descs());
+  VariableArrayView<NonConstT> deep_copy() const {
+    VariableArrayView<NonConstT> copy(var_descs());
     copy_data_to_location(copy.data());
     return copy;
   }
@@ -53,7 +61,7 @@ protected:
   std::size_t data_size;
   std::shared_ptr<T[]> owning_ptr;
   T* data_ptr;
-  inline void copy_data_to_location(T* dest) const {
+  inline void copy_data_to_location(NonConstT* dest) const {
     std::memcpy(dest, data_ptr, data_size * sizeof(T));
   }
   static std::tuple<VarDescPtr, std::size_t> name_to_desc_and_idx(const std::string& name,
@@ -75,6 +83,12 @@ protected:
       my_size += var_desc->size();
     }
     return my_size;
+  }
+private:
+  // Raw constructor for casting purposes.
+  VariableArrayView(const std::vector<VarDescPtr>& var_descs, std::size_t data_size,
+                    std::shared_ptr<T[]> owning_ptr, T* data_ptr)
+    : var_desc_vec(var_descs), data_size(data_size), owning_ptr(owning_ptr), data_ptr(data_ptr) {
   }
 };
 

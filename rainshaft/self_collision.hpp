@@ -13,9 +13,9 @@ public:
   // Calculate tendency from current state.
   void calc_tend(const RainshaftConstants& constants,
                  const RainshaftGrid& grid,
-                 const spaecies::State<double>& state,
+                 const spaecies::State<const double>& state,
                  const RainshaftDerivedVars& dvars,
-                 spaecies::Tendency<double>& tend) const;
+                 const spaecies::Tendency<double>& tend) const;
 
   // For given rain variables, measure whether collisions typically end
   // up merging drops (breakup_fac \approx 1) or is there significant
