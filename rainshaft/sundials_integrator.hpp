@@ -92,7 +92,7 @@ protected:
                            C countFun,
                            void *mem,
                            const double final_time,
-                           const N_Vector y_init,
+                           const N_Vector y0,
                            const Mode normal,
                            const Mode one_step) const
   {
@@ -101,8 +101,8 @@ protected:
     sunrealtype tret = -std::numeric_limits<sunrealtype>::infinity();
     if (steps_per_output > 0)
     {
-      states.emplace_back(n_vector_to_state(y_init, user_data.state_descs));
-      N_Vector y_out = N_VClone(y_init);
+      states.emplace_back(n_vector_to_state(y0, user_data.state_descs));
+      N_Vector y_out = N_VClone(y0);
       bool output_this_iter = true;
       for (int i = 0; tret < final_time; i++)
       {
@@ -148,12 +148,10 @@ protected:
   // Note (as above) that the N_Vector will not own the data, but rather will have a
   // non-const pointer to data that should be treated as const.
   //
-  // There's no way to force SUNDIALS to respect this const-ness, but it should be safe
-  // for sending initial conditions to SUNDIALS...
-  //
-  // Open question: Should we just accept the cost of making a copy wherever this is used,
-  // and get rid of this function?
-  static N_Vector const_view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<const double> &view)
+  // There's no way to force SUNDIALS to respect this const-ness, so this is only safe
+  // for cases where we know SUNDIALS won't modify the variables, e.g. for the initial
+  // conditions.
+  static N_Vector state_to_y0(const sundials::Context &sun_ctxt, const StateConst &view)
   {
     sunindextype num_variables = view.size();
     N_Vector y = N_VMake_Serial(num_variables, const_cast<double*>(view.data()), sun_ctxt);

@@ -21,8 +21,8 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
                                                 double final_time,
                                                 const StateConst& initial_state) const
 {
-  auto y_init = const_view_to_n_vector(sun_ctxt, initial_state);
-  void *arkode_mem = ERKStepCreate(create_f<0>(), initial_time, y_init, sun_ctxt);
+  N_Vector y0 = state_to_y0(sun_ctxt, initial_state);
+  void *arkode_mem = ERKStepCreate(create_f<0>(), initial_time, y0, sun_ctxt);
   ARKodeSetUserData(arkode_mem, (void *)&user_data);
   ARKodeSetFixedStep(arkode_mem, dt);
   ARKodeSetOrder(arkode_mem, order);
@@ -41,7 +41,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
 
   const sunrealtype fac = 1.;
   const sunrealtype reltol = fac * 1.e-2;
-  auto abstol = N_VClone(y_init);
+  auto abstol = N_VClone(y0);
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
   const auto nz = user_data.grid.nlev;
   for (std::size_t j = 0; j != nz; ++j)
@@ -73,11 +73,11 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
       },
       arkode_mem,
       final_time,
-      y_init,
+      y0,
       ARK_NORMAL,
       ARK_ONE_STEP);
 
-  N_VDestroy(y_init);
+  N_VDestroy(y0);
   SUNAdaptController_Destroy(controller);
   // SPS: Make RAII wrapper for this.
   ARKodeFree(&arkode_mem);

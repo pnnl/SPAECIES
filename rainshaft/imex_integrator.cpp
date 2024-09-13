@@ -23,8 +23,8 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
                                                 double final_time,
                                                 const StateConst &initial_state) const
 {
-  auto y_init = const_view_to_n_vector(sun_ctxt, initial_state);
-  void *arkode_mem = ARKStepCreate(create_f<0>(), create_f<1>(), initial_time, y_init, sun_ctxt);
+  N_Vector y0 = state_to_y0(sun_ctxt, initial_state);
+  void *arkode_mem = ARKStepCreate(create_f<0>(), create_f<1>(), initial_time, y0, sun_ctxt);
   ARKodeSetUserData(arkode_mem, (void *)&user_data);
   ARKodeSetFixedStep(arkode_mem, dt);
   ARKodeSetOrder(arkode_mem, order);
@@ -33,8 +33,8 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
 
   SUNLinearSolver LS = nullptr; 
   SUNMatrix J = nullptr;
-  J = SUNDenseMatrix(N_VGetLength(y_init), N_VGetLength(y_init), sun_ctxt);
-  LS = SUNLinSol_Dense(y_init, J, sun_ctxt);
+  J = SUNDenseMatrix(N_VGetLength(y0), N_VGetLength(y0), sun_ctxt);
+  LS = SUNLinSol_Dense(y0, J, sun_ctxt);
   ARKodeSetLinearSolver(arkode_mem, LS, J);
   // ARKodeSetMaxNonlinIters(arkode_mem, 160);
   // ARKodeSetNonlinConvCoef(arkode_mem, SUN_RCONST(1.e-3));
@@ -46,7 +46,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
 
   const sunrealtype fac = 1.;
   const sunrealtype reltol = fac * 1.e-2;
-  auto abstol = N_VClone(y_init);
+  auto abstol = N_VClone(y0);
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
   const auto nz = user_data.grid.nlev;
   for (std::size_t j = 0; j != nz; ++j)
@@ -79,11 +79,11 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
       },
       arkode_mem,
       final_time,
-      y_init,
+      y0,
       ARK_NORMAL,
       ARK_ONE_STEP);
 
-  N_VDestroy(y_init);
+  N_VDestroy(y0);
   // SPS: Make RAII wrapper for this.
   ARKodeFree(&arkode_mem);
   SUNMatDestroy(J);

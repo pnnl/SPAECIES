@@ -35,11 +35,11 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
                                            double final_time,
                                            const StateConst &initial_state) const
 {
-  auto y_init = const_view_to_n_vector(sun_ctxt, initial_state);
+  N_Vector y0 = state_to_y0(sun_ctxt, initial_state);
 
   /* create an ARKStep object, setting fast (inner) right-hand side
      functions and the initial condition */
-  auto inner_arkode_mem = ARKStepCreate(create_f<0>(), nullptr, initial_time, y_init, sun_ctxt);
+  auto inner_arkode_mem = ARKStepCreate(create_f<0>(), nullptr, initial_time, y0, sun_ctxt);
   ARKodeSetOrder(inner_arkode_mem, order);
   ARKodeSetUserData(inner_arkode_mem, (void *)&user_data);
   ARKodeSetMaxNumSteps(inner_arkode_mem, -1);
@@ -53,7 +53,7 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
 
   /* create an MRIStep object, setting the slow (outer) right-hand side
      functions and the initial condition */
-  void *outer_arkode_mem = MRIStepCreate(create_f<1>(), create_f<2>(), initial_time, y_init, stepper, sun_ctxt);
+  void *outer_arkode_mem = MRIStepCreate(create_f<1>(), create_f<2>(), initial_time, y0, stepper, sun_ctxt);
 
   /* Pass udata to user functions */
   ARKodeSetUserData(outer_arkode_mem, (void *)&user_data);
@@ -79,11 +79,11 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
       },
       outer_arkode_mem,
       final_time,
-      y_init,
+      y0,
       ARK_NORMAL,
       ARK_ONE_STEP);
 
-  N_VDestroy(y_init);
+  N_VDestroy(y0);
   MRIStepInnerStepper_Free(&stepper);
   ARKodeFree(&inner_arkode_mem);
   ARKodeFree(&outer_arkode_mem);
