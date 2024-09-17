@@ -12,19 +12,17 @@
 
 namespace spaecies {
 
-template<class T> class VariableArrayView;
-
 template <class T>
 class VariableArrayView {
 public:
-  typedef std::remove_const_t<T> NonConstT;
+  using NonConstT = std::remove_const_t<T>;
   VariableArrayView(std::initializer_list<VarDescPtr> var_descs)
     : VariableArrayView(std::vector<VarDescPtr>(var_descs)) {
   }
   VariableArrayView(const std::vector<VarDescPtr>& var_descs)
     : var_desc_vec(var_descs),
       data_size(calc_size(var_descs)),
-      owning_ptr(new T[VariableArrayView<T>::calc_size(var_descs)]), // After C++20, can use make_shared here.
+      owning_ptr(new T[data_size]), // After C++20, can use make_shared here.
       data_ptr(owning_ptr.get()) {
   };
   VariableArrayView(const std::vector<VarDescPtr>& var_descs, T* data_ptr)
