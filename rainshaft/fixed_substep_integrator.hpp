@@ -1,5 +1,6 @@
 #ifndef FIXED_SUBSTEP_INTEGRATOR_HPP
 #define FIXED_SUBSTEP_INTEGRATOR_HPP
+
 #include "rainshaft_integrator.hpp"
 
 class FixedSubstepIntegrator : public RainshaftIntegrator {
@@ -12,7 +13,7 @@ public:
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const RainshaftState& initial_state) const;
+                              const StateConst& initial_state) const;
 
   const double dt;
 

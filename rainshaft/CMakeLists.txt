@@ -12,9 +12,8 @@ add_executable(rainshaft
   rainshaft_grid.cpp
   rainshaft_ncio.cpp
   rainshaft_solution.cpp
-  rainshaft_state.cpp
   rainshaft_sum_process.cpp
-  rainshaft_tendency.cpp
+  rainshaft_tend_descs.cpp
   saturation.cpp
   sed_cfl_integrator.cpp
   sedimentation.cpp

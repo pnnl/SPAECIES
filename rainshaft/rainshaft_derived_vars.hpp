@@ -4,7 +4,7 @@
 
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
-#include "rainshaft_state.hpp"
+#include "rainshaft_types.hpp"
 
 class RainshaftDerivedVars {
 
@@ -13,7 +13,7 @@ public:
   // Constructor from state.
   RainshaftDerivedVars(const RainshaftConstants& constants,
                        const RainshaftGrid& grid,
-                       const RainshaftState& state);
+                       const StateConst& state);
 
   // Cell heights (m)
   const std::vector<double> dz;

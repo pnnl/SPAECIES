@@ -2,25 +2,29 @@
 #define RAINSHAFT_SOLUTION_HPP
 #include <vector>
 
-#include "rainshaft_state.hpp"
 #include "rainshaft_derived_vars.hpp"
+#include "rainshaft_types.hpp"
 
 class RainshaftSolution {
 
 public:
 
-  // Constructor from state and derived variable vectors.
-  RainshaftSolution(const std::vector<RainshaftState>& state_vec,
-                    const std::vector<RainshaftDerivedVars>& dvar_vec,
+  // Constructor from state arrays.
+  RainshaftSolution(const std::vector<StateConst>& states,
+                    int num_rhs_evals_in);
+
+  // Move constructor from state arrays.
+  RainshaftSolution(const std::vector<StateConst>&& states,
                     int num_rhs_evals_in);
 
   // State vector.
-  const std::vector<RainshaftState> states;
-  // Derived variables vector.
-  const std::vector<RainshaftDerivedVars> dvars;
+  std::vector<StateConst> states;
   // Number of evaluations of RHS function.
   int num_rhs_evals;
 
+  void pop_back();
+
+  void move_last_to_other(RainshaftSolution& other);
 };
 
 #endif // RAINSHAFT_SOLUTION_HPP

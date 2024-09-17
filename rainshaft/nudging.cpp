@@ -11,15 +11,17 @@ Nudging::Nudging(double time_scale_in, const std::vector<double>& t, const std::
   }
 }
 
-RainshaftTendency Nudging::calc_tend(const RainshaftConstants& constants,
-                                     const RainshaftGrid& grid,
-                                     const RainshaftState& state,
-                                     const RainshaftDerivedVars& dvars) const {
-  std::vector<double> t_tend(grid.nlev, 0.), q_tend(grid.nlev, 0.);
-  std::vector<double> nr_tend(grid.nlev, 0.), qr_tend(grid.nlev, 0.);
+void Nudging::calc_tend(const RainshaftConstants& constants,
+                        const RainshaftGrid& grid,
+                        const StateConst& state,
+                        const RainshaftDerivedVars& dvars,
+                        const Tendency& tend) const {
+  VarConst t = state.get_variable("T");
+  VarConst q = state.get_variable("q");
+  VarMut t_tend = tend.get_variable("T_tend");
+  VarMut q_tend = tend.get_variable("q_tend");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
-    t_tend[il] = (t0[il] - state.t[il]) / time_scale;
-    q_tend[il] = (q0[il] - state.q[il]) / time_scale;
+    t_tend[il] = (t0[il] - t[il]) / time_scale;
+    q_tend[il] = (q0[il] - q[il]) / time_scale;
   }
-  return RainshaftTendency(t_tend, q_tend, nr_tend, qr_tend);
 }

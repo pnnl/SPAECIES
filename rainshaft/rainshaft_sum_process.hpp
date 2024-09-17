@@ -14,10 +14,11 @@ public:
   SumProcess(const std::vector<const RainshaftProcess *>& processes);
 
   // Calculate tendency from current state.
-  RainshaftTendency calc_tend(const RainshaftConstants& constants,
-                              const RainshaftGrid& grid,
-                              const RainshaftState& state,
-                              const RainshaftDerivedVars& dvars) const;
+  void calc_tend(const RainshaftConstants& constants,
+                 const RainshaftGrid& grid,
+                 const StateConst& state,
+                 const RainshaftDerivedVars& dvars,
+                 const Tendency& tend) const;
 
 private:
 

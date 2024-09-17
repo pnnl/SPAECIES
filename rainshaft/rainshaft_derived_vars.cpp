@@ -6,23 +6,25 @@
 // Calculation of cell widths.
 std::vector<double> calc_dz(const RainshaftConstants& constants,
                             const RainshaftGrid& grid,
-                            const RainshaftState& state) {
+                            const StateConst& state) {
   // Virtual temperature.
-  std::vector<double> t_v;
+  std::vector<double> t_v(grid.nlev);
+  VarConst t = state.get_variable("T");
+  VarConst q = state.get_variable("q");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     // Virtual temperature factor.
-    double t_v_fac = 1. + ((1/constants.epsilon_h2o - 1.) * state.q[il]);
-    t_v.push_back(state.t[il] * t_v_fac);
+    double t_v_fac = 1. + ((1/constants.epsilon_h2o - 1.) * q[il]);
+    t_v[il] = t[il] * t_v_fac;
   }
   return grid.calc_dz(constants, t_v);
 }
 
 // Convert cell widths to interface heights.
 std::vector<double> dz_to_z_int(const std::vector<double> dz) {
-  auto nlev = dz.size();
+  std::size_t nlev = dz.size();
   std::vector<double> z_int(nlev+1, 0.);
   // Construct z_int from bottom to top.
-  for (int il = nlev-1; il != -1; --il) {
+  for (std::size_t il = nlev-1; il != -1; --il) {
     z_int[il] = z_int[il+1] + dz[il];
   }
   return z_int;
@@ -34,28 +36,29 @@ std::vector<double> dz_to_z_int(const std::vector<double> dz) {
 // but instead temperature times (1 + q/epsilon).
 std::vector<double> calc_rho_dry(const RainshaftConstants& constants,
                                  const RainshaftGrid& grid,
-                                 const RainshaftState& state) {
-  std::vector<double> rho_dry;
-  for (std::size_t i = 0; i != grid.nlev; ++i) {
-    rho_dry.push_back(grid.p_mid[i]
-                      / (constants.rdry * state.t[i] *
-                         (1 + state.q[i]/constants.epsilon_h2o)));
+                                 const StateConst& state) {
+  std::vector<double> rho_dry(grid.nlev);
+  VarConst t = state.get_variable("T");
+  VarConst q = state.get_variable("q");
+  for (std::size_t il = 0; il != grid.nlev; ++il) {
+    rho_dry[il] = grid.p_mid[il] / (constants.rdry * t[il] *
+                                  (1 + q[il]/constants.epsilon_h2o));
   }
   return rho_dry;
 }
 
 std::vector<double> calc_lambdar(const RainshaftConstants& constants,
                                  const RainshaftGrid& grid,
-                                 const RainshaftState& state) {
+                                 const StateConst& state) {
   // SPS: If not doing nr limiter here, do it somewhere?
-  std::vector<double> lambdar;
-  for (std::size_t i = 0; i != grid.nlev; ++i) {
-    if (state.qr[i] >= constants.qsmall) {
-      double lambda_cubed = constants.pi * constants.rhow * state.nr[i]
-        / state.qr[i];
-      lambdar.push_back(std::cbrt(lambda_cubed));
-    } else {
-      lambdar.push_back(0.);
+  std::vector<double> lambdar(grid.nlev);
+  VarConst nr = state.get_variable("nr");
+  VarConst qr = state.get_variable("qr");
+  for (std::size_t il = 0; il != grid.nlev; ++il) {
+    if (qr[il] >= constants.qsmall) {
+      double lambda_cubed = constants.pi * constants.rhow * nr[il]
+        / qr[il];
+      lambdar[il] = std::cbrt(lambda_cubed);
     }
   }
   return lambdar;
@@ -63,14 +66,14 @@ std::vector<double> calc_lambdar(const RainshaftConstants& constants,
 
 RainshaftDerivedVars::RainshaftDerivedVars(const RainshaftConstants& constants,
                                            const RainshaftGrid& grid,
-                                           const RainshaftState& state)
+                                           const StateConst& state)
   : dz(calc_dz(constants, grid,state)),
     z_int(dz_to_z_int(dz)),
     rho_dry(calc_rho_dry(constants, grid, state)),
     lambdar(calc_lambdar(constants, grid, state)) {
   // Check vector sizes.
   // SPS: Should actually print out mismatched dimensions on failure.
-  if (grid.nlev != state.t.size()) {
+  if (grid.nlev != state.get_variable("T").size()) {
     throw std::invalid_argument("grid and state dimensions are mismatched");
   }
 }
