@@ -53,6 +53,20 @@ public:
       return rho;
     }
   }
+
+  template <bool WithGrad=false>
+  Val<WithGrad, 2> get_dz(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const {
+    const auto dz_i = dz[i];
+
+    if constexpr (WithGrad) {
+      return {dz_i, {
+        dz_i / state.t[i],
+        dz_i * (1.0/constants.epsilon_h2o - 1.0) / (1.0 + (1.0/constants.epsilon_h2o - 1.0) * state.q[i])
+      }};
+    } else {
+      return dz_i;
+    }
+  } 
 };
 
 // Convert cell widths to interface heights.

@@ -17,11 +17,7 @@ std::optional<LookupLinear> Sedimentation::create_lookup(const RainshaftConstant
       std::vector{1., 1.},
       [=] (const double x) {
           const auto [v0, v3] = rain_fall_speeds(constants, 1.e6 / x, use_numerical_integration);
-        if (create_v0) {
-          return v0;
-        } else {
-          return v3;
-        }
+          return create_v0 ? v0 : v3;
       });
   } else {
     return std::nullopt;
@@ -51,7 +47,7 @@ RainshaftTendency Sedimentation::calc_tend(const RainshaftConstants &constants,
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
     const auto [v0, v3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
-
+    
     nr_tend[il] += calc_nr_tend(dvars.dz[il], state.nr[il], nr_prev, dvars.rho_dry[il], rho_prev,
                                v0, v0_prev);
     qr_tend[il] += calc_qr_tend(dvars.dz[il], state.qr[il], qr_prev, dvars.rho_dry[il], rho_prev,
@@ -116,11 +112,12 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
   {
     const auto rho = dvars.get_rho_dry<true>(constants, state, il);
     const auto lambdar = dvars.get_lambdar<true>(constants, state, il);
+    const auto dz = dvars.get_dz<true>(constants, state, il);
     const auto [v0, v3] = rain_fall_speeds<true>(constants, rho, lambdar);
 
-    const auto nr_tend = calc_nr_tend<true>(dvars.dz[il], state.nr[il], nr_prev, rho, rho_prev,
+    const auto nr_tend = calc_nr_tend<true>(dz, state.nr[il], nr_prev, rho, rho_prev,
                                v0, v0_prev);
-    const auto qr_tend = calc_qr_tend<true>(dvars.dz[il], state.qr[il], qr_prev, rho, rho_prev,
+    const auto qr_tend = calc_qr_tend<true>(dz, state.qr[il], qr_prev, rho, rho_prev,
                                v3, v3_prev);
     const auto [nr_tend_dT_prev, nr_tend_dT, nr_tend_dq_prev, nr_tend_dq, nr_tend_dnr_prev, nr_tend_dnr, nr_tend_dqr_prev, nr_tend_dqr] = get_grad(nr_tend);
     const auto [qr_tend_dT_prev, qr_tend_dT, qr_tend_dq_prev, qr_tend_dq, qr_tend_dnr_prev, qr_tend_dnr, qr_tend_dqr_prev, qr_tend_dqr] = get_grad(qr_tend);
