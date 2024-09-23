@@ -16,11 +16,9 @@ void SumProcess::calc_tend(const RainshaftConstants& constants,
   double* sub_ptr = sub_tend.data();
   // Iterate through sub-processes and add up all their tendencies.
   for (std::size_t is = 0; is != nsub; ++is) {
-    // TODO: not needed?
     std::fill_n(sub_ptr, sub_tend.size(), 0.);
     sub_processes[is]->calc_tend(constants, grid, state, dvars, sub_tend);
 
-    // TODO: std::copy_n
     for (std::size_t i = 0; i != tend.size(); ++i) {
       tend_ptr[i] += sub_ptr[i];
     }
