@@ -44,7 +44,7 @@ public:
 
   template <bool WithGrad=false>
   Val<WithGrad, 2> get_rho_dry(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
-    VarConst t = state.get_variable("t");
+    VarConst t = state.get_variable("T");
     VarConst q = state.get_variable("q");
     const auto rho = rho_dry[i];
 
@@ -60,7 +60,7 @@ public:
 
   template <bool WithGrad=false>
   Val<WithGrad, 2> get_dz(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
-    VarConst t = state.get_variable("t");
+    VarConst t = state.get_variable("T");
     VarConst q = state.get_variable("q");
     const auto dz_i = dz[i];
 

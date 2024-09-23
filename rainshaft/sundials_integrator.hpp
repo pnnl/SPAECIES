@@ -136,50 +136,30 @@ protected:
                            O outputFun,
                            void *mem,
                            const double final_time,
-                           const N_Vector y0,
+                           const N_Vector y,
                            const Mode normal,
                            const Mode one_step) const
   {
     std::vector<StateConst> states;
-
     auto tret = -std::numeric_limits<sunrealtype>::infinity();
-    // TODO: why do output after evolve now?
-    // TODO: why make a copy of y0?
-    // TODO: fix outputFun merge
     if (steps_per_output > 0)
     {
-      states.emplace_back(n_vector_to_state(y0, user_data.state_descs));
-      N_Vector y_out = N_VClone(y0);
-      bool output_this_iter = true;
       for (int i = 0; tret < final_time; i++)
       {
-        evolveFun(mem, final_time, y_out, &tret, one_step);
-        output_this_iter = (i+1) % steps_per_output == 0;
-        if (output_this_iter)
-        {
-          // Copy because (a) y_out is reused between iterations, and
-          // (b) it owns its data.
-          states.emplace_back(n_vector_to_state(y_out, user_data.state_descs).deep_copy());
+        if (i % steps_per_output == 0) {
+          states.emplace_back(n_vector_to_state(y, user_data.state_descs).deep_copy());
+          outputFun();
         }
+        evolveFun(mem, final_time, y, &tret, one_step);
       }
-      // Output last iteration if this was not already done.
-      if (!output_this_iter)
-      {
-        states.emplace_back(n_vector_to_state(y_out, user_data.state_descs).deep_copy());
-      }
-      N_VDestroy(y_out);
     }
     else
     {
-      // If we're only evolving and saving output once, place output directly
-      // into the state vector rather than copying.
-    outputFun();
-      State final_state(user_data.state_descs); // empty state for output
-      N_Vector y_out = view_to_n_vector(sun_ctxt, final_state); // y_out does not own memory
-      evolveFun(mem, final_time, y_out, &tret, normal);
-      states.emplace_back(std::move(final_state)); // Transfer owning state to solution vector.
-      N_VDestroy(y_out);
+      evolveFun(mem, final_time, y, &tret, normal);
     }
+
+    states.emplace_back(n_vector_to_state(y, user_data.state_descs).deep_copy());
+    outputFun();
 
     return RainshaftSolution(std::move(states), countFun());
   }
