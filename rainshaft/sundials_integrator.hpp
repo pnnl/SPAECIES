@@ -125,9 +125,10 @@ protected:
     return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_jac<PARTITION>;
   }
 
-  template <typename E, typename C, typename Mode>
+  template <typename E, typename C, typename O, typename Mode>
   RainshaftSolution evolve(E evolveFun,
                            C countFun,
+                           O outputFun,
                            void *mem,
                            const double final_time,
                            const N_Vector y,
@@ -145,6 +146,7 @@ protected:
         if (i % steps_per_output == 0)
         {
           const auto new_state = n_vector_to_state(y);
+          outputFun();
           dvars.emplace_back(user_data.constants, user_data.grid, new_state);
           states.push_back(new_state);
         }
@@ -157,6 +159,7 @@ protected:
     }
 
     const auto new_state = n_vector_to_state(y);
+    outputFun();
     dvars.emplace_back(user_data.constants, user_data.grid, new_state);
     states.push_back(new_state);
 
@@ -169,7 +172,7 @@ protected:
     // SPS: It should not assume 4 variables; move some of this to RainshaftState itself?
     sunindextype num_variables = nz * 4;
     N_Vector y = N_VNew_Serial(num_variables, sun_ctxt);
-    sunrealtype *ydata = N_VGetArrayPointer_Serial(y);
+    sunrealtype *ydata = N_VGetArrayPointer(y);
     for (sunindextype j = 0; j != nz; ++j)
     {
       ydata[j] = state.t[j];
@@ -193,7 +196,7 @@ protected:
   static void tend_to_n_vector(const RainshaftTendency &tend, N_Vector ydot)
   {
     sunindextype nz = tend.t_tend.size();
-    sunrealtype *ydata = N_VGetArrayPointer_Serial(ydot);
+    sunrealtype *ydata = N_VGetArrayPointer(ydot);
     for (sunindextype j = 0; j != nz; ++j)
     {
       ydata[j] = tend.t_tend[j];

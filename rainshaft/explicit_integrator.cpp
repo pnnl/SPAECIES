@@ -43,21 +43,17 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
   const auto nz = initial_state.t.size();
   for (std::size_t j = 0; j != nz; ++j)
-  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[j] = fac * 1.e-1;
   }
-  for (std::size_t j = 0; j != nz; ++j)
   for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[nz + j] = fac * 1.e-5;
   }
   for (std::size_t j = 0; j != nz; ++j)
-  for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[2 * nz + j] = fac * 1.e-1;
   }
-  for (std::size_t j = 0; j != nz; ++j)
   for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[3 * nz + j] = fac * 1.e-8;
@@ -73,6 +69,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
         ERKStepGetNumRhsEvals(arkode_mem, &num_rhs_evals);
         return num_rhs_evals;
       },
+      []() {},
       arkode_mem,
       final_time,
       y,

@@ -75,6 +75,7 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
         ARKStepGetNumRhsEvals(inner_arkode_mem, &nffe, &nffi);
         return nfse + nfsi + nffe + nffi;
       },
+      []() {},
       outer_arkode_mem,
       final_time,
       y,

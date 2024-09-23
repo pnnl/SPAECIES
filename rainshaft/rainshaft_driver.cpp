@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
-  double final_time = 1800.;
+  double final_time = 30. + 1e-6;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
   auto nlev = grid.nlev;
@@ -104,11 +104,11 @@ int main(int argc, char* argv[])
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(constants, sat_form, false, false);
+  Evaporation evap(constants, sat_form, false, true);
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.
-  SumProcess exp_processes = SumProcess{{&self_coll, &evap, &nudge}};
+  SumProcess exp_processes = SumProcess{{&nudge, &self_coll, &evap}};
   // Sum of local processes.
   SumProcess imp_processes = SumProcess{{&sed}};
 
@@ -119,19 +119,17 @@ int main(int argc, char* argv[])
   if (name == "ex") {
     intg = new ExplicitIntegrator(constants, grid, &all_processes, std::stod(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]));
   } else if (name == "imex") {
-    intg = new IMEXIntegrator(constants, grid, &exp_processes, &imp_processes, std::stod(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]));
+    std::optional<std::string> jacobian_file = argc > 5 ? std::optional(argv[5]) : std::nullopt;
+    intg = new IMEXIntegrator(constants, grid, &exp_processes, &imp_processes, std::stod(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]), jacobian_file);
   } else if (name == "mri") {
     intg = new MRIIntegrator(constants, grid, &imp_processes, &exp_processes, nullptr, std::stod(argv[2]), std::stod(argv[3]), std::stoi(argv[4]), std::stoi(argv[5]));
   } else {
     throw std::logic_error("Invalid name");
   }
 
-  const auto t0 = 30;
-  ExplicitIntegrator intg_start(constants, grid, &all_processes, 0.01, 5, 0);
-  auto sol_start = intg_start.integrate(0, t0, initial_state);
 
   auto before_sol = high_resolution_clock::now();
-  RainshaftSolution solution = intg->integrate(t0, final_time, sol_start.states.back());
+  RainshaftSolution solution = intg->integrate(0, final_time, initial_state);
   auto after_sol = high_resolution_clock::now();
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;

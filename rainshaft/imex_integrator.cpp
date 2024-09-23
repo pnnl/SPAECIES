@@ -1,34 +1,26 @@
 #include "imex_integrator.hpp"
 #include "arkode/arkode_arkstep.h"
 #include "nvector/nvector_serial.h"
-#include "sunlinsol/sunlinsol_spbcgs.h"
-#include "sunlinsol/sunlinsol_sptfqmr.h"
-#include "sunlinsol/sunlinsol_dense.h"
 #include "sunmatrix/sunmatrix_dense.h"
 #include "sunlinsol/sunlinsol_lapackdense.h"
-#include "sunlinsol/sunlinsol_band.h"
-#include "sunmatrix/sunmatrix_band.h"
-#include "sunlinsol/sunlinsol_lapackband.h"
-#include "sunlinsol/sunlinsol_spgmr.h"
-
-#include <iostream>
 
 IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
-                                       const RainshaftGrid &grid,
-                                       const RainshaftProcess *const process_exp,
-                                       const RainshaftProcess *const process_imp,
-                                       const double dt,
-                                       const int order,
-                                       const int steps_per_output)
+                               const RainshaftGrid &grid,
+                               const RainshaftProcess *const process_exp,
+                               const RainshaftProcess *const process_imp,
+                               const double dt,
+                               const int order,
+                               const int steps_per_output,
+                               const std::optional<std::string> jacobian_file)
     : SundialsIntegrator(constants, grid, {process_exp, process_imp}, steps_per_output),
-      dt(dt), order(order)
+      dt(dt), order(order), jacobian_file(jacobian_file)
 {
 }
 
 // SPS: Need to generalize this to get output states at arbitary times.
 RainshaftSolution IMEXIntegrator::integrate(double initial_time,
-                                                double final_time,
-                                                const RainshaftState &initial_state) const
+                                            double final_time,
+                                            const RainshaftState &initial_state) const
 {
   auto y = state_to_n_vector(sun_ctxt, initial_state);
   void *arkode_mem = ARKStepCreate(create_f<0>(), create_f<1>(), initial_time, y, sun_ctxt);
@@ -38,38 +30,16 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   ARKodeSetMaxNumSteps(arkode_mem, -1); // Set no limit on the number of steps
   ARKodeSetStopTime(arkode_mem, final_time);
 
-  // SUNLinearSolver LS = SUNLinSol_SPTFQMR(y, SUN_PREC_NONE, 40, sun_ctxt);
-  // ARKodeSetLinearSolver(arkode_mem, LS, nullptr);
-  // ARKodeSetJacTimes(arkode_mem, nullptr, create_jac_prod<1>());
-
-  // SUNLinearSolver LS = SUNLinSol_SPGMR(y, SUN_PREC_NONE, 40, sun_ctxt);
-  // ARKodeSetLinearSolver(arkode_mem, LS, nullptr);
-  // ARKodeSetJacTimes(arkode_mem, nullptr, create_jac_prod<1>());
-
-  // SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
-  // SUNLinearSolver LS = SUNLinSol_Dense(y, jac, sun_ctxt);
-  // ARKodeSetLinearSolver(arkode_mem, LS, jac);
-  // ARKodeSetJacFn(arkode_mem, create_jac<1>());
-
   SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
   SUNLinearSolver LS = SUNLinSol_LapackDense(y, jac, sun_ctxt);
   ARKodeSetLinearSolver(arkode_mem, LS, jac);
   ARKodeSetJacFn(arkode_mem, create_jac<1>());
 
-  // SUNMatrix jac = SUNBandMatrix(N_VGetLength(y), 0, 1, sun_ctxt);
-  // SUNLinearSolver LS = SUNLinSol_Band(y, jac, sun_ctxt);
-  // ARKodeSetLinearSolver(arkode_mem, LS, jac);
-  // ARKodeSetJacFn(arkode_mem, create_jac<1>());
-
-  // SUNMatrix jac = SUNBandMatrix(N_VGetLength(y), 0, 1, sun_ctxt);
-  // SUNLinearSolver LS = SUNLinSol_LapackBand(y, jac, sun_ctxt);
-  // ARKodeSetLinearSolver(arkode_mem, LS, jac);
-  // ARKodeSetJacFn(arkode_mem, create_jac<1>());
-
-  ARKodeSetMaxNonlinIters(arkode_mem, 1000);
-  // ARKodeSetNonlinConvCoef(arkode_mem, SUN_RCONST(1.e-4));
-  // ARKodeSetSafetyFactor(arkode_mem, 0.8);
-
+  auto controller = SUNAdaptController_I(sun_ctxt);
+  ARKodeSetAdaptController(arkode_mem, controller);
+  // Use no bias and instead rely on a safety factor. Shampine uses these values in the MATLAB ODE suite
+  SUNAdaptController_SetErrorBias(controller, 1);
+  ARKodeSetSafetyFactor(arkode_mem, 0.9);
   // ARKODE currently approximates the optimal step size with (err)^(-1/(embedded order)), but it's more common to use
   // (err)^(-1/(min(embedded order, order) + 1)). This adjusts the exponent to use the latter.
   ARKodeSetAdaptivityAdjustment(arkode_mem, 0);
@@ -108,16 +78,33 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
         ARKStepGetNumRhsEvals(arkode_mem, &nfe, &nfi);
         return nfe + nfi;
       },
+      [&]()
+      {
+        if (!jacobian_file.has_value())
+        {
+          return;
+        }
+        SUNMatrix mat = nullptr;
+        ARKodeGetJac(arkode_mem, &mat);
+        if (mat == nullptr) {
+          return;
+        }
+        
+        long int steps = 0;
+        ARKodeGetNumSteps(arkode_mem, &steps);
+        const auto filename = jacobian_file.value() + "." + std::to_string(steps);
+        const auto file = fopen(filename.c_str(), "w");
+        SUNDenseMatrix_Print(mat, file);
+        fclose(file);
+      },
       arkode_mem,
       final_time,
       y,
       ARK_NORMAL,
       ARK_ONE_STEP);
 
-  // N_VPrint(y);
-  // ARKodePrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
-
   N_VDestroy(y);
+  SUNAdaptController_Destroy(controller);
   // SPS: Make RAII wrapper for this.
   ARKodeFree(&arkode_mem);
   SUNMatDestroy(jac);
