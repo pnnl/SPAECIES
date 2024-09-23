@@ -2,7 +2,7 @@
 #include <cmath>
 #include <algorithm>
 
-ValGrad<1> LookupLinear::lookup_value(double x) const {
+RealGrad<1> LookupLinear::lookup_value(double x) const {
   // Binary search to find first bound > x
   auto itr = std::upper_bound(range_bounds.cbegin(), range_bounds.cend(), x);
 

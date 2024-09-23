@@ -17,7 +17,7 @@ public:
 
   // Saturation vapor pressure over liquid at a given temperature.
   template <bool WithGrad = false>
-  Val<WithGrad, 1> svp_liquid(const double temperature) const {
+  RealOptGrad<WithGrad, 1> svp_liquid(const double temperature) const {
     const auto log_t = std::log(temperature);
     const auto recip_t = 1. / temperature;
     const auto tanh_fac = std::tanh(0.0415 * (temperature - 218.8));
@@ -42,7 +42,7 @@ public:
   // Saturation specific humidity (over mass of dry air) as a function of
   // temperature and dry pressure.
   template <bool WithGrad = false>
-  Val<WithGrad, 1> q_sat_dry(const double temperature, const double pressure_dry) const {
+  RealOptGrad<WithGrad, 1> q_sat_dry(const double temperature, const double pressure_dry) const {
     const auto esl = svp_liquid<WithGrad>(temperature);
     const auto fac = epsilon_h2o / pressure_dry;
     const auto qds = fac * get_val(esl);

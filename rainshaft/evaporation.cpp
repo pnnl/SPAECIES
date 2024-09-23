@@ -11,7 +11,7 @@ std::optional<LookupLinear> Evaporation::create_lookup(const RainshaftConstants 
     return std::make_optional<LookupLinear>(
       std::vector{5., 195., 8595.},
       std::vector{1., 1.},
-      [=] (const double x) {
+      [=] (const auto x) {
         return calc_v_evap(constants, 1.e6 / x, use_numerical_integration);
       });
   } else {

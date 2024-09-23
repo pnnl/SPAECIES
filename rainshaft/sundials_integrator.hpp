@@ -14,6 +14,8 @@
 #include "rainshaft_solution.hpp"
 #include "rainshaft_types.hpp"
 
+static_assert(std::is_same_v<sunrealtype, double>, "sunrealtype must be double");
+
 template <int PARTITIONS>
 class SundialsIntegrator : public RainshaftIntegrator
 {

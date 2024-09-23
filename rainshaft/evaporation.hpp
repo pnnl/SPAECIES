@@ -13,7 +13,7 @@ class Evaporation : public RainshaftProcess
 {
 private:
   template <bool WithGrad = false>
-  Val<WithGrad, 1> calc_diffusivity(const double t, const double p) const {
+  RealOptGrad<WithGrad, 1> calc_diffusivity(const double t, const double p) const {
     const auto fac = 8.794e-5 / p;
     const auto diffusivity = fac * pow(t, 1.81);
 
@@ -26,7 +26,7 @@ private:
   }
 
   template <bool WithGrad = false>
-  Val<WithGrad, 1> calc_dynamic_viscosity(const double t) const {
+  RealOptGrad<WithGrad, 1> calc_dynamic_viscosity(const double t) const {
     const auto fac = 1.496e-6 / (t + 120.);
     const auto viscosity = fac * pow(t, 1.5);
 
@@ -42,7 +42,7 @@ private:
   }
 
   template <bool WithGrad = false>
-  Val<WithGrad, 2> calc_visc_over_rho(const double t, const Val<WithGrad, 2> rho_dry) const {
+  RealOptGrad<WithGrad, 2> calc_visc_over_rho(const double t, const RealOptGrad<WithGrad, 2> rho_dry) const {
     const auto visc = calc_dynamic_viscosity<WithGrad>(t);
     const auto visc_over_rho = get_val(visc) / get_val(rho_dry);
 
@@ -61,7 +61,7 @@ private:
   }
 
   template <bool WithGrad = false>
-  Val<WithGrad, 2> calc_schmidt_num(const Val<WithGrad, 1> diffusivity, const Val<WithGrad, 2> visc_over_rho) const {
+  RealOptGrad<WithGrad, 2> calc_schmidt_num(const RealOptGrad<WithGrad, 1> diffusivity, const RealOptGrad<WithGrad, 2> visc_over_rho) const {
     const auto schmidt_num = get_val(visc_over_rho) / get_val(diffusivity);
 
     if constexpr (WithGrad) {
@@ -79,7 +79,7 @@ private:
   }
 
   template <bool WithGrad = false>
-  Val<WithGrad, 1> calc_abl(const RainshaftConstants &constants, const double t, const Val<WithGrad, 1> q_sat_dry) const {
+  RealOptGrad<WithGrad, 1> calc_abl(const RainshaftConstants &constants, const double t, const RealOptGrad<WithGrad, 1> q_sat_dry) const {
     const auto fac = 1.0 / (constants.cp * constants.rvapor);
     const auto l_over_t_2 = pow(constants.latvap / t, 2);
     const auto abl = 1. + fac * l_over_t_2 * get_val(q_sat_dry);
@@ -94,14 +94,14 @@ private:
   }
 
   template <bool WithGrad = false>
-  Val<WithGrad, 4> calc_tau_inv(const RainshaftConstants &constants,
+  RealOptGrad<WithGrad, 4> calc_tau_inv(const RainshaftConstants &constants,
                             const double nr,
-                            const Val<WithGrad, 1> diffusivity,
-                            const Val<WithGrad, 2> rho_dry,
-                            const Val<WithGrad, 2> visc_over_rho,
-                            const Val<WithGrad, 2> schmidt_num,
-                            const Val<WithGrad, 1> v_evap,
-                            const Val<WithGrad, 2> lambdar) const {
+                            const RealOptGrad<WithGrad, 1> diffusivity,
+                            const RealOptGrad<WithGrad, 2> rho_dry,
+                            const RealOptGrad<WithGrad, 2> visc_over_rho,
+                            const RealOptGrad<WithGrad, 2> schmidt_num,
+                            const RealOptGrad<WithGrad, 1> v_evap,
+                            const RealOptGrad<WithGrad, 2> lambdar) const {
     const auto two_pi = 2 * constants.pi;
     const auto two_pi_nr = two_pi * nr;
     const auto rho_diffusivity = get_val(rho_dry) * get_val(diffusivity);
@@ -145,7 +145,7 @@ private:
   }
 
   template <bool WithGrad = false>
-  Val<WithGrad, 4> calc_q_evap(const double q, const Val<WithGrad, 1> q_sat_dry, const Val<WithGrad, 1> abl, const Val<WithGrad, 4> tau_inv) const {
+  RealOptGrad<WithGrad, 4> calc_q_evap(const double q, const RealOptGrad<WithGrad, 1> q_sat_dry, const RealOptGrad<WithGrad, 1> abl, const RealOptGrad<WithGrad, 4> tau_inv) const {
     const auto q_diff = get_val(q_sat_dry) - q;
     const auto q_evap_num = q_diff * get_val(tau_inv);
     const auto q_evap = q_evap_num / get_val(abl);
@@ -166,7 +166,7 @@ private:
   }
 
   template <bool WithGrad = false>
-  Val<WithGrad, 4> calc_n_evap(const double nr, const double qr, const Val<WithGrad, 4> q_evap) const
+  RealOptGrad<WithGrad, 4> calc_n_evap(const double nr, const double qr, const RealOptGrad<WithGrad, 4> q_evap) const
   {
     const auto qr_over_nr = nr / qr;
     const auto n_evap = qr_over_nr * get_val(q_evap);
@@ -185,7 +185,7 @@ private:
   }
 
   template <bool WithGrad = false>
-  Val<WithGrad, 4> calc_T_tend(const RainshaftConstants &constants, const Val<WithGrad, 4> q_evap) const
+  RealOptGrad<WithGrad, 4> calc_T_tend(const RainshaftConstants &constants, const RealOptGrad<WithGrad, 4> q_evap) const
   {
     const auto fac = -constants.latvap / constants.cp;
     const auto t_tend = fac * get_val(q_evap);
@@ -232,7 +232,7 @@ public:
 
   // Calculate characteristic velocity used for velocity calculation.
   template <bool WithGrad = false>
-  Val<WithGrad, 1> calc_v_evap(const RainshaftConstants &constants, double lambdar) const
+  RealOptGrad<WithGrad, 1> calc_v_evap(const RainshaftConstants &constants, double lambdar) const
   {
     if (v_table.has_value())
     {
@@ -267,7 +267,7 @@ private:
                                       const bool use_numerical_integration);
 
   template <bool WithGrad = false>
-  static Val<WithGrad, 1> calc_v_evap(const RainshaftConstants &constants, const double lambdar, const bool use_numerical_integration)
+  static RealOptGrad<WithGrad, 1> calc_v_evap(const RainshaftConstants &constants, const double lambdar, const bool use_numerical_integration)
   {
     if (use_numerical_integration) {
       return calc_v_evap_numerical<WithGrad>(constants, lambdar);
@@ -280,7 +280,7 @@ private:
   // This version ignores the lookup table, if present, and always just
   // calculates using incomplete gamma functions.
   template <bool WithGrad = false>
-  static Val<WithGrad, 1> calc_v_evap_gamma(const RainshaftConstants &constants, const double lambdar)
+  static RealOptGrad<WithGrad, 1> calc_v_evap_gamma(const RainshaftConstants &constants, const double lambdar)
   {
     // Skip function when no rain present.
     if (lambdar == 0.)
@@ -329,13 +329,13 @@ private:
 
   // Calculate characteristic velocity (v_evap) using Riemann sum over midpoints
   template <bool WithGrad = false>
-  static Val<WithGrad, 1> calc_v_evap_numerical(const RainshaftConstants &constants, const double lambdar)
+  static RealOptGrad<WithGrad, 1> calc_v_evap_numerical(const RainshaftConstants &constants, const double lambdar)
   {
     constexpr auto dd = 2.; // micron
     constexpr std::size_t low_k = 1;
     constexpr std::size_t high_k = 10000;
     const auto amg_fac = 1000. * constants.pi * constants.rhow / 6.;
-    Val<WithGrad, 1> accum{};
+    RealOptGrad<WithGrad, 1> accum{};
     for (std::size_t kk = low_k; kk != high_k + 1; ++kk) {
       const auto dia_micron = (kk - 0.5) * dd;
       const auto dia = dia_micron * 1.e-6;

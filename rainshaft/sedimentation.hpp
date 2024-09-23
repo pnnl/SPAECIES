@@ -18,13 +18,13 @@ private:
                                       const bool use_numerical_integration);
 
   template<bool WithGrad = false>
-  Val<WithGrad, 8> calc_nr_tend(const Val<WithGrad, 2> dz,
+  RealOptGrad<WithGrad, 8> calc_nr_tend(const RealOptGrad<WithGrad, 2> dz,
                                 const double nr,
                                 const double nr_prev,
-                                const Val<WithGrad, 2> rho,
-                                const Val<WithGrad, 2> rho_prev,
-                                const Val<WithGrad, 4> v0,
-                                const Val<WithGrad, 4> v0_prev) const
+                                const RealOptGrad<WithGrad, 2> rho,
+                                const RealOptGrad<WithGrad, 2> rho_prev,
+                                const RealOptGrad<WithGrad, 4> v0,
+                                const RealOptGrad<WithGrad, 4> v0_prev) const
   {
     const auto nr_flux_prev = get_val(v0_prev) * nr_prev * get_val(rho_prev);
     const auto nr_flux = get_val(v0) * nr * get_val(rho);
@@ -62,13 +62,13 @@ private:
 
 
   template<bool WithGrad = false>
-  Val<WithGrad, 8> calc_qr_tend(const Val<WithGrad, 2> dz,
+  RealOptGrad<WithGrad, 8> calc_qr_tend(const RealOptGrad<WithGrad, 2> dz,
                                 const double qr,
                                 const double qr_prev,
-                                const Val<WithGrad, 2> rho,
-                                const Val<WithGrad, 2> rho_prev,
-                                const Val<WithGrad, 4> v3,
-                                const Val<WithGrad, 4> v3_prev) const
+                                const RealOptGrad<WithGrad, 2> rho,
+                                const RealOptGrad<WithGrad, 2> rho_prev,
+                                const RealOptGrad<WithGrad, 4> v3,
+                                const RealOptGrad<WithGrad, 4> v3_prev) const
   {
     const auto qr_flux_prev = get_val(v3_prev) * qr_prev * get_val(rho_prev);
     const auto qr_flux = get_val(v3) * qr * get_val(rho);
@@ -106,7 +106,7 @@ private:
 
 public:
   template<bool WithGrad = false, int I = 4>
-  using Speeds = std::tuple<Val<WithGrad, I>, Val<WithGrad, I>>;
+  using Speeds = std::tuple<RealOptGrad<WithGrad, I>, RealOptGrad<WithGrad, I>>;
 
   // Constructor allowing use of lookup table.
   Sedimentation(const RainshaftConstants& constants, bool use_v_table,
@@ -136,8 +136,8 @@ public:
   // and their derivatives wrt (T, q, nr, qr)?
   template <bool WithGrad = false>
   Speeds<WithGrad, 4> rain_fall_speeds(const RainshaftConstants &constants, 
-                                           Val<WithGrad, 2> rho, 
-                                           Val<WithGrad, 2> lambdar) const
+                                           RealOptGrad<WithGrad, 2> rho, 
+                                           RealOptGrad<WithGrad, 2> lambdar) const
   {
     // Calculate correction for air density, with reference state at 1000 hPa and 273.15 K.
     const auto rf = rho_fac<WithGrad>(constants, rho);
@@ -291,8 +291,8 @@ private:
     constexpr std::size_t low_k = 1;
     constexpr std::size_t high_k = 10000;
     const auto amg_fac = 1000. * constants.pi * constants.rhow / 6.;
-    Val<WithGrad, 1> accum0{};
-    Val<WithGrad, 1> accum3{};
+    RealOptGrad<WithGrad, 1> accum0{};
+    RealOptGrad<WithGrad, 1> accum3{};
     for (std::size_t kk = low_k; kk != high_k + 1; ++kk) {
       const auto dia_micron = (kk - 0.5) * dd;
       const auto dia = dia_micron * 1.e-6;
@@ -340,8 +340,8 @@ private:
 
 
   template <bool WithGrad = false>
-  static Val<WithGrad, 2> rho_fac(const RainshaftConstants &constants, 
-                                  Val<WithGrad, 2> rho_dry)
+  static RealOptGrad<WithGrad, 2> rho_fac(const RainshaftConstants &constants, 
+                                  RealOptGrad<WithGrad, 2> rho_dry)
   {
     const auto rf = pow(1.e5 / (get_val(rho_dry) * constants.rdry * 273.15), 0.54);
     if constexpr (WithGrad) {

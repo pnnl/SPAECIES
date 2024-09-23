@@ -19,7 +19,7 @@ public:
   {}
 
   // Look up a table value.
-  ValGrad<1> lookup_value(double x) const;
+  RealGrad<1> lookup_value(double x) const;
 
 private:
   using Table = std::vector<std::vector<double>>;

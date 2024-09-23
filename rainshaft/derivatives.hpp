@@ -8,10 +8,10 @@ template <std::size_t I>
 using Grad = std::array<double, I>;
 
 template <std::size_t I>
-using ValGrad = std::tuple<double, Grad<I>>;
+using RealGrad = std::tuple<double, Grad<I>>;
 
 template <bool WithGrad, std::size_t I>
-using Val = std::conditional_t<WithGrad, ValGrad<I>, double>;
+using RealOptGrad = std::conditional_t<WithGrad, RealGrad<I>, double>;
 
 constexpr double get_val(const double &v) noexcept {
   return v;
@@ -22,22 +22,22 @@ constexpr double &get_val(double &v) noexcept {
 }
 
 template <std::size_t I>
-constexpr double get_val(const ValGrad<I> &v) noexcept {
+constexpr double get_val(const RealGrad<I> &v) noexcept {
   return std::get<0>(v);
 }
 
 template <std::size_t I>
-constexpr double &get_val(ValGrad<I> &v) noexcept {
+constexpr double &get_val(RealGrad<I> &v) noexcept {
   return std::get<0>(v);
 }
 
 template <std::size_t I>
-constexpr Grad<I> get_grad(const ValGrad<I> &v) noexcept {
+constexpr Grad<I> get_grad(const RealGrad<I> &v) noexcept {
   return std::get<1>(v);
 }
 
 template <std::size_t I>
-constexpr Grad<I> &get_grad(ValGrad<I> &v) noexcept {
+constexpr Grad<I> &get_grad(RealGrad<I> &v) noexcept {
   return std::get<1>(v);
 }
 

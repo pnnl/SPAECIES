@@ -83,7 +83,7 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
   auto [v0_prev, v3_prev] = rain_fall_speeds<true>(constants, {constants.rho_top, {0., 0.}}, {lambdar_top, {0., 0.}});
   auto nr_prev = constants.nr_top;
   auto qr_prev = constants.qr_top;
-  Val<true, 2> rho_prev = {constants.rho_top, {0., 0.}};
+  RealOptGrad<true, 2> rho_prev{constants.rho_top, {0., 0.}};
 
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");

@@ -27,7 +27,7 @@ public:
   const std::vector<double> lambdar;
 
   template <bool WithGrad=false>
-  Val<WithGrad, 2> get_lambdar(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
+  RealOptGrad<WithGrad, 2> get_lambdar(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
     VarConst nr = state.get_variable("nr");
     VarConst qr = state.get_variable("qr");
     const auto lam = lambdar[i];
@@ -43,7 +43,7 @@ public:
   }
 
   template <bool WithGrad=false>
-  Val<WithGrad, 2> get_rho_dry(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
+  RealOptGrad<WithGrad, 2> get_rho_dry(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
     VarConst t = state.get_variable("T");
     VarConst q = state.get_variable("q");
     const auto rho = rho_dry[i];
@@ -59,7 +59,7 @@ public:
   }
 
   template <bool WithGrad=false>
-  Val<WithGrad, 2> get_dz(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
+  RealOptGrad<WithGrad, 2> get_dz(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
     VarConst t = state.get_variable("T");
     VarConst q = state.get_variable("q");
     const auto dz_i = dz[i];

@@ -13,7 +13,7 @@ private:
   // breakup (breakup_fac < 1).
   // Should not be called if nr is near 0.
   template<bool WithGrad = false>
-  Val<WithGrad, 2> breakup_fac(const RainshaftConstants& constants,
+  RealOptGrad<WithGrad, 2> breakup_fac(const RainshaftConstants& constants,
                      const double nr, const double qr) const
   {
     const auto mean_mass_diam = std::cbrt(qr / (constants.pi * constants.rhow * nr));
@@ -39,10 +39,10 @@ private:
   }
 
   template<bool WithGrad = false>
-  Val<WithGrad, 4> calc_nr_tend(const double nr,
+  RealOptGrad<WithGrad, 4> calc_nr_tend(const double nr,
                                 const double qr,
-                                const Val<WithGrad, 2> breakup,
-                                const Val<WithGrad, 2> rho_dry) const
+                                const RealOptGrad<WithGrad, 2> breakup,
+                                const RealOptGrad<WithGrad, 2> rho_dry) const
   {
     const auto nr_tend_fac =  -5.78 * get_val(breakup) * nr * qr;
     const auto nr_tend = nr_tend_fac * get_val(rho_dry);
