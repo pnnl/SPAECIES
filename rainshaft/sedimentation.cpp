@@ -1,7 +1,6 @@
 #include "sedimentation.hpp"
 #include <cstddef>
 #include <cmath>
-#include <stdexcept>
 #include <boost/math/special_functions/gamma.hpp>
 using boost::math::tgamma, boost::math::tgamma_lower;
 using std::pow, std::sqrt, std::cbrt, std::exp;

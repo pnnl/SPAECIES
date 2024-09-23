@@ -46,11 +46,11 @@ int main(int argc, char* argv[])
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
-  double dt = 15;
+  double dt = 1.e-3;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
-  double final_time = 30. + 1e-6;
+  double final_time = 1800.;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
   auto nlev = grid.nlev;
@@ -104,7 +104,7 @@ int main(int argc, char* argv[])
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(constants, sat_form, false, true);
+  Evaporation evap(constants, sat_form, false, false);
   // Nudging to initial condition.
   Nudging nudge(nudge_time_scale, t, q);
   // Sum of all processes.
@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
 
 
   auto before_sol = high_resolution_clock::now();
-  RainshaftSolution solution = intg->integrate(0, final_time, initial_state);
+  RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state);
   auto after_sol = high_resolution_clock::now();
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
