@@ -69,30 +69,7 @@ void Sedimentation::calc_tend_jac_prod(const RainshaftConstants &constants,
                                        const double *const vec,
                                        double *const prod) const
 {
-  const auto lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
-  const auto [speeds_top0, speeds_top3] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
-
-  // Boundary condition
-  prod[3 * grid.nlev] += vec[3 * grid.nlev] * speeds_top3 * constants.qr_top * constants.rho_top * constants.rdry * state.t[0] / (dvars.dz[0] * grid.p_mid[0] * constants.epsilon_h2o);
-
-  for (std::size_t il = 0; il != grid.nlev; ++il)
-  {
-    const auto [speeds0, speeds3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
-
-    const auto i_nr = il + 2 * grid.nlev;
-    prod[i_nr] -= vec[i_nr] * speeds0 / dvars.dz[il];
-    if (il + 1 < grid.nlev)
-    {
-      prod[i_nr + 1] += vec[i_nr] * speeds0 * dvars.rho_dry[il] / (dvars.dz[il + 1] * dvars.rho_dry[il + 1]);
-    }
-
-    const auto i_qr = i_nr + grid.nlev;
-    prod[i_qr] -= vec[i_qr] * speeds3 / dvars.dz[il];
-    if (il + 1 < grid.nlev)
-    {
-      prod[i_qr + 1] += vec[i_qr] * speeds3 * dvars.rho_dry[il] / (dvars.dz[il + 1] * dvars.rho_dry[il + 1]);
-    }
-  }
+  throw std::logic_error("Jacobian product not implemented");
 }
 
 void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
