@@ -6,10 +6,12 @@
 ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants &constants,
                                        const RainshaftGrid &grid,
                                        const RainshaftProcess *const process,
+                                       const VarDescList& state_descs,
+                                       const VarDescList& tend_descs,
                                        const double dt,
                                        const int order,
                                        const int steps_per_output)
-    : SundialsIntegrator(constants, grid, {process}, steps_per_output),
+    : SundialsIntegrator(constants, grid, {process}, state_descs, tend_descs, steps_per_output),
       dt(dt), order(order)
 {
 }
@@ -17,10 +19,10 @@ ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants &constants,
 // SPS: Need to generalize this to get output states at arbitary times.
 RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
                                                 double final_time,
-                                                const RainshaftState &initial_state) const
+                                                const StateConst& initial_state) const
 {
-  auto y = state_to_n_vector(sun_ctxt, initial_state);
-  void *arkode_mem = ERKStepCreate(create_f<0>(), initial_time, y, sun_ctxt);
+  N_Vector y0 = state_to_y0(sun_ctxt, initial_state);
+  void *arkode_mem = ERKStepCreate(create_f<0>(), initial_time, y0, sun_ctxt);
   ARKodeSetUserData(arkode_mem, (void *)&user_data);
   ARKodeSetFixedStep(arkode_mem, dt);
   ARKodeSetOrder(arkode_mem, order);
@@ -39,9 +41,9 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
 
   const sunrealtype fac = 1.;
   const sunrealtype reltol = fac * 1.e-2;
-  auto abstol = N_VClone(y);
+  auto abstol = N_VClone(y0);
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
-  const auto nz = initial_state.t.size();
+  const auto nz = user_data.grid.nlev;
   for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[j] = fac * 1.e-1;
@@ -72,11 +74,11 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
       []() {},
       arkode_mem,
       final_time,
-      y,
+      y0,
       ARK_NORMAL,
       ARK_ONE_STEP);
 
-  N_VDestroy(y);
+  N_VDestroy(y0);
   SUNAdaptController_Destroy(controller);
   // SPS: Make RAII wrapper for this.
   ARKodeFree(&arkode_mem);

@@ -1,12 +1,12 @@
 #ifndef EVAPORATION_HPP
 #define EVAPORATION_HPP
-#include <vector>
 #include <optional>
 #include <boost/math/special_functions/gamma.hpp>
 using boost::math::tgamma, boost::math::tgamma_lower;
 
 #include "lookup_linear.hpp"
 #include "rainshaft_process.hpp"
+#include "rainshaft_types.hpp"
 #include "saturation.hpp"
 
 class Evaporation : public RainshaftProcess
@@ -211,21 +211,22 @@ public:
               bool use_numerical_integration);
 
   // Calculate tendency from current state.
-  RainshaftTendency calc_tend(const RainshaftConstants &constants,
+  void calc_tend(const RainshaftConstants &constants,
                               const RainshaftGrid &grid,
-                              const RainshaftState &state,
-                              const RainshaftDerivedVars &dvars) const;
+                              const StateConst& state,
+                              const RainshaftDerivedVars &dvars,
+                              const Tendency& tend) const;
 
   void calc_tend_jac_prod(const RainshaftConstants &constants,
                           const RainshaftGrid &grid,
-                          const RainshaftState &state,
+                          const StateConst& state,
                           const RainshaftDerivedVars &dvars,
                           const double *const vec,
                           double *const prod) const;
 
   void calc_tend_jac(const RainshaftConstants &constants,
                              const RainshaftGrid &grid,
-                             const RainshaftState &state,
+                             const StateConst& state,
                              const RainshaftDerivedVars &dvars,
                              Matrix jac) const;
 

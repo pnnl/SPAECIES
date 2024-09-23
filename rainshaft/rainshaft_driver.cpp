@@ -2,13 +2,11 @@
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
 #include "fixed_substep_integrator.hpp"
-// #include "forward_euler_integrator.hpp"
 #include "nudging.hpp"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
-#include "rainshaft_state.hpp"
-#include "rainshaft_tendency.hpp"
 #include "rainshaft_solution.hpp"
+#include "rainshaft_tend_descs.hpp"
 #include "rainshaft_ncio.hpp"
 #include "rainshaft_sum_process.hpp"
 #include "saturation.hpp"
@@ -46,18 +44,35 @@ int main(int argc, char* argv[])
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
   // Time step size in seconds.
-  double dt = 1.e-3;
+  double dt = 1.;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
   double final_time = 1800.;
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
-  auto nlev = grid.nlev;
+  std::size_t nlev = grid.nlev;
   // Set up initial condition.
   SaturationFormulae sat_form(constants);
-  // Initial condition for nr and qr is just 0, and allocate t and q as well.
-  std::vector<double> t(nlev, 0.), q(nlev, 0.), nr(nlev, 0.), qr(nlev, 0.);
+
+  spaecies::Domain dom;
+  spaecies::DimensionPtr lev_dim = dom.add_dimension("level", nlev);
+  spaecies::VarDescPtr t_desc = dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K");
+  spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
+  spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
+  spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
+  VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc};
+  VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
+  State initial_state(state_descs);
+  VarMut t = initial_state.get_variable("T");
+  VarMut q = initial_state.get_variable("q");
+  VarMut nr = initial_state.get_variable("nr");
+  VarMut qr = initial_state.get_variable("qr");
+  for (std::size_t i = 0; i != nlev; ++i) {
+    nr[i] = 0.;
+    qr[i] = 0.;
+  }
+
   // Coming up with an initial condition for t and q is slightly tricky, because
   // we only have an implicit relationship between t, q, and dz. But since the
   // effect of q on layer height is not large, start by ignoring it, in which
@@ -97,16 +112,22 @@ int main(int argc, char* argv[])
     std::cerr << "Initial condition iteration failed to converge." << std::endl;
     return 1;
   }
-  RainshaftState initial_state(t, q, nr, qr);
   RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
   // Sedimentation process.
-  Sedimentation sed(constants, false, false);
+  Sedimentation sed(constants, true, false);
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(constants, sat_form, false, false);
+  Evaporation evap(constants, sat_form, true, false);
   // Nudging to initial condition.
-  Nudging nudge(nudge_time_scale, t, q);
+  // SPS: Need some kind of span-like interface to avoid having to
+  // do this copy.
+  std::vector<double> t_vec, q_vec;
+  for (std::size_t i = 0; i != nlev; ++i) {
+    t_vec.push_back(t[i]);
+    q_vec.push_back(q[i]);
+  }
+  Nudging nudge(nudge_time_scale, t_vec, q_vec);
   // Sum of all processes.
   SumProcess exp_processes = SumProcess{{&nudge, &self_coll, &evap}};
   // Sum of local processes.
@@ -117,12 +138,12 @@ int main(int argc, char* argv[])
   RainshaftIntegrator *intg = nullptr;
   auto name = std::string(argv[1]);
   if (name == "ex") {
-    intg = new ExplicitIntegrator(constants, grid, &all_processes, std::stod(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]));
+    intg = new ExplicitIntegrator(constants, grid, &all_processes, state_descs, tend_descs, std::stod(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]));
   } else if (name == "imex") {
     std::optional<std::string> jacobian_file = argc > 5 ? std::optional(argv[5]) : std::nullopt;
-    intg = new IMEXIntegrator(constants, grid, &exp_processes, &imp_processes, std::stod(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]), jacobian_file);
+    intg = new IMEXIntegrator(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, std::stod(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]), jacobian_file);
   } else if (name == "mri") {
-    intg = new MRIIntegrator(constants, grid, &imp_processes, &exp_processes, nullptr, std::stod(argv[2]), std::stod(argv[3]), std::stoi(argv[4]), std::stoi(argv[5]));
+    intg = new MRIIntegrator(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, std::stod(argv[2]), std::stod(argv[3]), std::stoi(argv[4]), std::stoi(argv[5]));
   } else {
     throw std::logic_error("Invalid name");
   }
@@ -135,10 +156,15 @@ int main(int argc, char* argv[])
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   std::cout << "Time: " << walltime_ms.count() << std::endl;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_1ms_no_table.nc");
+  NetcdfWriter writer("./rainshaft_1s_imex_test.nc");
   writer.write_grid(grid);
   writer.write_states(solution.states);
-  writer.write_derived_vars(solution.dvars);
+  std::vector<RainshaftDerivedVars> solution_dvars;
+  solution_dvars.reserve(solution.states.size());
+  for (StateConst state : solution.states) {
+    solution_dvars.emplace_back(constants, grid, state);
+  }
+  writer.write_derived_vars(solution_dvars);
   writer.write_num_rhs_evals(solution.num_rhs_evals);
   writer.write_walltime_ms(walltime_ms.count());
   // Ensure that the library is linked and greet the user.

@@ -1,7 +1,8 @@
 #ifndef RAINSHAFT_INTEGRATOR_HPP
 #define RAINSHAFT_INTEGRATOR_HPP
-#include "rainshaft_state.hpp"
+
 #include "rainshaft_solution.hpp"
+#include "rainshaft_types.hpp"
 
 class RainshaftIntegrator {
 
@@ -9,7 +10,7 @@ public:
 
   virtual RainshaftSolution integrate(double initial_time,
                                       double final_time,
-                                      const RainshaftState& initial_state) const = 0;
+                                      const StateConst& initial_state) const = 0;
 
   virtual ~RainshaftIntegrator() {}
 

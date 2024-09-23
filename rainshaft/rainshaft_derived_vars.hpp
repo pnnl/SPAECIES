@@ -5,7 +5,7 @@
 
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
-#include "rainshaft_state.hpp"
+#include "rainshaft_types.hpp"
 #include "derivatives.hpp"
 
 class RainshaftDerivedVars {
@@ -15,7 +15,7 @@ public:
   // Constructor from state.
   RainshaftDerivedVars(const RainshaftConstants& constants,
                        const RainshaftGrid& grid,
-                       const RainshaftState& state);
+                       const StateConst& state);
 
   // Cell heights (m)
   const std::vector<double> dz;
@@ -27,13 +27,15 @@ public:
   const std::vector<double> lambdar;
 
   template <bool WithGrad=false>
-  Val<WithGrad, 2> get_lambdar(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const {
+  Val<WithGrad, 2> get_lambdar(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
+    VarConst nr = state.get_variable("nr");
+    VarConst qr = state.get_variable("qr");
     const auto lam = lambdar[i];
 
     if constexpr (WithGrad) {
       return {lam, {
-        state.qr[i] >= constants.qsmall ? lam / (3. * state.nr[i]) : 0.0,
-        state.qr[i] >= constants.qsmall ? -lam / (3. * state.qr[i]) : 0.0
+        qr[i] >= constants.qsmall ? lam / (3. * nr[i]) : 0.0,
+        qr[i] >= constants.qsmall ? -lam / (3. * qr[i]) : 0.0
       }};
     } else {
       return lam;
@@ -41,13 +43,15 @@ public:
   }
 
   template <bool WithGrad=false>
-  Val<WithGrad, 2> get_rho_dry(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const {
+  Val<WithGrad, 2> get_rho_dry(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
+    VarConst t = state.get_variable("t");
+    VarConst q = state.get_variable("q");
     const auto rho = rho_dry[i];
 
     if constexpr (WithGrad) {
       return {rho, {
-        -rho / state.t[i],
-        -rho / (constants.epsilon_h2o + state.q[i])
+        -rho / t[i],
+        -rho / (constants.epsilon_h2o + q[i])
       }};
     } else {
       return rho;
@@ -55,14 +59,16 @@ public:
   }
 
   template <bool WithGrad=false>
-  Val<WithGrad, 2> get_dz(const RainshaftConstants& constants, const RainshaftState& state, std::size_t i) const {
+  Val<WithGrad, 2> get_dz(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
+    VarConst t = state.get_variable("t");
+    VarConst q = state.get_variable("q");
     const auto dz_i = dz[i];
 
     if constexpr (WithGrad) {
       const auto factor = 1.0/constants.epsilon_h2o - 1.0;
       return {dz_i, {
-        dz_i / state.t[i],
-        dz_i * factor / (1.0 + factor * state.q[i])
+        dz_i / t[i],
+        dz_i * factor / (1.0 + factor * q[i])
       }};
     } else {
       return dz_i;

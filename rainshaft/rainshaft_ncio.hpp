@@ -8,8 +8,9 @@ extern "C"
 #include "netcdf.h"
 }
 
+#include "spaecies.hpp"
+
 #include "rainshaft_grid.hpp"
-#include "rainshaft_state.hpp"
 #include "rainshaft_derived_vars.hpp"
 
 class NetcdfWriter {
@@ -24,8 +25,8 @@ public:
   // Write RainshaftGrid information to file.
   void write_grid(const RainshaftGrid& grid);
 
-  // Write a series of RainshaftStates to file.
-  void write_states(const std::vector<RainshaftState>& states);
+  // Write a series of States to file.
+  void write_states(const std::vector<StateConst>& arrays);
 
   // Write a series of RainshaftDerivedVars to file.
   void write_derived_vars(const std::vector<RainshaftDerivedVars>& dvars);

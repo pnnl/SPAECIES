@@ -28,32 +28,49 @@ void NetcdfWriter::write_grid(const RainshaftGrid& grid) {
   nc_put_var(ncid, p_midid, grid.p_mid.data());
 }
 
-void NetcdfWriter::write_states(const std::vector<RainshaftState>& states) {
-  int levid, timeid, tid, qid, nrid, qrid;
-  std::size_t nlev = states[0].t.size();
-  std::size_t ntimes = states.size();
+void NetcdfWriter::write_states(const std::vector<StateConst>& arrays) {
+  int levid, timeid;
+  std::size_t nlev = arrays[0].get_variable("T").size();
+  std::size_t ntimes = arrays.size();
   // SPS: Need to check errors from all these as well.
   // SPS: Add variable metadata to all these too.
   // SPS: Error if vertical coordinate not defined?
   // Find the vertical coordinate ids.
   nc_inq_dimid(ncid, "lev", &levid);
-  // Define time dimension.
-  nc_def_dim(ncid, "time", ntimes, &timeid);
-  // Define state variables.
-  int state_dimids[2] = {timeid, levid};
-  nc_def_var(ncid, "T", NC_DOUBLE, 2, state_dimids, &tid);
-  nc_def_var(ncid, "q", NC_DOUBLE, 2, state_dimids, &qid);
-  nc_def_var(ncid, "nr", NC_DOUBLE, 2, state_dimids, &nrid);
-  nc_def_var(ncid, "qr", NC_DOUBLE, 2, state_dimids, &qrid);
+  // SPS: Test this with and without a time dimension already present.
+  int status = nc_inq_dimid(ncid, "time", &timeid);
+  if (status == NC_EBADDIM) {
+    // Define time dimension.
+    nc_def_dim(ncid, "time", ntimes, &timeid);
+  }
+  // Define variables.
+  // SPS: Should be more flexible about dimensions here.
+  int var_dimids[2] = {timeid, levid};
+  std::vector<std::string> varnames;
+  std::vector<int> varids;
+  // SPS: Need to check that all arrays have the same variables, or come up with
+  // a new type for time series of arrays.
+  for (spaecies::VarDescPtr var_desc : arrays[0].var_descs()) {
+    int varid;
+    std::string name = var_desc->name;
+    nc_def_var(ncid, name.c_str(), NC_DOUBLE, 2, var_dimids, &varid);
+    varnames.push_back(name);
+    varids.push_back(varid);
+  }
 
   // Write variables.
   for (std::size_t i = 0; i != ntimes; ++i) {
     std::size_t starts[2] = {i, 0};
     std::size_t counts[2] = {1, nlev};
-    nc_put_vara_double(ncid, tid, starts, counts, states[i].t.data());
-    nc_put_vara_double(ncid, qid, starts, counts, states[i].q.data());
-    nc_put_vara_double(ncid, nrid, starts, counts, states[i].nr.data());
-    nc_put_vara_double(ncid, qrid, starts, counts, states[i].qr.data());
+    for (std::size_t j = 0; j != varids.size(); ++j) {
+      // SPS: Would be more efficient/simple if we could request data using an
+      // integer id from the VariableArrayView, rather than using string lookups.
+      // SPS: Note also the implicit assumption that the variable data is
+      // contiguous.
+      auto var = arrays[i].get_variable(varnames[j]);
+      nc_put_vara_double(ncid, varids[j], starts, counts,
+                         &var[0]);
+    }
   }
 }
 

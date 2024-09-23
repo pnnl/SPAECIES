@@ -8,21 +8,23 @@ IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
                                const RainshaftGrid &grid,
                                const RainshaftProcess *const process_exp,
                                const RainshaftProcess *const process_imp,
+                                       const VarDescList& state_descs,
+                                       const VarDescList& tend_descs,
                                const double dt,
                                const int order,
                                const int steps_per_output,
                                const std::optional<std::string> jacobian_file)
-    : SundialsIntegrator(constants, grid, {process_exp, process_imp}, steps_per_output),
+    : SundialsIntegrator(constants, grid, {process_exp, process_imp}, state_descs, tend_descs, steps_per_output),
       dt(dt), order(order), jacobian_file(jacobian_file)
 {
 }
 
 // SPS: Need to generalize this to get output states at arbitary times.
 RainshaftSolution IMEXIntegrator::integrate(double initial_time,
-                                            double final_time,
-                                            const RainshaftState &initial_state) const
+                                                double final_time,
+                                                const StateConst &initial_state) const
 {
-  auto y = state_to_n_vector(sun_ctxt, initial_state);
+  N_Vector y = state_to_y0(sun_ctxt, initial_state);
   void *arkode_mem = ARKStepCreate(create_f<0>(), create_f<1>(), initial_time, y, sun_ctxt);
   ARKodeSetUserData(arkode_mem, (void *)&user_data);
   ARKodeSetFixedStep(arkode_mem, dt);
@@ -49,7 +51,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   const sunrealtype reltol = fac * 1.e-2;
   auto abstol = N_VClone(y);
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
-  const auto nz = initial_state.t.size();
+  const auto nz = user_data.grid.nlev;
   for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[j] = fac * 1.e-1;
