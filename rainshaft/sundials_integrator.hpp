@@ -164,30 +164,16 @@ protected:
     return RainshaftSolution(std::move(states), countFun());
   }
 
-  // Note (as above) that the N_Vector will not own the data, but rather will have a
-  // non-const pointer to data that should be treated as const.
-  //
-  // There's no way to force SUNDIALS to respect this const-ness, so this is only safe
-  // for cases where we know SUNDIALS won't modify the variables, e.g. for the initial
-  // conditions.
-  static N_Vector state_to_y0(const sundials::Context &sun_ctxt, const StateConst &view)
+  // Create an N_Vector from a StateConst. To preserve const correctness, this
+  // makes a copy of the data.
+  static N_Vector state_to_n_vector(const sundials::Context &sun_ctxt, const StateConst &view)
   {
-    sunindextype num_variables = view.size();
-    N_Vector y = N_VMake_Serial(num_variables, const_cast<double*>(view.data()), sun_ctxt);
+    N_Vector y = N_VNew_Serial(view.size(), sun_ctxt);
+    std::copy_n(view.data(), view.size(), N_VGetArrayPointer(y));
     return y;
   }
 
 private:
-
-  // Note that the N_Vector does not take ownership of the data and will not free it.
-  // The N_Vector must not be permitted to live longer than the view.
-  static N_Vector view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<double> &view)
-  {
-    sunindextype num_variables = view.size();
-    N_Vector y = N_VMake_Serial(num_variables, view.data(), sun_ctxt);
-    return y;
-  }
-
   // The state and tendency conversions below are currently duplicated, but
   // in the future the arguments to the state and tendency constructors will be different...
   // Note that in both cases the N_Vector is treated as the owner of the data, and must
@@ -196,14 +182,12 @@ private:
 
   static State n_vector_to_state(N_Vector y, const VarDescList& var_descs)
   {
-    sunrealtype* ydata = N_VGetArrayPointer(y);
-    return State(var_descs, &ydata[0]);
+    return {var_descs, N_VGetArrayPointer(y)};
   }
 
   static Tendency n_vector_to_tendency(N_Vector y, const VarDescList& var_descs)
   {
-    sunrealtype* ydata = N_VGetArrayPointer(y);
-    return Tendency(var_descs, &ydata[0]);
+    return {var_descs, N_VGetArrayPointer(y)};
   }
 };
 
