@@ -37,8 +37,8 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   ARKodeSetAdaptivityAdjustment(arkode_mem, 0);
   ARKodeSetFixedStepBounds(arkode_mem, 1, 1); // Remove deadzone
 
-  const sunrealtype fac = 1;
-  const sunrealtype reltol = fac * 1.e-14;
+  const sunrealtype fac = 1.;
+  const sunrealtype reltol = fac * 1.e-2;
   auto abstol = N_VClone(y);
   auto tol_data = N_VGetArrayPointer_Serial(abstol);
   const auto nz = initial_state.t.size();
@@ -76,9 +76,6 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
       ARK_NORMAL,
       ARK_ONE_STEP);
 
-  // ERKStepPrintAllStats(arkode_mem, stdout, SUN_OUTPUTFORMAT_TABLE);
-
-  // N_VPrint(y);
   N_VDestroy(y);
   SUNAdaptController_Destroy(controller);
   // SPS: Make RAII wrapper for this.

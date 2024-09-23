@@ -59,9 +59,10 @@ public:
     const auto dz_i = dz[i];
 
     if constexpr (WithGrad) {
+      const auto factor = 1.0/constants.epsilon_h2o - 1.0;
       return {dz_i, {
         dz_i / state.t[i],
-        dz_i * (1.0/constants.epsilon_h2o - 1.0) / (1.0 + (1.0/constants.epsilon_h2o - 1.0) * state.q[i])
+        dz_i * factor / (1.0 + factor * state.q[i])
       }};
     } else {
       return dz_i;
