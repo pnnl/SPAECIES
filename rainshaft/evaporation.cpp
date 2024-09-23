@@ -32,7 +32,7 @@ void Evaporation::calc_tend(const RainshaftConstants& constants,
                             const RainshaftGrid& grid,
                             const StateConst& state,
                             const RainshaftDerivedVars& dvars,
-                            const Tendency& tend) const {
+                            Tendency& tend) const {
   VarConst t = state.get_variable("T");
   VarConst q = state.get_variable("q");
   VarConst nr = state.get_variable("nr");

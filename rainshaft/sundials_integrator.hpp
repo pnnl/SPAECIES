@@ -39,7 +39,7 @@ private:
                                                       state);
     // Zero out ydot so that we don't have to remember to zero every value in calc_tend.
     N_VConst(0., ydot);
-    const Tendency tend = n_vector_to_tendency(ydot, cast_data->tend_descs);
+    Tendency tend = n_vector_to_tendency(ydot, cast_data->tend_descs);
     cast_data->processes[PARTITION]->calc_tend(cast_data->constants,
                                                cast_data->grid,
                                                state, dvars, tend);

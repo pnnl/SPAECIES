@@ -9,7 +9,7 @@ void SumProcess::calc_tend(const RainshaftConstants& constants,
                            const RainshaftGrid& grid,
                            const StateConst& state,
                            const RainshaftDerivedVars& dvars,
-                           const Tendency& tend) const {
+                           Tendency& tend) const {
   double* tend_ptr = tend.data();
   Tendency sub_tend(tend.var_descs());
   double* sub_ptr = sub_tend.data();

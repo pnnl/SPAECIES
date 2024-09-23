@@ -33,7 +33,7 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
                               const RainshaftGrid &grid,
                               const StateConst &state,
                               const RainshaftDerivedVars &dvars,
-                              const Tendency& tend) const
+                              Tendency& tend) const
 {
   const auto lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
   auto [v0_prev, v3_prev] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);

@@ -6,7 +6,7 @@ void SelfCollision::calc_tend(const RainshaftConstants& constants,
                               const RainshaftGrid& grid,
                               const StateConst& state,
                               const RainshaftDerivedVars& dvars,
-                              const Tendency& tend) const {
+                              Tendency& tend) const {
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");
   VarMut nr_tend = tend.get_variable("nr_tend");
