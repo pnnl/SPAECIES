@@ -36,6 +36,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   SUNLinearSolver LS = SUNLinSol_LapackDense(y, jac, sun_ctxt);
   ARKodeSetLinearSolver(arkode_mem, LS, jac);
   ARKodeSetJacFn(arkode_mem, create_jac<1>());
+  ARKodeSetMaxNonlinIters(arkode_mem, 100);
 
   auto controller = SUNAdaptController_I(sun_ctxt);
   ARKodeSetAdaptController(arkode_mem, controller);
