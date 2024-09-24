@@ -32,6 +32,8 @@ void SelfCollision::calc_tend_jac(const RainshaftConstants &constants,
                                   const RainshaftDerivedVars &dvars,
                                   Matrix jac) const
 {
+  VarConst T = state.get_variable("T");
+  VarConst q = state.get_variable("q");
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");
 
@@ -43,7 +45,7 @@ void SelfCollision::calc_tend_jac(const RainshaftConstants &constants,
     const auto i_qr = i_nr + grid.nlev;
 
     const auto breakup = breakup_fac<true>(constants, nr[il], qr[il]);
-    const auto rho_dry = dvars.get_rho_dry<true>(constants, nr[il], qr[il], il);
+    const auto rho_dry = dvars.get_rho_dry<true>(constants, T[il], q[il], il);
     const auto nr_tend = calc_nr_tend<true>(nr[il], qr[il], breakup, rho_dry);
     const auto [nr_tend_T, nr_tend_q, nr_tend_nr, nr_tend_qr] = get_grad(nr_tend);
 
