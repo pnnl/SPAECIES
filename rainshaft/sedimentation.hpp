@@ -144,6 +144,13 @@ public:
 
     if (v0_table.has_value() & v3_table.has_value())
     {
+      // skip computation if no rain is present
+      if (get_val(lambdar) == 0.)
+      {
+        // This returns 0 (and 0 derivative)
+        return {};
+      }
+
       const auto d_micron = 1.e6 / get_val(lambdar);
       const auto v0 = v0_table->lookup_value(d_micron);
       const auto v3 = v3_table->lookup_value(d_micron);
