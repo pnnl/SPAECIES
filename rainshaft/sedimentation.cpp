@@ -50,9 +50,9 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
   {
     const auto [v0, v3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
     
-    nr_tend[il] += calc_nr_tend(dvars.dz[il], nr[il], nr_prev, dvars.rho_dry[il], rho_prev,
+    nr_tend[il] = calc_nr_tend(dvars.dz[il], nr[il], nr_prev, dvars.rho_dry[il], rho_prev,
                                v0, v0_prev);
-    qr_tend[il] += calc_qr_tend(dvars.dz[il], qr[il], qr_prev, dvars.rho_dry[il], rho_prev,
+    qr_tend[il] = calc_qr_tend(dvars.dz[il], qr[il], qr_prev, dvars.rho_dry[il], rho_prev,
                                v3, v3_prev);
 
     v0_prev = v0;
