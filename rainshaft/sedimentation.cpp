@@ -85,14 +85,16 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
   auto qr_prev = constants.qr_top;
   RealOptGrad<true, 2> rho_prev{constants.rho_top, {0., 0.}};
 
+  VarConst t = state.get_variable("T");
+  VarConst q = state.get_variable("q");
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
-    const auto rho = dvars.get_rho_dry<true>(constants, state, il);
-    const auto lambdar = dvars.get_lambdar<true>(constants, state, il);
-    const auto dz = dvars.get_dz<true>(constants, state, il);
+    const auto rho = dvars.get_rho_dry<true>(constants, t[il], q[il], il);
+    const auto lambdar = dvars.get_lambdar<true>(constants, nr[il], qr[il], il);
+    const auto dz = dvars.get_dz<true>(constants, t[il], q[il], il);
     const auto [v0, v3] = rain_fall_speeds<true>(constants, rho, lambdar);
 
     const auto nr_tend = calc_nr_tend<true>(dz, nr[il], nr_prev, rho, rho_prev,

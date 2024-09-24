@@ -129,11 +129,11 @@ int main(int argc, char* argv[])
   }
   Nudging nudge(nudge_time_scale, t_vec, q_vec);
   // Sum of all processes.
-  SumProcess exp_processes = SumProcess{{&nudge, &self_coll, &evap}};
+  SumProcess exp_processes = SumProcess{{&evap, &nudge, &self_coll}};
   // Sum of local processes.
   SumProcess imp_processes = SumProcess{{&sed}};
 
-  SumProcess all_processes = SumProcess{{&sed, &self_coll, &evap, &nudge}};
+  SumProcess all_processes = SumProcess{{&sed, &nudge, &self_coll, &evap}};
 
   RainshaftIntegrator *intg = nullptr;
   auto name = std::string(argv[1]);

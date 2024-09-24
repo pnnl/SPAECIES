@@ -27,15 +27,13 @@ public:
   const std::vector<double> lambdar;
 
   template <bool WithGrad=false>
-  RealOptGrad<WithGrad, 2> get_lambdar(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
-    VarConst nr = state.get_variable("nr");
-    VarConst qr = state.get_variable("qr");
+  RealOptGrad<WithGrad, 2> get_lambdar(const RainshaftConstants& constants, const double nr, const double qr, std::size_t i) const {
     const auto lam = lambdar[i];
 
     if constexpr (WithGrad) {
       return {lam, {
-        qr[i] >= constants.qsmall ? lam / (3. * nr[i]) : 0.0,
-        qr[i] >= constants.qsmall ? -lam / (3. * qr[i]) : 0.0
+        qr >= constants.qsmall ? lam / (3. * nr) : 0.0,
+        qr >= constants.qsmall ? -lam / (3. * qr) : 0.0
       }};
     } else {
       return lam;
@@ -43,15 +41,13 @@ public:
   }
 
   template <bool WithGrad=false>
-  RealOptGrad<WithGrad, 2> get_rho_dry(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
-    VarConst t = state.get_variable("T");
-    VarConst q = state.get_variable("q");
+  RealOptGrad<WithGrad, 2> get_rho_dry(const RainshaftConstants& constants, const double t, const double q, std::size_t i) const {
     const auto rho = rho_dry[i];
 
     if constexpr (WithGrad) {
       return {rho, {
-        -rho / t[i],
-        -rho / (constants.epsilon_h2o + q[i])
+        -rho / t,
+        -rho / (constants.epsilon_h2o + q)
       }};
     } else {
       return rho;
@@ -59,16 +55,14 @@ public:
   }
 
   template <bool WithGrad=false>
-  RealOptGrad<WithGrad, 2> get_dz(const RainshaftConstants& constants, const StateConst& state, std::size_t i) const {
-    VarConst t = state.get_variable("T");
-    VarConst q = state.get_variable("q");
+  RealOptGrad<WithGrad, 2> get_dz(const RainshaftConstants& constants, const double t, const double q, std::size_t i) const {
     const auto dz_i = dz[i];
 
     if constexpr (WithGrad) {
       const auto factor = 1.0/constants.epsilon_h2o - 1.0;
       return {dz_i, {
-        dz_i / t[i],
-        dz_i * factor / (1.0 + factor * q[i])
+        dz_i / t,
+        dz_i * factor / (1.0 + factor * q)
       }};
     } else {
       return dz_i;
