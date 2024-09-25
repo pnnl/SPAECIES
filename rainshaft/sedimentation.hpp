@@ -142,7 +142,7 @@ public:
     // Calculate correction for air density, with reference state at 1000 hPa and 273.15 K.
     const auto rf = rho_fac<WithGrad>(constants, rho);
 
-    if (v0_table.has_value() & v3_table.has_value())
+    if (v0_table.has_value() && v3_table.has_value())
     {
       // skip computation if no rain is present
       if (get_val(lambdar) == 0.)
