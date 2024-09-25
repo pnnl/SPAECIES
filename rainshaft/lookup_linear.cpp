@@ -8,10 +8,10 @@ RealGrad<1> LookupLinear::lookup_value(double x) const {
 
   // If x outside the range, return the endpoint value with 0 slope
   if (itr == range_bounds.cbegin()) {
-    return {y_table.front().front(), {0.0}};
+    return {*itr, {0.0}};
   }
   if (itr == range_bounds.cend()) {
-    return {y_table.back().back(), {0.0}};
+    return {*std::prev(itr), {0.0}};
   }
 
   // Index of largest range bound <= x
