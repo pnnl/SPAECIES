@@ -18,41 +18,77 @@ private:
                                       const bool use_numerical_integration);
 
   template<bool WithGrad = false>
-  RealOptGrad<WithGrad, 8> calc_nr_tend(const RealOptGrad<WithGrad, 2> dz,
-                                const double nr,
-                                const double nr_prev,
+  RealOptGrad<WithGrad, 4> calc_nr_flux(const double nr,
                                 const RealOptGrad<WithGrad, 2> rho,
-                                const RealOptGrad<WithGrad, 2> rho_prev,
-                                const RealOptGrad<WithGrad, 4> v0,
-                                const RealOptGrad<WithGrad, 4> v0_prev) const
+                                const RealOptGrad<WithGrad, 4> v0) const
   {
-    const auto nr_flux_prev = get_val(v0_prev) * nr_prev * get_val(rho_prev);
     const auto nr_flux = get_val(v0) * nr * get_val(rho);
 
-    const auto nr_tend = (nr_flux_prev - nr_flux) / (get_val(dz) * get_val(rho));
+    if constexpr (WithGrad) {
+      const auto nr_times_rho = nr * get_val(rho);
+      const auto v0_times_nr = get_val(v0) * nr;
+
+      const auto nr_flux_dT = get_grad(v0)[0] * nr_times_rho + v0_times_nr * get_grad(rho)[0];
+      const auto nr_flux_dq = get_grad(v0)[1] * nr_times_rho + v0_times_nr * get_grad(rho)[1];
+      const auto nr_flux_dnr = get_grad(v0)[2] * nr_times_rho + get_val(v0) * get_val(rho);
+      const auto nr_flux_dqr = get_grad(v0)[3] * nr_times_rho;
+
+      return {nr_flux, {nr_flux_dT, nr_flux_dq, nr_flux_dnr, nr_flux_dqr}};
+    } else {
+      return nr_flux;
+    }
+  }
+
+  template<bool WithGrad = false>
+  RealOptGrad<WithGrad, 4> calc_qr_flux(const double qr,
+                                const RealOptGrad<WithGrad, 2> rho,
+                                const RealOptGrad<WithGrad, 4> v3) const
+  {
+    const auto qr_flux = get_val(v3) * qr * get_val(rho);
 
     if constexpr (WithGrad) {
-      const auto nr_flux_prev_dT = get_grad(v0_prev)[0] * nr_prev * get_val(rho_prev) + get_val(v0_prev) * nr_prev * get_grad(rho_prev)[0];
-      const auto nr_flux_prev_dq = get_grad(v0_prev)[1] * nr_prev * get_val(rho_prev) + get_val(v0_prev) * nr_prev * get_grad(rho_prev)[1];
-      const auto nr_flux_prev_dnr = get_grad(v0_prev)[2] * nr_prev * get_val(rho_prev) + get_val(v0_prev) * get_val(rho_prev);
-      const auto nr_flux_prev_dqr = get_grad(v0_prev)[3] * nr_prev * get_val(rho_prev);
+      const auto qr_times_rho = qr * get_val(rho);
+      const auto v3_times_qr = get_val(v3) * qr;
 
-      const auto nr_flux_dT = get_grad(v0)[0] * nr * get_val(rho) + get_val(v0) * nr * get_grad(rho)[0];
-      const auto nr_flux_dq = get_grad(v0)[1] * nr * get_val(rho) + get_val(v0) * nr * get_grad(rho)[1];
-      const auto nr_flux_dnr = get_grad(v0)[2] * nr * get_val(rho) + get_val(v0) * get_val(rho);
-      const auto nr_flux_dqr = get_grad(v0)[3] * nr * get_val(rho);
+      const auto qr_flux_dT = get_grad(v3)[0] * qr_times_rho + v3_times_qr * get_grad(rho)[0];
+      const auto qr_flux_dq = get_grad(v3)[1] * qr_times_rho + v3_times_qr * get_grad(rho)[1];
+      const auto qr_flux_dnr = get_grad(v3)[2] * qr_times_rho;
+      const auto qr_flux_dqr = get_grad(v3)[3] * qr_times_rho + get_val(v3) * get_val(rho);
 
-      const auto tend_dTprev = nr_flux_prev_dT / (get_val(dz) * get_val(rho));
-      const auto tend_dT = ((get_val(dz) * get_val(rho)) * -nr_flux_dT - (nr_flux_prev - nr_flux) * (get_val(dz) * get_grad(rho)[0] + get_grad(dz)[0] * get_val(rho))) / pow(get_val(dz) * get_val(rho), 2.);
+      return {qr_flux, {qr_flux_dT, qr_flux_dq, qr_flux_dnr, qr_flux_dqr}};
+    } else {
+      return qr_flux;
+    }
+  }
 
-      const auto tend_dqprev = nr_flux_prev_dq / (get_val(dz) * get_val(rho));
-      const auto tend_dq = ((get_val(dz) * get_val(rho)) * -nr_flux_dq - (nr_flux_prev - nr_flux) * (get_val(dz) * get_grad(rho)[1] + get_grad(dz)[1] * get_val(rho))) / pow(get_val(dz) * get_val(rho), 2.);
+  template<bool WithGrad = false>
+  RealOptGrad<WithGrad, 8> calc_nr_tend(const RealOptGrad<WithGrad, 2> dz,
+                                const RealOptGrad<WithGrad, 2> rho,
+                                const RealOptGrad<WithGrad, 2> rho_prev,
+                                const RealOptGrad<WithGrad, 4> nr_flux_in,
+                                const RealOptGrad<WithGrad, 4> nr_flux_prev_in) const
+  {
+    const auto nr_flux_prev = get_val(nr_flux_prev_in);
+    const auto nr_flux = get_val(nr_flux_in);
+    const auto dz_times_rho = get_val(dz) * get_val(rho);
 
-      const auto tend_dnrprev = nr_flux_prev_dnr / (get_val(dz) * get_val(rho));
-      const auto tend_dnr = -nr_flux_dnr / (get_val(dz) * get_val(rho));
+    const auto nr_tend = (nr_flux_prev - nr_flux) / dz_times_rho;
 
-      const auto tend_dqrprev = nr_flux_prev_dqr / (get_val(dz) * get_val(rho));
-      const auto tend_dqr = -nr_flux_dqr / (get_val(dz) * get_val(rho));
+    if constexpr (WithGrad) {
+      const auto [nr_flux_prev_dT, nr_flux_prev_dq, nr_flux_prev_dnr, nr_flux_prev_dqr] = get_grad(nr_flux_prev_in);
+      const auto [nr_flux_dT, nr_flux_dq, nr_flux_dnr, nr_flux_dqr] = get_grad(nr_flux_in);
+
+      const auto tend_dTprev = nr_flux_prev_dT / dz_times_rho;
+      const auto tend_dT = (-nr_flux_dT - (nr_flux_prev - nr_flux) * (get_val(dz) * get_grad(rho)[0] + get_grad(dz)[0] * get_val(rho)) / dz_times_rho) / dz_times_rho;
+
+      const auto tend_dqprev = nr_flux_prev_dq / dz_times_rho;
+      const auto tend_dq = (-nr_flux_dq - (nr_flux_prev - nr_flux) * (get_val(dz) * get_grad(rho)[1] + get_grad(dz)[1] * get_val(rho)) / dz_times_rho) / dz_times_rho;
+
+      const auto tend_dnrprev = nr_flux_prev_dnr / dz_times_rho;
+      const auto tend_dnr = -nr_flux_dnr / dz_times_rho;
+
+      const auto tend_dqrprev = nr_flux_prev_dqr / dz_times_rho;
+      const auto tend_dqr = -nr_flux_dqr / dz_times_rho;
 
       return {nr_tend, {tend_dTprev, tend_dT, tend_dqprev, tend_dq, tend_dnrprev, tend_dnr, tend_dqrprev, tend_dqr}};
     } else {
@@ -60,43 +96,34 @@ private:
     }
   }
 
-
   template<bool WithGrad = false>
   RealOptGrad<WithGrad, 8> calc_qr_tend(const RealOptGrad<WithGrad, 2> dz,
-                                const double qr,
-                                const double qr_prev,
                                 const RealOptGrad<WithGrad, 2> rho,
                                 const RealOptGrad<WithGrad, 2> rho_prev,
-                                const RealOptGrad<WithGrad, 4> v3,
-                                const RealOptGrad<WithGrad, 4> v3_prev) const
+                                const RealOptGrad<WithGrad, 4> qr_flux_in,
+                                const RealOptGrad<WithGrad, 4> qr_flux_prev_in) const
   {
-    const auto qr_flux_prev = get_val(v3_prev) * qr_prev * get_val(rho_prev);
-    const auto qr_flux = get_val(v3) * qr * get_val(rho);
+    const auto qr_flux_prev = get_val(qr_flux_prev_in);
+    const auto qr_flux = get_val(qr_flux_in);
+    const auto dz_times_rho = get_val(dz) * get_val(rho);
 
-    const auto qr_tend = (qr_flux_prev - qr_flux) / (get_val(dz) * get_val(rho));
+    const auto qr_tend = (qr_flux_prev - qr_flux) / dz_times_rho;
 
     if constexpr (WithGrad) {
-      const auto qr_flux_prev_dT = get_grad(v3_prev)[0] * qr_prev * get_val(rho_prev) + get_val(v3_prev) * qr_prev * get_grad(rho_prev)[0];
-      const auto qr_flux_prev_dq = get_grad(v3_prev)[1] * qr_prev * get_val(rho_prev) + get_val(v3_prev) * qr_prev * get_grad(rho_prev)[1];
-      const auto qr_flux_prev_dnr = get_grad(v3_prev)[2] * qr_prev * get_val(rho_prev);
-      const auto qr_flux_prev_dqr = get_grad(v3_prev)[3] * qr_prev * get_val(rho_prev) + get_val(v3_prev) * get_val(rho_prev);
+      const auto [qr_flux_prev_dT, qr_flux_prev_dq, qr_flux_prev_dnr, qr_flux_prev_dqr] = get_grad(qr_flux_prev_in);
+      const auto [qr_flux_dT, qr_flux_dq, qr_flux_dnr, qr_flux_dqr] = get_grad(qr_flux_in);
 
-      const auto qr_flux_dT = get_grad(v3)[0] * qr * get_val(rho) + get_val(v3) * qr * get_grad(rho)[0];
-      const auto qr_flux_dq = get_grad(v3)[1] * qr * get_val(rho) + get_val(v3) * qr * get_grad(rho)[1];
-      const auto qr_flux_dnr = get_grad(v3)[2] * qr * get_val(rho);
-      const auto qr_flux_dqr = get_grad(v3)[3] * qr * get_val(rho) + get_val(v3) * get_val(rho);
+      const auto tend_dTprev = qr_flux_prev_dT / dz_times_rho;
+      const auto tend_dT = (-qr_flux_dT - (qr_flux_prev - qr_flux) * (get_val(dz) * get_grad(rho)[0] + get_grad(dz)[0] * get_val(rho)) / dz_times_rho) / dz_times_rho;
 
-      const auto tend_dTprev = qr_flux_prev_dT / (get_val(dz) * get_val(rho));
-      const auto tend_dT = ((get_val(dz) * get_val(rho)) * -qr_flux_dT - (qr_flux_prev - qr_flux) * (get_val(dz) * get_grad(rho)[0] + get_grad(dz)[0] * get_val(rho))) / pow(get_val(dz) * get_val(rho), 2.);
+      const auto tend_dqprev = qr_flux_prev_dq / dz_times_rho;
+      const auto tend_dq = (-qr_flux_dq - (qr_flux_prev - qr_flux) * (get_val(dz) * get_grad(rho)[1] + get_grad(dz)[1] * get_val(rho)) / dz_times_rho) / dz_times_rho;
 
-      const auto tend_dqprev = qr_flux_prev_dq / (get_val(dz) * get_val(rho));
-      const auto tend_dq = ((get_val(dz) * get_val(rho)) * -qr_flux_dq - (qr_flux_prev - qr_flux) * (get_val(dz) * get_grad(rho)[1] + get_grad(dz)[1] * get_val(rho))) / pow(get_val(dz) * get_val(rho), 2.);
+      const auto tend_dnrprev = qr_flux_prev_dnr / dz_times_rho;
+      const auto tend_dnr = -qr_flux_dnr / dz_times_rho;
 
-      const auto tend_dnrprev = qr_flux_prev_dnr / (get_val(dz) * get_val(rho));
-      const auto tend_dnr = -qr_flux_dnr / (get_val(dz) * get_val(rho));
-
-      const auto tend_dqrprev = qr_flux_prev_dqr / (get_val(dz) * get_val(rho));
-      const auto tend_dqr = -qr_flux_dqr / (get_val(dz) * get_val(rho));
+      const auto tend_dqrprev = qr_flux_prev_dqr / dz_times_rho;
+      const auto tend_dqr = -qr_flux_dqr / dz_times_rho;
 
       return {qr_tend, {tend_dTprev, tend_dT, tend_dqprev, tend_dq, tend_dnrprev, tend_dnr, tend_dqrprev, tend_dqr}};
     } else {
@@ -352,8 +379,9 @@ private:
   {
     const auto rf = pow(1.e5 / (get_val(rho_dry) * constants.rdry * 273.15), 0.54);
     if constexpr (WithGrad) {
-      return {rf, {-0.54 * rf / get_val(rho_dry) * get_grad(rho_dry)[0],
-                   -0.54 * rf / get_val(rho_dry) * get_grad(rho_dry)[1]}};
+      const auto fac = -0.54 * rf / get_val(rho_dry);
+      return {rf, {fac * get_grad(rho_dry)[0],
+                   fac * get_grad(rho_dry)[1]}};
     } else {
       return rf;
     }

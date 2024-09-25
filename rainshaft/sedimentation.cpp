@@ -40,6 +40,8 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
   auto nr_prev = constants.nr_top;
   auto qr_prev = constants.qr_top;
   auto rho_prev = constants.rho_top;
+  auto nr_flux_prev = calc_nr_flux(nr_prev, rho_prev, v0_prev);
+  auto qr_flux_prev = calc_qr_flux(qr_prev, rho_prev, v3_prev);
 
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");
@@ -49,17 +51,15 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
     const auto [v0, v3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
+    const auto nr_flux = calc_nr_flux(nr[il], dvars.rho_dry[il], v0);
+    const auto qr_flux = calc_qr_flux(qr[il], dvars.rho_dry[il], v3);
     
-    nr_tend[il] = calc_nr_tend(dvars.dz[il], nr[il], nr_prev, dvars.rho_dry[il], rho_prev,
-                               v0, v0_prev);
-    qr_tend[il] = calc_qr_tend(dvars.dz[il], qr[il], qr_prev, dvars.rho_dry[il], rho_prev,
-                               v3, v3_prev);
+    nr_tend[il] = calc_nr_tend(dvars.dz[il], dvars.rho_dry[il], rho_prev, nr_flux, nr_flux_prev);
+    qr_tend[il] = calc_qr_tend(dvars.dz[il], dvars.rho_dry[il], rho_prev, qr_flux, qr_flux_prev);
 
-    v0_prev = v0;
-    v3_prev = v3;
-    nr_prev = nr[il];
-    qr_prev = qr[il];
     rho_prev = dvars.rho_dry[il];
+    nr_flux_prev = nr_flux;
+    qr_flux_prev = qr_flux;
   }
 }
 
@@ -84,6 +84,8 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
   auto nr_prev = constants.nr_top;
   auto qr_prev = constants.qr_top;
   RealOptGrad<true, 2> rho_prev{constants.rho_top, {0., 0.}};
+  auto nr_flux_prev = calc_nr_flux<true>(nr_prev, rho_prev, v0_prev);
+  auto qr_flux_prev = calc_qr_flux<true>(qr_prev, rho_prev, v3_prev);
 
   VarConst t = state.get_variable("T");
   VarConst q = state.get_variable("q");
@@ -96,11 +98,11 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
     const auto lambdar = dvars.get_lambdar<true>(constants, nr[il], qr[il], il);
     const auto dz = dvars.get_dz<true>(constants, t[il], q[il], il);
     const auto [v0, v3] = rain_fall_speeds<true>(constants, rho, lambdar);
+    const auto nr_flux = calc_nr_flux<true>(nr[il], rho, v0);
+    const auto qr_flux = calc_qr_flux<true>(qr[il], rho, v3);
 
-    const auto nr_tend = calc_nr_tend<true>(dz, nr[il], nr_prev, rho, rho_prev,
-                               v0, v0_prev);
-    const auto qr_tend = calc_qr_tend<true>(dz, qr[il], qr_prev, rho, rho_prev,
-                               v3, v3_prev);
+    const auto nr_tend = calc_nr_tend<true>(dz, rho, rho_prev, nr_flux, nr_flux_prev);
+    const auto qr_tend = calc_qr_tend<true>(dz, rho, rho_prev, qr_flux, qr_flux_prev);
     const auto [nr_tend_dT_prev, nr_tend_dT, nr_tend_dq_prev, nr_tend_dq, nr_tend_dnr_prev, nr_tend_dnr, nr_tend_dqr_prev, nr_tend_dqr] = get_grad(nr_tend);
     const auto [qr_tend_dT_prev, qr_tend_dT, qr_tend_dq_prev, qr_tend_dq, qr_tend_dnr_prev, qr_tend_dnr, qr_tend_dqr_prev, qr_tend_dqr] = get_grad(qr_tend);
 
@@ -131,10 +133,8 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
       jac(i_qr, i_qr - 1) += qr_tend_dqr_prev;
     }
 
-    v0_prev = v0;
-    v3_prev = v3;
-    nr_prev = nr[il];
-    qr_prev = qr[il];
     rho_prev = rho;
+    nr_flux_prev = nr_flux;
+    qr_flux_prev = qr_flux;
   }
 }
