@@ -42,7 +42,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   const sunrealtype fac = 1.;
   const sunrealtype reltol = fac * 1.e-2;
   auto abstol = N_VClone(y);
-  auto tol_data = N_VGetArrayPointer_Serial(abstol);
+  auto tol_data = N_VGetArrayPointer(abstol);
   const auto nz = user_data.grid.nlev;
   for (std::size_t j = 0; j != nz; ++j)
   {
