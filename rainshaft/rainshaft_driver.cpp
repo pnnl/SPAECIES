@@ -17,6 +17,7 @@
 #include <iostream>
 #include <cmath>
 #include <chrono>
+#include <memory>
 #include <string>
 #include "imex_integrator.hpp"
 #include "mri_integrator.hpp"
@@ -43,8 +44,6 @@ int main(int argc, char* argv[])
   double rel_hum_init = 0.7;
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
-  // Time step size in seconds.
-  double dt = 1.;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -135,19 +134,21 @@ int main(int argc, char* argv[])
 
   SumProcess all_processes = SumProcess{{&sed, &nudge, &self_coll, &evap}};
 
-  RainshaftIntegrator *intg = nullptr;
-  auto name = std::string(argv[1]);
-  if (name == "ex") {
-    intg = new ExplicitIntegrator(constants, grid, &all_processes, state_descs, tend_descs, std::stod(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]));
-  } else if (name == "imex") {
-    std::optional<std::string> jacobian_file = argc > 5 ? std::optional(argv[5]) : std::nullopt;
-    intg = new IMEXIntegrator(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, std::stod(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]), jacobian_file);
-  } else if (name == "mri") {
-    intg = new MRIIntegrator(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, std::stod(argv[2]), std::stod(argv[3]), std::stoi(argv[4]), std::stoi(argv[5]));
-  } else {
-    throw std::logic_error("Invalid name");
-  }
-
+  const auto dt = std::stod(argv[2]);
+  const auto order = std::stoi(argv[3]);
+  const auto name = std::string(argv[1]);
+  const auto steps_per_output = std::stoi(argv[4]);
+  const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
+    if (name == "ex") {
+      return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);
+    } else if (name == "imex") {
+      return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, steps_per_output);
+    } else if (name == "mri") {
+      return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt, order, steps_per_output, std::stoi(argv[5]));
+    } else {
+      throw std::logic_error("Invalid name");
+    }
+  }();
 
   auto before_sol = high_resolution_clock::now();
   RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state);
@@ -169,6 +170,5 @@ int main(int argc, char* argv[])
   writer.write_walltime_ms(walltime_ms.count());
   // Ensure that the library is linked and greet the user.
   spaecies::do_nothing();
-  delete intg;
   return 0;
 }
