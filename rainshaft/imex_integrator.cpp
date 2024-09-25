@@ -37,6 +37,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   ARKodeSetLinearSolver(arkode_mem, LS, jac);
   ARKodeSetJacFn(arkode_mem, create_jac<1>());
   ARKodeSetMaxNonlinIters(arkode_mem, 100);
+  ARKodeSetDeduceImplicitRhs(arkode_mem, true);
 
   auto controller = SUNAdaptController_I(sun_ctxt);
   ARKodeSetAdaptController(arkode_mem, controller);
