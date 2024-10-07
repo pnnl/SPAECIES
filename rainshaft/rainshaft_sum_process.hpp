@@ -20,13 +20,6 @@ public:
                  const RainshaftDerivedVars& dvars,
                  Tendency& tend) const;
 
-  void calc_tend_jac_prod(const RainshaftConstants &constants,
-                          const RainshaftGrid &grid,
-                          const StateConst& state,
-                          const RainshaftDerivedVars &dvars,
-                          const double *const vec,
-                          double *const prod) const;
-
   void calc_tend_jac(const RainshaftConstants &constants,
                              const RainshaftGrid &grid,
                              const StateConst& state,

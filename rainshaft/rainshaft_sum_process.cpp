@@ -24,19 +24,6 @@ void SumProcess::calc_tend(const RainshaftConstants& constants,
   }
 }
 
-void SumProcess::calc_tend_jac_prod(const RainshaftConstants &constants,
-                                    const RainshaftGrid &grid,
-                                    const StateConst& state,
-                                    const RainshaftDerivedVars &dvars,
-                                    const double *const vec,
-                                    double *const prod) const
-{
-  for (const auto &p : sub_processes)
-  {
-    p->calc_tend_jac_prod(constants, grid, state, dvars, vec, prod);
-  }
-}
-
 void SumProcess::calc_tend_jac(const RainshaftConstants &constants,
                                const RainshaftGrid &grid,
                                const StateConst& state,

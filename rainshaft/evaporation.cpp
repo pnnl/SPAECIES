@@ -52,16 +52,6 @@ void Evaporation::calc_tend(const RainshaftConstants& constants,
   }
 }
 
-void Evaporation::calc_tend_jac_prod(const RainshaftConstants &constants,
-                                     const RainshaftGrid &grid,
-                                     const StateConst& state,
-                                     const RainshaftDerivedVars &dvars,
-                                     const double *const vec,
-                                     double *const prod) const
-{
-  throw std::logic_error("Jacobian product not implemented");
-}
-
 void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
                                 const RainshaftGrid &grid,
                                 const StateConst& state,

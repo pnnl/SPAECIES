@@ -28,19 +28,6 @@ void Nudging::calc_tend(const RainshaftConstants& constants,
   }
 }
 
-void Nudging::calc_tend_jac_prod(const RainshaftConstants &constants,
-                                 const RainshaftGrid &grid,
-                                 const StateConst& state,
-                                 const RainshaftDerivedVars &dvars,
-                                 const double *const vec,
-                                 double *const prod) const
-{
-  for (std::size_t il = 0; il != 2 * grid.nlev; ++il)
-  {
-    prod[il] -= vec[il] / time_scale;
-  }
-}
-
 void Nudging::calc_tend_jac(const RainshaftConstants &constants,
                             const RainshaftGrid &grid,
                             const StateConst& state,
