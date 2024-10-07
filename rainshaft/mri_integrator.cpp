@@ -35,7 +35,7 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
                                            double final_time,
                                            const StateConst &initial_state) const
 {
-  N_Vector y = state_to_n_vector(sun_ctxt, initial_state);
+  N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
 
   /* create an ARKStep object, setting fast (inner) right-hand side
      functions and the initial condition */

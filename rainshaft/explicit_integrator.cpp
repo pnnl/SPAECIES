@@ -21,7 +21,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
                                                 double final_time,
                                                 const StateConst& initial_state) const
 {
-  N_Vector y = state_to_n_vector(sun_ctxt, initial_state);
+  N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
   void *arkode_mem = ERKStepCreate(create_f<0>(), initial_time, y, sun_ctxt);
   ARKodeSetUserData(arkode_mem, (void *)&user_data);
   ARKodeSetFixedStep(arkode_mem, dt);

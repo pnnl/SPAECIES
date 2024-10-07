@@ -13,6 +13,7 @@
 #include "rainshaft_process.hpp"
 #include "rainshaft_solution.hpp"
 #include "rainshaft_types.hpp"
+#include "variable_array_view.hpp"
 
 static_assert(std::is_same_v<sunrealtype, double>, "sunrealtype must be double");
 
@@ -168,7 +169,7 @@ protected:
 
   // Create an N_Vector from a StateConst. To preserve const correctness, this
   // makes a copy of the data.
-  static N_Vector state_to_n_vector(const sundials::Context &sun_ctxt, const StateConst &view)
+  static N_Vector view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<const double> &view)
   {
     N_Vector y = N_VNew_Serial(view.size(), sun_ctxt);
     std::copy_n(view.data(), view.size(), N_VGetArrayPointer(y));
