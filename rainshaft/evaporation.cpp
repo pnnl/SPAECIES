@@ -84,11 +84,11 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
     const std::size_t i_nr = i_q + grid.nlev;
     const std::size_t i_qr = i_nr + grid.nlev;
 
-    const auto [t_tend_dT, t_tend_dq, t_tend_dnr, t_tend_dqr] = get_grad(t_evap);
-    jac(i_t, i_t) += t_tend_dT;
-    jac(i_t, i_q) += t_tend_dq;
-    jac(i_t, i_nr) += t_tend_dnr;
-    jac(i_t, i_qr) += t_tend_dqr;
+    const auto [t_evap_dT, t_evap_dq, t_evap_dnr, t_evap_dqr] = get_grad(t_evap);
+    jac(i_t, i_t) += t_evap_dT;
+    jac(i_t, i_q) += t_evap_dq;
+    jac(i_t, i_nr) += t_evap_dnr;
+    jac(i_t, i_qr) += t_evap_dqr;
 
     const auto [q_evap_dT, q_evap_dq, q_evap_dnr, q_evap_dqr] = get_grad(q_evap);
     jac(i_q, i_t) += q_evap_dT;
