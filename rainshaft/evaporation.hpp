@@ -185,7 +185,7 @@ private:
   }
 
   template <bool WithGrad = false>
-  RealOptGrad<WithGrad, 4> calc_T_tend(const RainshaftConstants &constants, const RealOptGrad<WithGrad, 4> q_evap) const
+  RealOptGrad<WithGrad, 4> calc_T_evap(const RainshaftConstants &constants, const RealOptGrad<WithGrad, 4> q_evap) const
   {
     const double fac = -constants.latvap / constants.cp;
     const double t_tend = fac * get_val(q_evap);
@@ -248,6 +248,35 @@ public:
     {
       return calc_v_evap<WithGrad>(constants, lambdar, use_numerical_integration);
     }
+  }
+
+  template <bool WithGrad = false>
+std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& constants, const double t, const double q,
+  const double nr, const double qr, const double p_mid, const RealOptGrad<WithGrad, 2> rho_dry, const RealOptGrad<WithGrad, 2> lambdar) const
+  {
+    // Skip the rest of this if no rain.
+    if (qr < constants.qsmall)
+    {
+      return {};
+    }
+    const RealOptGrad<WithGrad, 1> q_sat_dry = sat_form.q_sat_dry<WithGrad>(t, p_mid);
+    // Skip the rest of this if not saturated.
+    if (get_val(q_sat_dry) < q)
+    {
+      return {};
+    }
+
+    const RealOptGrad<WithGrad, 1> diffusivity = calc_diffusivity<WithGrad>(t, p_mid);
+    const RealOptGrad<WithGrad, 2> visc_over_rho = calc_visc_over_rho<WithGrad>(t, rho_dry);
+    const RealOptGrad<WithGrad, 2> schmidt_num = calc_schmidt_num<WithGrad>(diffusivity, visc_over_rho);
+    const RealOptGrad<WithGrad, 1> abl = calc_abl<WithGrad>(constants, t, q_sat_dry);
+    const RealOptGrad<WithGrad, 1> v_evap = calc_v_evap<WithGrad>(constants, get_val(lambdar));
+    const RealOptGrad<WithGrad, 4> tau_inv = calc_tau_inv<WithGrad>(constants, nr, diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
+    const RealOptGrad<WithGrad, 4> q_evap = calc_q_evap<WithGrad>(q, q_sat_dry, abl, tau_inv);
+    const RealOptGrad<WithGrad, 4> n_evap = calc_n_evap<WithGrad>(nr, qr, q_evap);
+    const RealOptGrad<WithGrad, 4> t_evap = calc_T_evap<WithGrad>(constants, q_evap);
+
+    return {q_evap, n_evap, t_evap};
   }
 
   const bool use_numerical_integration;

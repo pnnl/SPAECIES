@@ -42,30 +42,12 @@ void Evaporation::calc_tend(const RainshaftConstants& constants,
   VarMut nr_tend = tend.get_variable("nr_tend");
   VarMut qr_tend = tend.get_variable("qr_tend");
 
-  for (std::size_t il = 0; il != grid.nlev; ++il) {
-    // Skip the rest of this if no rain.
-    if (qr[il] < constants.qsmall) {
-      continue;
-    }
-    const auto q_sat_dry = sat_form.q_sat_dry(t[il], grid.p_mid[il]);
-    // Skip the rest of this if not saturated.
-    if (q_sat_dry < q[il]) {
-      continue;
-    }
-
-    const auto diffusivity = calc_diffusivity(t[il], grid.p_mid[il]);
-    const auto rho_dry = dvars.get_rho_dry(constants, t[il], q[il], il);
-    const auto visc_over_rho = calc_visc_over_rho(t[il], rho_dry);
-    const auto schmidt_num = calc_schmidt_num(diffusivity, visc_over_rho);
-    const auto abl = calc_abl(constants, t[il], q_sat_dry);
-    const auto lambdar = dvars.get_lambdar(constants, nr[il], qr[il], il);
-    const auto v_evap = calc_v_evap(constants, dvars.lambdar[il]);
-    const auto tau_inv = calc_tau_inv(constants, nr[il], diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
-    const auto q_evap = calc_q_evap(q[il], q_sat_dry, abl, tau_inv);
-    
-    t_tend[il] = calc_T_tend(constants, q_evap);
+  for (std::size_t il = 0; il != grid.nlev; ++il)
+  {
+    const auto [q_evap, n_evap, t_evap] = calc_evap(constants, t[il], q[il], nr[il], qr[il], grid.p_mid[il], dvars.rho_dry[il], dvars.lambdar[il]);
+    t_tend[il] = t_evap;
     q_tend[il] = q_evap;
-    nr_tend[il] = -calc_n_evap(nr[il], qr[il], q_evap);
+    nr_tend[il] = -n_evap;
     qr_tend[il] = -q_evap;
   }
 }
@@ -93,36 +75,16 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
-    // Skip the rest of this if no rain.
-    if (qr[il] < constants.qsmall)
-    {
-      continue;
-    }
-    const auto q_sat_dry = sat_form.q_sat_dry<true>(t[il], grid.p_mid[il]);
-    // Skip the rest of this if not saturated.
-    if (get_val(q_sat_dry) < q[il])
-    {
-      continue;
-    }
+    const RealGrad<2> rho_dry = dvars.get_rho_dry<true>(constants, t[il], q[il], il);
+    const RealGrad<2> lambdar = dvars.get_lambdar<true>(constants, nr[il], qr[il], il);
+    const auto [q_evap, n_evap, t_evap] = calc_evap<true>(constants, t[il], q[il], nr[il], qr[il], grid.p_mid[il], rho_dry, lambdar);
 
-    const auto diffusivity = calc_diffusivity<true>(t[il], grid.p_mid[il]);
-    const auto rho_dry = dvars.get_rho_dry<true>(constants, t[il], q[il], il);
-    const auto visc_over_rho = calc_visc_over_rho<true>(t[il], rho_dry);
-    const auto schmidt_num = calc_schmidt_num<true>(diffusivity, visc_over_rho);
-    const auto abl = calc_abl<true>(constants, t[il], q_sat_dry);
-    const auto lambdar = dvars.get_lambdar<true>(constants, nr[il], qr[il], il);
-    const auto v_evap = calc_v_evap<true>(constants, dvars.lambdar[il]);    
-    const auto tau_inv = calc_tau_inv<true>(constants, nr[il], diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
-    const auto q_evap = calc_q_evap<true>(q[il], q_sat_dry, abl, tau_inv);
-    const auto n_evap = calc_n_evap<true>(nr[il], qr[il], q_evap);
-    const auto t_tend = calc_T_tend<true>(constants, q_evap);
+    const std::size_t i_t = il;
+    const std::size_t i_q = i_t + grid.nlev;
+    const std::size_t i_nr = i_q + grid.nlev;
+    const std::size_t i_qr = i_nr + grid.nlev;
 
-    const auto i_t = il;
-    const auto i_q = i_t + grid.nlev;
-    const auto i_nr = i_q + grid.nlev;
-    const auto i_qr = i_nr + grid.nlev;
-
-    const auto [t_tend_dT, t_tend_dq, t_tend_dnr, t_tend_dqr] = get_grad(t_tend);
+    const auto [t_tend_dT, t_tend_dq, t_tend_dnr, t_tend_dqr] = get_grad(t_evap);
     jac(i_t, i_t) += t_tend_dT;
     jac(i_t, i_q) += t_tend_dq;
     jac(i_t, i_nr) += t_tend_dnr;
