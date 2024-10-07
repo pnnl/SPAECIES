@@ -3,7 +3,6 @@
 #include <vector>
 #include <optional>
 #include <tuple>
-#include <iostream>
 #include <boost/math/special_functions/gamma.hpp>
 using boost::math::tgamma, boost::math::tgamma_lower;
 
