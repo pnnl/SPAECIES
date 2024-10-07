@@ -28,7 +28,7 @@ public:
 
   template <bool WithGrad=false>
   RealOptGrad<WithGrad, 2> get_lambdar(const RainshaftConstants& constants, const double nr, const double qr, std::size_t i) const {
-    const auto lam = lambdar[i];
+    const double lam = lambdar[i];
 
     if constexpr (WithGrad) {
       return {lam, {
@@ -42,7 +42,7 @@ public:
 
   template <bool WithGrad=false>
   RealOptGrad<WithGrad, 2> get_rho_dry(const RainshaftConstants& constants, const double t, const double q, std::size_t i) const {
-    const auto rho = rho_dry[i];
+    const double rho = rho_dry[i];
 
     if constexpr (WithGrad) {
       return {rho, {
@@ -56,10 +56,10 @@ public:
 
   template <bool WithGrad=false>
   RealOptGrad<WithGrad, 2> get_dz(const RainshaftConstants& constants, const double t, const double q, std::size_t i) const {
-    const auto dz_i = dz[i];
+    const double dz_i = dz[i];
 
     if constexpr (WithGrad) {
-      const auto factor = 1.0/constants.epsilon_h2o - 1.0;
+      const double factor = 1.0/constants.epsilon_h2o - 1.0;
       return {dz_i, {
         dz_i / t,
         dz_i * factor / (1.0 + factor * q)
