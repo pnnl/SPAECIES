@@ -35,9 +35,9 @@ private:
   template <int PARTITION>
   static int rainshaft_f(sunrealtype, N_Vector y, N_Vector ydot, void *user_data)
   {
-    auto *cast_data = static_cast<RainshaftUserData *>(user_data);
+    RainshaftUserData *cast_data = static_cast<RainshaftUserData *>(user_data);
     const StateConst state = n_vector_to_state(y, cast_data->state_descs);
-    const auto dvars = RainshaftDerivedVars(cast_data->constants,
+    const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data->constants,
                                                       cast_data->grid,
                                                       state);
     // Zero out ydot so that we don't have to remember to zero every value in calc_tend.
@@ -53,13 +53,13 @@ private:
   static int rainshaft_jac(sunrealtype, N_Vector y, N_Vector, SUNMatrix Jac, void *user_data, N_Vector, N_Vector, N_Vector)
   {
     SUNMatZero(Jac);
-    auto *cast_data = static_cast<RainshaftUserData *>(user_data);
+    RainshaftUserData *cast_data = static_cast<RainshaftUserData *>(user_data);
     const StateConst state = n_vector_to_state(y, cast_data->state_descs);
-    const auto dvars = RainshaftDerivedVars(cast_data->constants,
+    const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data->constants,
                                       cast_data->grid,
                                       state);
 
-    RainshaftProcess::Matrix mat = [Jac](const auto i, const auto j) -> auto & {
+    RainshaftProcess::Matrix mat = [Jac](const std::size_t i, const std::size_t j) -> sunrealtype & {
       return SM_ELEMENT_D(Jac, i, j);
     };
 
@@ -121,7 +121,7 @@ protected:
                            const Mode one_step) const
   {
     std::vector<StateConst> states;
-    auto tret = -std::numeric_limits<sunrealtype>::infinity();
+    sunrealtype tret = -std::numeric_limits<sunrealtype>::infinity();
     if (steps_per_output > 0)
     {
       for (int i = 0; tret < final_time; i++)
