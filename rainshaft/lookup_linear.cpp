@@ -19,7 +19,7 @@ RealGrad<1> LookupLinear::lookup_value(double x) const {
   const double spacing = spacings[range_idx];
   double int_part;
   const double frac_part = std::modf((x - *std::prev(itr)) / spacing, &int_part);
-  const std::size_t cell_idx = static_cast<std::vector<double>::size_type>(int_part);
+  const auto cell_idx = static_cast<std::vector<double>::size_type>(int_part);
   const double y_left = y_table[range_idx][cell_idx];
   const double y_diff = y_table[range_idx][cell_idx + 1] - y_left;
   return {y_left + y_diff * frac_part, {y_diff / spacing}};

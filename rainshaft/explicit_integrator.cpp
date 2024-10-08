@@ -21,7 +21,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
                                                 double final_time,
                                                 const StateConst& initial_state) const
 {
-  N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
+  const N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
   void *arkode_mem = ERKStepCreate(create_f<0>(), initial_time, y, sun_ctxt);
   ARKodeSetUserData(arkode_mem, (void *)&user_data);
   ARKodeSetFixedStep(arkode_mem, dt);
@@ -29,7 +29,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   ARKodeSetMaxNumSteps(arkode_mem, -1); // Set no limit on the number of steps
   ARKodeSetStopTime(arkode_mem, final_time);
 
-  auto controller = SUNAdaptController_I(sun_ctxt);
+  SUNAdaptController controller = SUNAdaptController_I(sun_ctxt);
   ARKodeSetAdaptController(arkode_mem, controller);
   // Use no bias and instead rely on a safety factor. Shampine uses these values in the MATLAB ODE suite
   SUNAdaptController_SetErrorBias(controller, 1);
@@ -41,9 +41,9 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
 
   const sunrealtype fac = 1.;
   const sunrealtype reltol = fac * 1.e-2;
-  auto abstol = N_VClone(y);
-  auto tol_data = N_VGetArrayPointer(abstol);
-  const auto nz = user_data.grid.nlev;
+  const N_Vector abstol = N_VClone(y);
+  double * const tol_data = N_VGetArrayPointer(abstol);
+  const std::size_t nz = user_data.grid.nlev;
   for (std::size_t j = 0; j != nz; ++j)
   {
     tol_data[j] = fac * 1.e-1;
@@ -63,7 +63,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   ARKodeSVtolerances(arkode_mem, reltol, abstol);
   N_VDestroy(abstol);
 
-  auto solution = evolve(
+  const RainshaftSolution solution = evolve(
       ARKodeEvolve,
       [arkode_mem]()
       {

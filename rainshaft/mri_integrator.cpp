@@ -35,11 +35,11 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
                                            double final_time,
                                            const StateConst &initial_state) const
 {
-  N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
+  const N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
 
   /* create an ARKStep object, setting fast (inner) right-hand side
      functions and the initial condition */
-  auto inner_arkode_mem = ARKStepCreate(create_f<0>(), nullptr, initial_time, y, sun_ctxt);
+  void *inner_arkode_mem = ARKStepCreate(create_f<0>(), nullptr, initial_time, y, sun_ctxt);
   ARKodeSetOrder(inner_arkode_mem, order);
   ARKodeSetUserData(inner_arkode_mem, (void *)&user_data);
   ARKodeSetMaxNumSteps(inner_arkode_mem, -1);
@@ -64,7 +64,7 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
   /* Set the slow step size */
   ARKodeSetFixedStep(outer_arkode_mem, dt_slow);
 
-  auto solution = evolve(
+  const RainshaftSolution solution = evolve(
       ARKodeEvolve,
       [outer_arkode_mem, inner_arkode_mem]()
       {
