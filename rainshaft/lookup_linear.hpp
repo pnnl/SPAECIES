@@ -32,7 +32,7 @@ private:
     Table tab(spacings.size());
     for (Table::size_type i = 0; i < spacings.size(); i++) {
       for (Table::value_type::size_type j = 0;; j++) {
-        const auto x = range_bounds[i] + j * spacings[i];
+        const double x = range_bounds[i] + j * spacings[i];
         tab[i].push_back(f(x));
         if (x >= range_bounds[i + 1]) {
           break;
