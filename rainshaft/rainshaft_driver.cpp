@@ -22,7 +22,7 @@
 #include "imex_integrator.hpp"
 #include "mri_integrator.hpp"
 
-int main(int argc, char* argv[])
+int main(int, char* argv[])
 {
   using std::chrono::high_resolution_clock;
   using std::chrono::duration;

@@ -33,7 +33,7 @@ private:
   };
 
   template <int PARTITION>
-  static int rainshaft_f(sunrealtype t, N_Vector y, N_Vector ydot, void *user_data)
+  static int rainshaft_f(sunrealtype, N_Vector y, N_Vector ydot, void *user_data)
   {
     auto *cast_data = static_cast<RainshaftUserData *>(user_data);
     const StateConst state = n_vector_to_state(y, cast_data->state_descs);
@@ -50,24 +50,7 @@ private:
   }
 
   template <int PARTITION>
-  static int rainshaft_jac_prod(N_Vector v, N_Vector Jv, sunrealtype t, N_Vector y, N_Vector fy, void *user_data, N_Vector tmp)
-  {
-    N_VConst(0, Jv);
-    auto *cast_data = static_cast<RainshaftUserData *>(user_data);
-    const StateConst state = n_vector_to_state(y, cast_data->state_descs);
-    const auto dvars = RainshaftDerivedVars(cast_data->constants,
-                                      cast_data->grid,
-                                      state);
-    cast_data->processes[PARTITION]->calc_tend_jac_prod(cast_data->constants,
-                                                        cast_data->grid,
-                                                        state, dvars,
-                                                        N_VGetArrayPointer(v),
-                                                        N_VGetArrayPointer(Jv));
-    return 0;
-  }
-
-  template <int PARTITION>
-  static int rainshaft_jac(sunrealtype t, N_Vector y, N_Vector fy, SUNMatrix Jac, void *user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
+  static int rainshaft_jac(sunrealtype, N_Vector y, N_Vector, SUNMatrix Jac, void *user_data, N_Vector, N_Vector, N_Vector)
   {
     SUNMatZero(Jac);
     auto *cast_data = static_cast<RainshaftUserData *>(user_data);
@@ -87,13 +70,13 @@ private:
     return 0;
   }
 
-  static void handle_error(int line,
-                           const char *func,
-                           const char *file,
+  static void handle_error(int,
+                           const char *,
+                           const char *,
                            const char *msg,
-                           SUNErrCode err_code,
-                           void *err_user_data,
-                           SUNContext ctx)
+                           SUNErrCode,
+                           void *,
+                           SUNContext)
   {
     throw std::logic_error(msg);
   }
@@ -119,12 +102,6 @@ protected:
   auto create_f() const
   {
     return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_f<PARTITION>;
-  }
-
-  template <int PARTITION>
-  auto create_jac_prod() const
-  {
-    return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_jac_prod<PARTITION>;
   }
 
   template <int PARTITION>

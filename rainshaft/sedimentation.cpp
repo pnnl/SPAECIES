@@ -54,8 +54,8 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
     const double nr_flux = calc_nr_flux(nr[il], dvars.rho_dry[il], v0);
     const double qr_flux = calc_qr_flux(qr[il], dvars.rho_dry[il], v3);
     
-    nr_tend[il] = calc_nr_tend(dvars.dz[il], dvars.rho_dry[il], rho_prev, nr_flux, nr_flux_prev);
-    qr_tend[il] = calc_qr_tend(dvars.dz[il], dvars.rho_dry[il], rho_prev, qr_flux, qr_flux_prev);
+    nr_tend[il] = calc_nr_tend(dvars.dz[il], dvars.rho_dry[il], nr_flux, nr_flux_prev);
+    qr_tend[il] = calc_qr_tend(dvars.dz[il], dvars.rho_dry[il], qr_flux, qr_flux_prev);
 
     rho_prev = dvars.rho_dry[il];
     nr_flux_prev = nr_flux;
@@ -91,8 +91,8 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
     const RealGrad<4> nr_flux = calc_nr_flux<true>(nr[il], rho, v0);
     const RealGrad<4> qr_flux = calc_qr_flux<true>(qr[il], rho, v3);
 
-    const RealGrad<8> nr_tend = calc_nr_tend<true>(dz, rho, rho_prev, nr_flux, nr_flux_prev);
-    const RealGrad<8> qr_tend = calc_qr_tend<true>(dz, rho, rho_prev, qr_flux, qr_flux_prev);
+    const RealGrad<8> nr_tend = calc_nr_tend<true>(dz, rho, nr_flux, nr_flux_prev);
+    const RealGrad<8> qr_tend = calc_qr_tend<true>(dz, rho, qr_flux, qr_flux_prev);
     const auto [nr_tend_dT_prev, nr_tend_dT, nr_tend_dq_prev, nr_tend_dq, nr_tend_dnr_prev, nr_tend_dnr, nr_tend_dqr_prev, nr_tend_dqr] = get_grad(nr_tend);
     const auto [qr_tend_dT_prev, qr_tend_dT, qr_tend_dq_prev, qr_tend_dq, qr_tend_dnr_prev, qr_tend_dnr, qr_tend_dqr_prev, qr_tend_dqr] = get_grad(qr_tend);
 

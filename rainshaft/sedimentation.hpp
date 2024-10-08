@@ -64,7 +64,6 @@ private:
   template<bool WithGrad = false>
   RealOptGrad<WithGrad, 8> calc_nr_tend(const RealOptGrad<WithGrad, 2> dz,
                                 const RealOptGrad<WithGrad, 2> rho,
-                                const RealOptGrad<WithGrad, 2> rho_prev,
                                 const RealOptGrad<WithGrad, 4> nr_flux_in,
                                 const RealOptGrad<WithGrad, 4> nr_flux_prev_in) const
   {
@@ -99,7 +98,6 @@ private:
   template<bool WithGrad = false>
   RealOptGrad<WithGrad, 8> calc_qr_tend(const RealOptGrad<WithGrad, 2> dz,
                                 const RealOptGrad<WithGrad, 2> rho,
-                                const RealOptGrad<WithGrad, 2> rho_prev,
                                 const RealOptGrad<WithGrad, 4> qr_flux_in,
                                 const RealOptGrad<WithGrad, 4> qr_flux_prev_in) const
   {

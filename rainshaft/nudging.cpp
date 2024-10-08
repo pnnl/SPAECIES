@@ -13,10 +13,10 @@ Nudging::Nudging(double time_scale_in, const std::vector<double> &t, const std::
   }
 }
 
-void Nudging::calc_tend(const RainshaftConstants& constants,
+void Nudging::calc_tend(const RainshaftConstants&,
                         const RainshaftGrid& grid,
                         const StateConst& state,
-                        const RainshaftDerivedVars& dvars,
+                        const RainshaftDerivedVars&,
                         Tendency& tend) const {
   VarConst t = state.get_variable("T");
   VarConst q = state.get_variable("q");
@@ -28,10 +28,10 @@ void Nudging::calc_tend(const RainshaftConstants& constants,
   }
 }
 
-void Nudging::calc_tend_jac(const RainshaftConstants &constants,
+void Nudging::calc_tend_jac(const RainshaftConstants &,
                             const RainshaftGrid &grid,
-                            const StateConst& state,
-                            const RainshaftDerivedVars &dvars,
+                            const StateConst&,
+                            const RainshaftDerivedVars &,
                             Matrix jac) const
 {
   for (std::size_t il = 0; il != 2 * grid.nlev; ++il)
