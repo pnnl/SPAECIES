@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cmath>
 #include <stdexcept>
+#include <numeric>
 
 // Calculation of cell widths.
 std::vector<double> calc_dz(const RainshaftConstants& constants,
@@ -21,12 +22,9 @@ std::vector<double> calc_dz(const RainshaftConstants& constants,
 
 // Convert cell widths to interface heights.
 std::vector<double> dz_to_z_int(const std::vector<double> dz) {
-  std::size_t nlev = dz.size();
-  std::vector<double> z_int(nlev+1, 0.);
-  // Construct z_int from bottom to top.
-  for (std::size_t il = nlev-1; il != -1; --il) {
-    z_int[il] = z_int[il+1] + dz[il];
-  }
+  std::vector<double> z_int(dz.size() + 1);
+  z_int.back() = 0.;
+  std::partial_sum(dz.crbegin(), dz.crend(), z_int.rbegin() + 1);
   return z_int;
 }
 

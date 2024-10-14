@@ -35,11 +35,11 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
                                            double final_time,
                                            const StateConst &initial_state) const
 {
-  N_Vector y0 = state_to_y0(sun_ctxt, initial_state);
+  const N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
 
   /* create an ARKStep object, setting fast (inner) right-hand side
      functions and the initial condition */
-  auto inner_arkode_mem = ARKStepCreate(create_f<0>(), nullptr, initial_time, y0, sun_ctxt);
+  void *inner_arkode_mem = ARKStepCreate(create_f<0>(), nullptr, initial_time, y, sun_ctxt);
   ARKodeSetOrder(inner_arkode_mem, order);
   ARKodeSetUserData(inner_arkode_mem, (void *)&user_data);
   ARKodeSetMaxNumSteps(inner_arkode_mem, -1);
@@ -53,7 +53,7 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
 
   /* create an MRIStep object, setting the slow (outer) right-hand side
      functions and the initial condition */
-  void *outer_arkode_mem = MRIStepCreate(create_f<1>(), create_f<2>(), initial_time, y0, stepper, sun_ctxt);
+  void *outer_arkode_mem = MRIStepCreate(create_f<1>(), create_f<2>(), initial_time, y, stepper, sun_ctxt);
 
   /* Pass udata to user functions */
   ARKodeSetUserData(outer_arkode_mem, (void *)&user_data);
@@ -64,7 +64,7 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
   /* Set the slow step size */
   ARKodeSetFixedStep(outer_arkode_mem, dt_slow);
 
-  auto solution = evolve(
+  const RainshaftSolution solution = evolve(
       ARKodeEvolve,
       [outer_arkode_mem, inner_arkode_mem]()
       {
@@ -77,13 +77,14 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
         ARKStepGetNumRhsEvals(inner_arkode_mem, &nffe, &nffi);
         return nfse + nfsi + nffe + nffi;
       },
+      []() {},
       outer_arkode_mem,
       final_time,
-      y0,
+      y,
       ARK_NORMAL,
       ARK_ONE_STEP);
 
-  N_VDestroy(y0);
+  N_VDestroy(y);
   MRIStepInnerStepper_Free(&stepper);
   ARKodeFree(&inner_arkode_mem);
   ARKodeFree(&outer_arkode_mem);

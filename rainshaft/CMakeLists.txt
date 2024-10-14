@@ -5,7 +5,6 @@ add_executable(rainshaft
   mri_integrator.cpp
   fixed_substep_integrator.cpp
   lookup_linear.cpp
-  lookup_table.cpp
   nudging.cpp
   rainshaft_driver.cpp
   rainshaft_derived_vars.cpp
@@ -23,6 +22,7 @@ add_executable(rainshaft
 target_link_libraries(rainshaft
   NetCDF::NetCDF
   SUNDIALS::arkode
+  SUNDIALS::sunlinsollapackdense
   Boost::boost
   spaecies)
 target_include_directories(rainshaft PRIVATE

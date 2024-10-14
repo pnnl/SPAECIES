@@ -2,20 +2,15 @@
 #define LOOKUP_TABLE_HPP
 #include <vector>
 #include <cstddef>
+#include "derivatives.hpp"
 
 // Abstract base class for lookup tables.
 class LookupTable {
 
 public:
-
-  virtual double lookup_value(double x) const = 0;
-
-  static std::vector<std::size_t> subrange_offsets(std::vector<double> x_range_bounds,
-                                                   std::vector<double> x_spacings);
-
-  static std::vector<double> calc_x_values(std::vector<double> x_range_bounds,
-                                           std::vector<double> x_spacings);
-
+  // Ideally this would return Val<WithGrad, 1>, but virtual functions can't be
+  // templated. Is this base class even necessary?
+  virtual RealGrad<1> lookup_value(double x) const = 0;
 };
 
 #endif // LOOKUP_TABLE_HPP

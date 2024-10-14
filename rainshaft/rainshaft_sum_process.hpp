@@ -18,7 +18,13 @@ public:
                  const RainshaftGrid& grid,
                  const StateConst& state,
                  const RainshaftDerivedVars& dvars,
-                 const Tendency& tend) const;
+                 Tendency& tend) const;
+
+  void calc_tend_jac(const RainshaftConstants &constants,
+                             const RainshaftGrid &grid,
+                             const StateConst& state,
+                             const RainshaftDerivedVars &dvars,
+                             Matrix jac) const;
 
 private:
 

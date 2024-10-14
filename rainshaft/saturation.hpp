@@ -1,6 +1,7 @@
 #ifndef SATURATION_HPP
 #define SATURATION_HPP
 #include "rainshaft_constants.hpp"
+#include "derivatives.hpp"
 #include <cmath>
 
 // SPS: Should consider making this an abstract class with different formulas,
@@ -15,14 +16,44 @@ public:
   SaturationFormulae(const RainshaftConstants& constants);
 
   // Saturation vapor pressure over liquid at a given temperature.
-  double svp_liquid(double temperature) const;
+  template <bool WithGrad = false>
+  RealOptGrad<WithGrad, 1> svp_liquid(const double temperature) const {
+    const double log_t = std::log(temperature);
+    const double recip_t = 1. / temperature;
+    const double tanh_fac = std::tanh(0.0415 * (temperature - 218.8));
+    const double scaled_recip_t_1 = 1331.22 * recip_t;
+    const double tanh_coeff = 53.878 - scaled_recip_t_1 - 9.44523 * log_t + 0.014025 * temperature;
+    const double tanh_term = tanh_coeff * tanh_fac;
+    const double scaled_recip_t_2 = 6763.22 * recip_t;
+    const double log_esl = 54.842763 - scaled_recip_t_2 - 4.21 * log_t
+      + 0.000367*temperature + tanh_term;
+    const double svp = std::exp(log_esl);
 
-  // Convert water vapor pressure to specific humidity over dry air.
-  double wv_pressure_to_q_dry(double pressure_wv, double pressure_dry) const;
+    if constexpr (WithGrad) {
+      const double tanh_fac_grad = 0.0415 * tanh_coeff * (1.0 - pow(tanh_fac, 2)) + tanh_fac * (0.014025 + (scaled_recip_t_1 - 9.44523) * recip_t);
+      return {svp, {
+        svp * (0.000367 + (scaled_recip_t_2 - 4.21) * recip_t + tanh_fac_grad)
+      }};
+    } else {
+      return svp;
+    }
+  }
 
   // Saturation specific humidity (over mass of dry air) as a function of
   // temperature and dry pressure.
-  double q_sat_dry(double temperature, double pressure_dry) const;
+  template <bool WithGrad = false>
+  RealOptGrad<WithGrad, 1> q_sat_dry(const double temperature, const double pressure_dry) const {
+    const RealOptGrad<WithGrad, 1> esl = svp_liquid<WithGrad>(temperature);
+    const double fac = epsilon_h2o / pressure_dry;
+    const double qds = fac * get_val(esl);
+
+    if constexpr (WithGrad) {
+      const auto [esl_grad] = get_grad(esl);
+      return {qds, {fac * esl_grad}};
+    } else {
+      return qds;
+    }
+  }
 
 private:
 

@@ -12,6 +12,8 @@ public:
                                       double final_time,
                                       const StateConst& initial_state) const = 0;
 
+  virtual ~RainshaftIntegrator() {}
+
 };
 
 #endif // RAINSHAFT_INTEGRATOR_HPP

@@ -36,11 +36,18 @@ public:
   }
   // Required for access to private constructor used above.
   friend class VariableArrayView<NonConstT>;
-  ContiguousVariableView<T> get_variable(const std::string& name) const {
+  ContiguousVariableView<const T> get_variable(const std::string& name) const {
     auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs());
-    return ContiguousVariableView(var_desc, data_ptr + idx);
+    return {var_desc, data_ptr + idx};
   };
-  inline T* data() const {
+  ContiguousVariableView<T> get_variable(const std::string& name) {
+    auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs());
+    return {var_desc, data_ptr + idx};
+  };
+  inline T* data() {
+    return data_ptr;
+  };
+  inline const T* data() const {
     return data_ptr;
   };
   inline const std::vector<VarDescPtr>& var_descs() const {

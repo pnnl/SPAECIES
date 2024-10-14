@@ -62,7 +62,7 @@ void NetcdfWriter::write_states(const std::vector<StateConst>& arrays) {
   for (std::size_t i = 0; i != ntimes; ++i) {
     std::size_t starts[2] = {i, 0};
     std::size_t counts[2] = {1, nlev};
-    for (int j = 0; j != varids.size(); ++j) {
+    for (std::size_t j = 0; j != varids.size(); ++j) {
       // SPS: Would be more efficient/simple if we could request data using an
       // integer id from the VariableArrayView, rather than using string lookups.
       // SPS: Note also the implicit assumption that the variable data is

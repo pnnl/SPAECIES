@@ -17,9 +17,12 @@
 #include <iostream>
 #include <cmath>
 #include <chrono>
+#include <memory>
+#include <string>
 #include "imex_integrator.hpp"
+#include "mri_integrator.hpp"
 
-int main(int argc, char** argv)
+int main(int, char* argv[])
 {
   using std::chrono::high_resolution_clock;
   using std::chrono::duration;
@@ -41,8 +44,6 @@ int main(int argc, char** argv)
   double rel_hum_init = 0.7;
   // Time scale over which to nudge t and q back to initial condition in seconds.
   double nudge_time_scale = 15. * 60.;
-  // Time step size in seconds.
-  double dt = 1.;
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
@@ -116,45 +117,45 @@ int main(int argc, char** argv)
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(constants, &sat_form, true, false);
+  Evaporation evap(constants, sat_form, true, false);
   // Nudging to initial condition.
   // SPS: Need some kind of span-like interface to avoid having to
   // do this copy.
   std::vector<double> t_vec, q_vec;
-  for (int i = 0; i != nlev; ++i) {
+  for (std::size_t i = 0; i != nlev; ++i) {
     t_vec.push_back(t[i]);
     q_vec.push_back(q[i]);
   }
   Nudging nudge(nudge_time_scale, t_vec, q_vec);
   // Sum of all processes.
-  std::vector<const RainshaftProcess *> micro_processes{&sed};
-  SumProcess all_micro = SumProcess(micro_processes);
+  SumProcess exp_processes = SumProcess{{&evap, &nudge, &self_coll}};
   // Sum of local processes.
-  std::vector<const RainshaftProcess *> local_processes{&self_coll, &evap, &nudge};
-  SumProcess all_local = SumProcess(local_processes);
-  // Evolve state forward.
-  // P3 Settings
-  // ForwardEulerIntegrator sed_step(&constants, &grid, &sed, state_descs, tend_descs, &sun_ctxt);
-  // SedCflIntegrator sed_loop(&constants, &grid, &sed, &sed_step);
-  // ForwardEulerIntegrator local_step(&constants, &grid, &all_local, state_descs, tend_descs, &sun_ctxt);
-  // std::vector<const RainshaftIntegrator *> seq_ints{&local_step, &sed_loop};
-  // SequentialSplitIntegrator seq_step(seq_ints);
-  // FixedSubstepIntegrator intg(&seq_step, dt);
-  // ARKODE Settings
-  // ExplicitIntegrator micro_step(&constants, &grid, &all_micro, state_descs, tend_descs, &sun_ctxt);
-  // FixedSubstepIntegrator intg(&micro_step, dt);
-  // Pure Forward Euler Settings
-  // ForwardEulerIntegrator micro_step(constants, grid, &all_micro);
-  IMEXIntegrator micro_step(constants, grid, &all_local, &all_micro, state_descs, tend_descs, dt, 4, 1);
-  FixedSubstepIntegrator intg(&micro_step, dt);
-  // Pure Forward Euler Settings
-  // ForwardEulerIntegrator micro_step(&constants, &grid, &all_micro, state_descs, tend_descs, &sun_ctxt);
-  // FixedSubstepIntegrator intg(&micro_step, dt);
+  SumProcess imp_processes = SumProcess{{&sed}};
+
+  SumProcess all_processes = SumProcess{{&sed, &nudge, &self_coll, &evap}};
+
+  const auto dt = std::stod(argv[2]);
+  const auto order = std::stoi(argv[3]);
+  const auto name = std::string(argv[1]);
+  const auto steps_per_output = std::stoi(argv[4]);
+  const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
+    if (name == "ex") {
+      return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);
+    } else if (name == "imex") {
+      return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, steps_per_output);
+    } else if (name == "mri") {
+      return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt, order, steps_per_output, std::stoi(argv[5]));
+    } else {
+      throw std::logic_error("Invalid name");
+    }
+  }();
+
   auto before_sol = high_resolution_clock::now();
-  RainshaftSolution solution = intg.integrate(initial_time, final_time, initial_state);
+  RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state);
   auto after_sol = high_resolution_clock::now();
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
+  std::cout << "Time: " << walltime_ms.count() << std::endl;
   // Write out grid and all states.
   NetcdfWriter writer("./rainshaft_1s_imex_test.nc");
   writer.write_grid(grid);

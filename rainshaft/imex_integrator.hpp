@@ -1,5 +1,8 @@
 #ifndef IMEX_INTEGRATOR_HPP
 #define IMEX_INTEGRATOR_HPP
+
+#include <string>
+#include <optional>
 #include "sundials_integrator.hpp"
 
 class IMEXIntegrator : public SundialsIntegrator<2>
@@ -7,6 +10,7 @@ class IMEXIntegrator : public SundialsIntegrator<2>
 private:
   const double dt;
   const int order;
+  const std::optional<std::string> jacobian_file;
 
 public:
   IMEXIntegrator(const RainshaftConstants &constants,
@@ -17,7 +21,8 @@ public:
                      const VarDescList& tend_descs,
                      const double dt = 0,
                      const int order = 4,
-                     const int steps_per_output = -1);
+                     const int steps_per_output = -1,
+                     const std::optional<std::string> jacobian_file = std::nullopt);
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,

@@ -1,14 +1,15 @@
 #include "rainshaft_sum_process.hpp"
 
-SumProcess::SumProcess(const std::vector<const RainshaftProcess *>& processes)
-  : nsub(processes.size()), sub_processes(processes) {
+SumProcess::SumProcess(const std::vector<const RainshaftProcess *> &processes)
+    : nsub(processes.size()), sub_processes(processes)
+{
 }
 
 void SumProcess::calc_tend(const RainshaftConstants& constants,
                            const RainshaftGrid& grid,
                            const StateConst& state,
                            const RainshaftDerivedVars& dvars,
-                           const Tendency& tend) const {
+                           Tendency& tend) const {
   double* tend_ptr = tend.data();
   Tendency sub_tend(tend.var_descs());
   double* sub_ptr = sub_tend.data();
@@ -16,8 +17,21 @@ void SumProcess::calc_tend(const RainshaftConstants& constants,
   for (std::size_t is = 0; is != nsub; ++is) {
     std::fill_n(sub_ptr, sub_tend.size(), 0.);
     sub_processes[is]->calc_tend(constants, grid, state, dvars, sub_tend);
+
     for (std::size_t i = 0; i != tend.size(); ++i) {
       tend_ptr[i] += sub_ptr[i];
     }
+  }
+}
+
+void SumProcess::calc_tend_jac(const RainshaftConstants &constants,
+                               const RainshaftGrid &grid,
+                               const StateConst& state,
+                               const RainshaftDerivedVars &dvars,
+                               Matrix jac) const
+{
+  for (const auto &p : sub_processes)
+  {
+    p->calc_tend_jac(constants, grid, state, dvars, jac);
   }
 }
