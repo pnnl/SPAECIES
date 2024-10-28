@@ -144,7 +144,7 @@ int main(int, char* argv[])
     } else if (name == "imex") {
       return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, steps_per_output);
     } else if (name == "mri") {
-      return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt, order, steps_per_output, std::stoi(argv[5]));
+      return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, std::stod(argv[5]), dt, order, steps_per_output);
     } else {
       throw std::logic_error("Invalid name");
     }
