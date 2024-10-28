@@ -19,6 +19,7 @@
 #include <cmath>
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <string>
 #include "imex_integrator.hpp"
 #include "mri_integrator.hpp"
@@ -27,6 +28,31 @@ int main(int, char* argv[])
 {
   using std::chrono::high_resolution_clock;
   using std::chrono::duration;
+
+  // Get command line arguments
+  std::size_t i = 0;
+  std::string initial_condition(argv[++i]); // File for initial conditions, or 'adiabatic'.
+  double sim_len = std::stod(argv[++i]); // Length of time to integrate to
+  bool do_nudging;
+  std::string nudge_opt(argv[++i]); // Whether or not to do nudging
+  if (nudge_opt == "TRUE" || nudge_opt == "True" || nudge_opt == "T"
+      || nudge_opt == "true" || nudge_opt == "t") {
+    do_nudging = true;
+  } else if (nudge_opt == "FALSE" || nudge_opt == "False" || nudge_opt == "F"
+      || nudge_opt == "false" || nudge_opt == "f") {
+    do_nudging = false;
+  } else {
+    throw std::logic_error("Unrecognized nudging option");
+  }
+  std::string method_type(argv[++i]); // Time integration method type
+  std::optional<double> dt_fast; // Fast time step for MRI method
+  if (method_type == "mri") {
+    dt_fast = std::stod(argv[++i]);
+  }
+  double dt = std::stod(argv[++i]); // Overall time step size
+  int order = std::stoi(argv[++i]); // Order of accuracy desired
+  int steps_per_output = std::stoi(argv[++i]); // Number of time steps between each output
+  std::string output_file(argv[++i]); // Name of file to output to
 
   // Set up model constants.
   // SPS: Choose rho_top in a more principled way?
@@ -48,12 +74,14 @@ int main(int, char* argv[])
   // Time of simulation start.
   double initial_time = 0.;
   // Final time to integrate to.
-  double final_time = 1800.;
+  double final_time = initial_time + sim_len;
+  // Saturation vapor pressure formula.
+  SaturationFormulae sat_form(constants);
+
+  // Set up grid
   RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                            srf_temp, lapse_rate);
   std::size_t nlev = grid.nlev;
-  // Set up initial condition.
-  SaturationFormulae sat_form(constants);
 
   spaecies::Domain dom;
   spaecies::DimensionPtr lev_dim = dom.add_dimension("level", nlev);
@@ -65,11 +93,16 @@ int main(int, char* argv[])
   VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
   State initial_state(state_descs);
 
-  bool converged = warm_adiabatic_initial_condition(constants, grid, sat_form, srf_temp,
-                                                    lapse_rate, rel_hum_init, initial_state);
-  if (!converged) {
-    std::cerr << "Initial condition iteration failed to converge." << std::endl;
-    return 1;
+  // Set up initial condition.
+  if (initial_condition == "adiabatic") {
+    bool converged = warm_adiabatic_initial_condition(constants, grid, sat_form, srf_temp,
+                                                      lapse_rate, rel_hum_init, initial_state);
+    if (!converged) {
+      std::cerr << "Initial condition iteration failed to converge." << std::endl;
+      return 1;
+    }
+  } else {
+    throw std::logic_error("Invalid initial condition");
   }
   RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
   // Sedimentation process.
@@ -79,36 +112,41 @@ int main(int, char* argv[])
   // Evaporation process.
   Evaporation evap(constants, sat_form, true, false);
   // Nudging to initial condition.
-  // SPS: Need some kind of span-like interface to avoid having to
-  // do this copy.
-  VarMut t = initial_state.get_variable("T");
-  VarMut q = initial_state.get_variable("q");
-  std::vector<double> t_vec, q_vec;
-  for (std::size_t i = 0; i != nlev; ++i) {
-    t_vec.push_back(t[i]);
-    q_vec.push_back(q[i]);
-  }
-  Nudging nudge(nudge_time_scale, t_vec, q_vec);
+  std::shared_ptr<Nudging> nudge;
   // Sum of all processes.
-  SumProcess exp_processes = SumProcess{{&evap, &nudge, &self_coll}};
+  std::vector<const RainshaftProcess *> exp_process_vec{}, all_process_vec{};
+  if (do_nudging) {
+    // SPS: Need some kind of span-like interface to avoid having to
+    // do this copy.
+    VarMut t = initial_state.get_variable("T");
+    VarMut q = initial_state.get_variable("q");
+    std::vector<double> t_vec, q_vec;
+    for (std::size_t i = 0; i != nlev; ++i) {
+      t_vec.push_back(t[i]);
+      q_vec.push_back(q[i]);
+    }
+    nudge = std::make_shared<Nudging>(nudge_time_scale, t_vec, q_vec);
+    exp_process_vec = {&evap, &*nudge, &self_coll};
+    all_process_vec = {&sed, &*nudge, &self_coll, &evap};
+  } else {
+    exp_process_vec = {&evap, &self_coll};
+    all_process_vec = {&sed, &self_coll, &evap};
+  }
+  SumProcess exp_processes(exp_process_vec);
   // Sum of local processes.
   SumProcess imp_processes = SumProcess{{&sed}};
 
-  SumProcess all_processes = SumProcess{{&sed, &nudge, &self_coll, &evap}};
+  SumProcess all_processes = SumProcess{all_process_vec};
 
-  const auto dt = std::stod(argv[2]);
-  const auto order = std::stoi(argv[3]);
-  const auto name = std::string(argv[1]);
-  const auto steps_per_output = std::stoi(argv[4]);
   const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
-    if (name == "ex") {
+    if (method_type == "ex") {
       return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);
-    } else if (name == "imex") {
+    } else if (method_type == "imex") {
       return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, steps_per_output);
-    } else if (name == "mri") {
-      return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt, order, steps_per_output, std::stoi(argv[5]));
+    } else if (method_type == "mri") {
+      return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt_fast.value(), dt, order, steps_per_output);
     } else {
-      throw std::logic_error("Invalid name");
+      throw std::logic_error("Invalid time integration method type");
     }
   }();
 
@@ -119,7 +157,7 @@ int main(int, char* argv[])
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   std::cout << "Time: " << walltime_ms.count() << std::endl;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_1s_imex_test.nc");
+  NetcdfWriter writer(output_file);
   writer.write_grid(grid);
   writer.write_states(solution.states);
   std::vector<RainshaftDerivedVars> solution_dvars;
