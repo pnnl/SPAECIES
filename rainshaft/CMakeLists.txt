@@ -9,6 +9,7 @@ add_executable(rainshaft
   rainshaft_driver.cpp
   rainshaft_derived_vars.cpp
   rainshaft_grid.cpp
+  rainshaft_initial.cpp
   rainshaft_ncio.cpp
   rainshaft_solution.cpp
   rainshaft_sum_process.cpp

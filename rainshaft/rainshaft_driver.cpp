@@ -5,6 +5,7 @@
 #include "nudging.hpp"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
+#include "rainshaft_initial.hpp"
 #include "rainshaft_solution.hpp"
 #include "rainshaft_tend_descs.hpp"
 #include "rainshaft_ncio.hpp"
@@ -63,50 +64,9 @@ int main(int, char* argv[])
   VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc};
   VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
   State initial_state(state_descs);
-  VarMut t = initial_state.get_variable("T");
-  VarMut q = initial_state.get_variable("q");
-  VarMut nr = initial_state.get_variable("nr");
-  VarMut qr = initial_state.get_variable("qr");
-  for (std::size_t i = 0; i != nlev; ++i) {
-    nr[i] = 0.;
-    qr[i] = 0.;
-  }
 
-  // Coming up with an initial condition for t and q is slightly tricky, because
-  // we only have an implicit relationship between t, q, and dz. But since the
-  // effect of q on layer height is not large, start by ignoring it, in which
-  // case we do have an explicit relationship between t and dz.
-  double rog = constants.rdry / constants.g;
-  std::vector<double> z_int(nlev+1, 0.);
-  for (int il = nlev - 1; il != -1; --il) {
-    double pdel = grid.p_int[il+1]-grid.p_int[il];
-    t[il] = (srf_temp - lapse_rate*z_int[il+1])
-      / (1. + 0.5 * lapse_rate * rog * pdel/ grid.p_mid[il]);
-    z_int[il] = rog * t[il] * pdel / grid.p_mid[il];
-  }
-  // Now iterate until change in dz between successive iterations is small;
-  // ten iterations should do it.
-  bool converged = false;
-  double t_tolerance = 1.e-3; // Kelvin
-  for (int it = 0; it != 10 && !converged; ++it) {
-    std::vector<double> t_v(nlev, 0.);
-    for (std::size_t il = 0; il != nlev; ++il) {
-      q[il] = rel_hum_init * sat_form.q_sat_dry(t[il], grid.p_mid[il]);
-      // Virtual temperature factor.
-      double t_v_fac = 1. + ((1/constants.epsilon_h2o - 1.) * q[il]);
-      t_v[il] = t[il] * t_v_fac;
-    }
-    auto dz = grid.calc_dz(constants, t_v);
-    z_int = dz_to_z_int(dz);
-    converged = true;
-    for (std::size_t il = 0; il!= nlev; ++il) {
-      double new_temp = srf_temp - lapse_rate * (z_int[il] - 0.5 * dz[il]);
-      if (abs(new_temp - t[il]) > t_tolerance) {
-        converged = false;
-      }
-      t[il] = new_temp;
-    }
-  }
+  bool converged = warm_adiabatic_initial_condition(constants, grid, sat_form, srf_temp,
+                                                    lapse_rate, rel_hum_init, initial_state);
   if (!converged) {
     std::cerr << "Initial condition iteration failed to converge." << std::endl;
     return 1;
@@ -121,6 +81,8 @@ int main(int, char* argv[])
   // Nudging to initial condition.
   // SPS: Need some kind of span-like interface to avoid having to
   // do this copy.
+  VarMut t = initial_state.get_variable("T");
+  VarMut q = initial_state.get_variable("q");
   std::vector<double> t_vec, q_vec;
   for (std::size_t i = 0; i != nlev; ++i) {
     t_vec.push_back(t[i]);
