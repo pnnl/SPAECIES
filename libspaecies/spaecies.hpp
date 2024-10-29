@@ -11,9 +11,4 @@
 #include "variable_descriptor.hpp"
 #include "variable_view.hpp"
 
-namespace spaecies
-{
-void do_nothing();
-}
-
 #endif // SPAECIES_HPP

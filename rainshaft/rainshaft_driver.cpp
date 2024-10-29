@@ -168,7 +168,5 @@ int main(int, char* argv[])
   writer.write_derived_vars(solution_dvars);
   writer.write_num_rhs_evals(solution.num_rhs_evals);
   writer.write_walltime_ms(walltime_ms.count());
-  // Ensure that the library is linked and greet the user.
-  spaecies::do_nothing();
   return 0;
 }
