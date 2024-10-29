@@ -78,95 +78,109 @@ int main(int, char* argv[])
   // Saturation vapor pressure formula.
   SaturationFormulae sat_form(constants);
 
-  // Set up grid
-  RainshaftGrid grid = make_e3sm_like_grid(constants, model_top, srf_pres,
-                                           srf_temp, lapse_rate);
-  std::size_t nlev = grid.nlev;
-
-  spaecies::Domain dom;
-  spaecies::DimensionPtr lev_dim = dom.add_dimension("level", nlev);
-  spaecies::VarDescPtr t_desc = dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K");
-  spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
-  spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
-  spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
-  VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc};
-  VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
-  State initial_state(state_descs);
-
-  // Set up initial condition.
+  // Set up max grid size
+  std::size_t num_cases, max_levs;
+  RainshaftGrid default_grid = make_e3sm_like_grid(constants, model_top, srf_pres,
+                                                   srf_temp, lapse_rate);
   if (initial_condition == "adiabatic") {
-    bool converged = warm_adiabatic_initial_condition(constants, grid, sat_form, srf_temp,
-                                                      lapse_rate, rel_hum_init, initial_state);
-    if (!converged) {
-      std::cerr << "Initial condition iteration failed to converge." << std::endl;
-      return 1;
-    }
-  } else {
-    throw std::logic_error("Invalid initial condition");
+    num_cases = 1;
+    max_levs = default_grid.nlev;
   }
-  RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
+  NetcdfWriter writer(output_file, num_cases, max_levs);
+
+  // Physics types that won't vary between cases (declare here to avoid calculating the
+  // lookup table in the case loop.
   // Sedimentation process.
   Sedimentation sed(constants, true, false);
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
   Evaporation evap(constants, sat_form, true, false);
-  // Nudging to initial condition.
-  std::shared_ptr<Nudging> nudge;
-  // Sum of all processes.
-  std::vector<const RainshaftProcess *> exp_process_vec{}, all_process_vec{};
-  if (do_nudging) {
-    // SPS: Need some kind of span-like interface to avoid having to
-    // do this copy.
-    VarMut t = initial_state.get_variable("T");
-    VarMut q = initial_state.get_variable("q");
-    std::vector<double> t_vec, q_vec;
-    for (std::size_t i = 0; i != nlev; ++i) {
-      t_vec.push_back(t[i]);
-      q_vec.push_back(q[i]);
-    }
-    nudge = std::make_shared<Nudging>(nudge_time_scale, t_vec, q_vec);
-    exp_process_vec = {&evap, &*nudge, &self_coll};
-    all_process_vec = {&sed, &*nudge, &self_coll, &evap};
-  } else {
-    exp_process_vec = {&evap, &self_coll};
-    all_process_vec = {&sed, &self_coll, &evap};
-  }
-  SumProcess exp_processes(exp_process_vec);
-  // Sum of local processes.
-  SumProcess imp_processes = SumProcess{{&sed}};
 
-  SumProcess all_processes = SumProcess{all_process_vec};
+  for (std::size_t icase = 0; icase != num_cases; ++icase) {
+    // Grid for this case.
+    RainshaftGrid grid = default_grid;
+    std::size_t nlev = grid.nlev;
 
-  const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
-    if (method_type == "ex") {
-      return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);
-    } else if (method_type == "imex") {
-      return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, steps_per_output);
-    } else if (method_type == "mri") {
-      return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt_fast.value(), dt, order, steps_per_output);
+    spaecies::Domain dom;
+    spaecies::DimensionPtr lev_dim = dom.add_dimension("level", nlev);
+    spaecies::VarDescPtr t_desc = dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K");
+    spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
+    spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
+    spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
+    VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc};
+    VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
+    State initial_state(state_descs);
+
+    // Set up initial condition.
+    if (initial_condition == "adiabatic") {
+      bool converged = warm_adiabatic_initial_condition(constants, grid, sat_form, srf_temp,
+                                                        lapse_rate, rel_hum_init, initial_state);
+      if (!converged) {
+        std::cerr << "Initial condition iteration failed to converge." << std::endl;
+        return 1;
+      }
     } else {
-      throw std::logic_error("Invalid time integration method type");
+      throw std::logic_error("Invalid initial condition");
     }
-  }();
+    RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
 
-  auto before_sol = high_resolution_clock::now();
-  RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state);
-  auto after_sol = high_resolution_clock::now();
-  // Time taken for solution.
-  duration<double, std::milli> walltime_ms = after_sol - before_sol;
-  std::cout << "Time: " << walltime_ms.count() << std::endl;
-  // Write out grid and all states.
-  NetcdfWriter writer(output_file);
-  writer.write_grid(grid);
-  writer.write_states(solution.states);
-  std::vector<RainshaftDerivedVars> solution_dvars;
-  solution_dvars.reserve(solution.states.size());
-  for (StateConst state : solution.states) {
-    solution_dvars.emplace_back(constants, grid, state);
+    // Nudging to initial condition.
+    std::shared_ptr<Nudging> nudge;
+    // Sum of all processes.
+    std::vector<const RainshaftProcess *> exp_process_vec{}, all_process_vec{};
+    if (do_nudging) {
+      // SPS: Need some kind of span-like interface to avoid having to
+      // do this copy.
+      VarMut t = initial_state.get_variable("T");
+      VarMut q = initial_state.get_variable("q");
+      std::vector<double> t_vec, q_vec;
+      for (std::size_t i = 0; i != nlev; ++i) {
+        t_vec.push_back(t[i]);
+        q_vec.push_back(q[i]);
+      }
+      nudge = std::make_shared<Nudging>(nudge_time_scale, t_vec, q_vec);
+      exp_process_vec = {&evap, &*nudge, &self_coll};
+      all_process_vec = {&sed, &*nudge, &self_coll, &evap};
+    } else {
+      exp_process_vec = {&evap, &self_coll};
+      all_process_vec = {&sed, &self_coll, &evap};
+    }
+    SumProcess exp_processes(exp_process_vec);
+    // Sum of local processes.
+    SumProcess imp_processes = SumProcess{{&sed}};
+
+    SumProcess all_processes = SumProcess{all_process_vec};
+
+    const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
+      if (method_type == "ex") {
+        return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);
+      } else if (method_type == "imex") {
+        return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, steps_per_output);
+      } else if (method_type == "mri") {
+        return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt_fast.value(), dt, order, steps_per_output);
+      } else {
+        throw std::logic_error("Invalid time integration method type");
+      }
+    }();
+
+    auto before_sol = high_resolution_clock::now();
+    RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state);
+    auto after_sol = high_resolution_clock::now();
+    // Time taken for solution.
+    duration<double, std::milli> walltime_ms = after_sol - before_sol;
+    std::cout << "Time: " << walltime_ms.count() << std::endl;
+    // Write out grid and all states.
+    writer.write_grid(grid, icase);
+    writer.write_states(solution.states, icase);
+    std::vector<RainshaftDerivedVars> solution_dvars;
+    solution_dvars.reserve(solution.states.size());
+    for (StateConst state : solution.states) {
+      solution_dvars.emplace_back(constants, grid, state);
+    }
+    writer.write_derived_vars(solution_dvars, icase);
+    writer.write_num_rhs_evals(solution.num_rhs_evals, icase);
+    writer.write_walltime_ms(walltime_ms.count(), icase);
   }
-  writer.write_derived_vars(solution_dvars);
-  writer.write_num_rhs_evals(solution.num_rhs_evals);
-  writer.write_walltime_ms(walltime_ms.count());
   return 0;
 }
