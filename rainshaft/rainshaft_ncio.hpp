@@ -13,6 +13,49 @@ extern "C"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_derived_vars.hpp"
 
+#include <tuple>
+
+class NetcdfReader {
+
+public:
+
+  // Constructed from file name.
+  NetcdfReader(const std::string& file_name);
+  // Destructor closes the file.
+  ~NetcdfReader();
+  // Other constructors as per the rule of 5.
+  NetcdfReader(const NetcdfReader&) = delete;
+  NetcdfReader& operator=(const NetcdfReader &) = delete;
+  NetcdfReader(NetcdfReader &&other) noexcept : is_open(true), ncid(other.ncid) {
+    other.is_open = false;
+    other.ncid = -100;
+  }
+  NetcdfReader& operator=(NetcdfReader &&other) {
+    is_open = true;
+    ncid = other.ncid;
+    other.is_open = false;
+    other.ncid = -100;
+    return *this;
+  }
+
+  std::tuple<std::size_t, std::size_t> read_num_cases_and_max_levs();
+
+  RainshaftGrid read_grid(std::size_t case_idx);
+
+  void read_boundary_conditions(std::size_t case_idx, RainshaftConstants &constants);
+
+  void read_initial_conditions(std::size_t case_idx, State &initial_state);
+
+protected:
+
+  // Is the file open?
+  bool is_open;
+
+  // NetCDF file id
+  int ncid;
+
+};
+
 class NetcdfWriter {
   
 public:

@@ -1,5 +1,104 @@
 #include "rainshaft_ncio.hpp"
 #include <cstddef>
+#include <vector>
+
+NetcdfReader::NetcdfReader(const std::string& file_name) : is_open(true) {
+  // SPS: Should throw error if this fails, probably also allow the file mode
+  // argument to be adjusted.
+  nc_open(file_name.c_str(), NC_NOWRITE, &ncid);
+}
+
+NetcdfReader::~NetcdfReader() {
+  // SPS: Can this fail? Probably safe to not check error code?
+  if (is_open) {
+    nc_close(ncid);
+  }
+  is_open = false;
+}
+
+std::tuple<std::size_t, std::size_t> NetcdfReader::read_num_cases_and_max_levs() {
+  int caseid, levid;
+  nc_inq_dimid(ncid, "nsamp", &caseid);
+  nc_inq_dimid(ncid, "nlev", &levid);
+  std::size_t num_cases, max_levs;
+  nc_inq_dimlen(ncid, caseid, &num_cases);
+  int status = nc_inq_dimlen(ncid, levid, &max_levs);
+  return {num_cases, max_levs};
+}
+
+RainshaftGrid NetcdfReader::read_grid(std::size_t case_idx) {
+  int nlevid, psid, pdelid;
+  nc_inq_varid(ncid, "nlev_samp", &nlevid);
+  nc_inq_varid(ncid, "surface_pressure", &psid);
+  nc_inq_varid(ncid, "pdel", &pdelid);
+  int nlev;
+  nc_get_var1_int(ncid, nlevid, &case_idx, &nlev);
+  std::size_t starts[2] = {case_idx, 0};
+  std::size_t counts[2] = {1, (std::size_t) nlev};
+  std::vector<double> pdel(nlev);
+  nc_get_vara_double(ncid, pdelid, starts, counts, pdel.data());
+  // Dimension is nlev because we discard the top (cloud-base) level.
+  std::vector<double> p_int(nlev);
+  nc_get_var1_double(ncid, psid, &case_idx, &p_int[nlev-1]);
+  for (std::size_t i = nlev-1; i != 0; --i) {
+    p_int[i-1] = p_int[i] - pdel[i];
+  }
+  return RainshaftGrid(p_int);
+}
+
+void NetcdfReader::read_boundary_conditions(std::size_t case_idx,
+                                            RainshaftConstants &constants) {
+  // Get state at cloud base.
+  int rainfracid, pmidid, tid, qid, nrid, qrid;
+  nc_inq_varid(ncid, "rainfrac", &rainfracid);
+  nc_inq_varid(ncid, "pmid", &pmidid);
+  nc_inq_varid(ncid, "t", &tid);
+  nc_inq_varid(ncid, "q", &qid);
+  nc_inq_varid(ncid, "nr", &nrid);
+  nc_inq_varid(ncid, "qr", &qrid);
+  double rainfrac, pmid, t, q, nr, qr;
+  std::size_t loc[2] = {case_idx, 0};
+  nc_get_var1_double(ncid, rainfracid, loc, &rainfrac);
+  nc_get_var1_double(ncid, pmidid, loc, &pmid);
+  nc_get_var1_double(ncid, tid, loc, &t);
+  nc_get_var1_double(ncid, qid, loc, &q);
+  nc_get_var1_double(ncid, nrid, loc, &nr);
+  nc_get_var1_double(ncid, qrid, loc, &qr);
+  constants.rho_top = rho_dry_from_ideal_gas_law(constants.rdry, constants.epsilon_h2o,
+                                                 pmid, t, q);
+  // Convert nr/qr at the top to in-cloud values.
+  constants.nr_top = nr / rainfrac;
+  constants.qr_top = qr / rainfrac;
+}
+
+void NetcdfReader::read_initial_conditions(std::size_t case_idx, State &initial_state) {
+  int nlevid, rainfracid, tid, qid, nrid, qrid;
+  nc_inq_varid(ncid, "nlev_samp", &nlevid);
+  nc_inq_varid(ncid, "rainfrac", &rainfracid);
+  nc_inq_varid(ncid, "t", &tid);
+  nc_inq_varid(ncid, "q", &qid);
+  nc_inq_varid(ncid, "nr", &nrid);
+  nc_inq_varid(ncid, "qr", &qrid);
+  int nlev;
+  nc_get_var1_int(ncid, nlevid, &case_idx, &nlev);
+  std::vector<double> rainfrac(nlev-1);
+  std::size_t starts[2] = {case_idx, 1};
+  std::size_t counts[2] = {1, (std::size_t) nlev-1};
+  nc_get_vara_double(ncid, rainfracid, starts, counts, rainfrac.data());
+  VarMut t = initial_state.get_variable("T");
+  VarMut q = initial_state.get_variable("q");
+  VarMut nr = initial_state.get_variable("nr");
+  VarMut qr = initial_state.get_variable("qr");
+  nc_get_vara_double(ncid, tid, starts, counts, &t[0]);
+  nc_get_vara_double(ncid, qid, starts, counts, &q[0]);
+  nc_get_vara_double(ncid, nrid, starts, counts, &nr[0]);
+  nc_get_vara_double(ncid, qrid, starts, counts, &qr[0]);
+  // Convert to in-cloud values.
+  for (std::size_t i = 0; i != nlev - 1; ++i) {
+    nr[i] /= rainfrac[i];
+    qr[i] /= rainfrac[i];
+  }
+}
 
 NetcdfWriter::NetcdfWriter(const std::string& file_name, std::size_t num_cases, std::size_t max_levs) {
   // SPS: Should throw error if this fails, probably also allow the file mode

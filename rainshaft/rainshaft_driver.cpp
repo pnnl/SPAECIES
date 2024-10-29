@@ -32,6 +32,10 @@ int main(int, char* argv[])
   // Get command line arguments
   std::size_t i = 0;
   std::string initial_condition(argv[++i]); // File for initial conditions, or 'adiabatic'.
+  std::size_t num_cases = 1;
+  if (initial_condition != "adiabatic") {
+    num_cases = std::stoi(argv[++i]); // Number of cases to read from beginning of file.
+  }
   double sim_len = std::stod(argv[++i]); // Length of time to integrate to
   bool do_nudging;
   std::string nudge_opt(argv[++i]); // Whether or not to do nudging
@@ -79,17 +83,27 @@ int main(int, char* argv[])
   SaturationFormulae sat_form(constants);
 
   // Set up max grid size
-  std::size_t num_cases, max_levs;
+  std::size_t max_cases, max_levs;
   RainshaftGrid default_grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                                    srf_temp, lapse_rate);
+  std::optional<NetcdfReader> reader;
   if (initial_condition == "adiabatic") {
-    num_cases = 1;
+    max_cases = 1;
     max_levs = default_grid.nlev;
+  } else {
+    reader = NetcdfReader(initial_condition);
+    std::tuple<std::size_t, std::size_t> cases_levs = reader->read_num_cases_and_max_levs();
+    max_cases = std::get<0>(cases_levs);
+    if (max_cases < num_cases) {
+      throw std::logic_error("Requested more cases than exist on file.");
+    }
+    // Remove cloud base from levels.
+    max_levs = std::get<1>(cases_levs) - 1;
   }
   NetcdfWriter writer(output_file, num_cases, max_levs);
 
   // Physics types that won't vary between cases (declare here to avoid calculating the
-  // lookup table in the case loop.
+  // lookup tables in the case loop).
   // Sedimentation process.
   Sedimentation sed(constants, true, false);
   // Self-collision processes.
@@ -99,8 +113,13 @@ int main(int, char* argv[])
 
   for (std::size_t icase = 0; icase != num_cases; ++icase) {
     // Grid for this case.
-    RainshaftGrid grid = default_grid;
+    RainshaftGrid grid = (initial_condition == "adiabatic")
+      ? default_grid : reader->read_grid(icase);
     std::size_t nlev = grid.nlev;
+    // Set boundary condition if needed.
+    if (initial_condition != "adiabatic") {
+      reader->read_boundary_conditions(icase, constants);
+    }
 
     spaecies::Domain dom;
     spaecies::DimensionPtr lev_dim = dom.add_dimension("level", nlev);
@@ -121,7 +140,7 @@ int main(int, char* argv[])
         return 1;
       }
     } else {
-      throw std::logic_error("Invalid initial condition");
+      reader->read_initial_conditions(icase, initial_state);
     }
     RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
 

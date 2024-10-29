@@ -73,4 +73,9 @@ public:
 // Convert cell widths to interface heights.
 std::vector<double> dz_to_z_int(const std::vector<double> dz);
 
+constexpr double rho_dry_from_ideal_gas_law(double rdry, double epsilon_h2o,
+                                            double p_mid, double t, double q) {
+  return p_mid / (rdry * t * (1 + q/epsilon_h2o));
+}
+
 #endif // RAINSHAFT_DERIVED_VARS_HPP
