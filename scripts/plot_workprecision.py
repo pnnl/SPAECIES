@@ -38,10 +38,10 @@ for SIM_NAME in SIM_NAMES:
     
 ## load reference solution
 ref_data = netCDF4.Dataset(REFERENCE)
-Z = ref_data["z_int"][-1,:]
-dZ = [np.abs(z_right - z_left) for z_left, z_right in zip(Z, Z[1:])]
+p = ref_data["p_int"][:]
+dp = [np.abs(p_right - p_left) for p_left, p_right in zip(p, p[1:])]
 sol_ref = ref_data[SOL_FIELD][-1,:]
-L2_ref = np.sqrt(np.sum(dZ * sol_ref**2))
+L2_ref = np.sqrt(np.sum(dp * sol_ref**2))
 
 ## for each collection of simulations, compute L2 errors and extract 
 ## wall clock time and time step info
@@ -72,7 +72,6 @@ for idx, SIM_NAME in enumerate(SIM_NAMES):
             
             for dt_slow in slow_timesteps:
                 filenames_dtslow = [filename for filename in filenames_order if dt_slow in filename]
-                print(filenames_dtslow)
                 
                 timesteps_order_dtslow = []
                 L2_errors_order_dtslow = []
@@ -85,9 +84,8 @@ for idx, SIM_NAME in enumerate(SIM_NAMES):
                     
                     # compute relative L2 error
                     data = netCDF4.Dataset(filename)
-                    Z = data["z_int"][-1,:]
                     sol = data[SOL_FIELD][-1,:]
-                    L2 = np.sqrt(np.sum(dZ * (sol - sol_ref)**2)) / L2_ref
+                    L2 = np.sqrt(np.sum(dp * (sol - sol_ref)**2)) / L2_ref
 
                     # filter out large errors (assumed unstable) and very small errors
                     # (assumed stagnated)
@@ -96,7 +94,7 @@ for idx, SIM_NAME in enumerate(SIM_NAMES):
                     elif L2 < MIN_ERR:
                         L2_errors_order_dtslow.append(np.nan)
                     else:
-                        L2_errors_order_dtslow.append(np.sqrt(np.sum(dZ * (sol - sol_ref)**2)) / L2_ref)
+                        L2_errors_order_dtslow.append(L2)
                     
                     # extract wall clock time (in seconds)
                     walltimes_order_dtslow.append(data['walltime_ms'][:]/1000.0)
@@ -123,9 +121,8 @@ for idx, SIM_NAME in enumerate(SIM_NAMES):
             
                 # compute relative L2 error
                 data = netCDF4.Dataset(filename)
-                Z = data["z_int"][-1,:]
                 sol = data[SOL_FIELD][-1,:]
-                L2 = np.sqrt(np.sum(dZ * (sol - sol_ref)**2)) / L2_ref
+                L2 = np.sqrt(np.sum(dp * (sol - sol_ref)**2)) / L2_ref
                 
                 # filter out large errors (assumed unstable) and very small errors
                 # (assumed stagnated)
@@ -134,7 +131,7 @@ for idx, SIM_NAME in enumerate(SIM_NAMES):
                 elif L2 < MIN_ERR:
                     L2_errors_order.append(np.nan)
                 else:
-                    L2_errors_order.append(np.sqrt(np.sum(dZ * (sol - sol_ref)**2)) / L2_ref)
+                    L2_errors_order.append(L2)
                 
                 # extract wall clock time (in seconds)
                 walltimes_order.append(data['walltime_ms'][:]/1000.0)
