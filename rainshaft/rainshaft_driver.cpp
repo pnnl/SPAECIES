@@ -2,6 +2,7 @@
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
 #include "fixed_substep_integrator.hpp"
+#include "limiting_integrator.hpp"
 #include "nudging.hpp"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
@@ -54,8 +55,12 @@ int main(int, char* argv[])
     dt_fast = std::stod(argv[++i]);
   }
   double dt = std::stod(argv[++i]); // Overall time step size
-  int order = std::stoi(argv[++i]); // Order of accuracy desired
-  int steps_per_output = std::stoi(argv[++i]); // Number of time steps between each output
+  int order;
+  int steps_per_output;
+  if (method_type != "original") {
+    order = std::stoi(argv[++i]); // Order of accuracy desired
+    steps_per_output = std::stoi(argv[++i]); // Number of time steps between each output
+  }
   std::string output_file(argv[++i]); // Name of file to output to
 
   // Set up model constants.
@@ -109,7 +114,11 @@ int main(int, char* argv[])
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
-  Evaporation evap(constants, sat_form, true, false);
+  std::optional<double> dt_for_evap = std::nullopt;
+  if (method_type == "original") {
+    dt_for_evap = dt;
+  }
+  Evaporation evap(constants, sat_form, true, false, dt_for_evap);
 
   for (std::size_t icase = 0; icase != num_cases; ++icase) {
     // Grid for this case.
@@ -171,6 +180,9 @@ int main(int, char* argv[])
 
     SumProcess all_processes = SumProcess{all_process_vec};
 
+    // List of integrators that need to remain allocated for use by original scheme.
+    std::vector<std::shared_ptr<RainshaftIntegrator>> backing_integrators;
+
     const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
       if (method_type == "ex") {
         return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);
@@ -178,6 +190,16 @@ int main(int, char* argv[])
         return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, steps_per_output);
       } else if (method_type == "mri") {
         return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt_fast.value(), dt, order, steps_per_output);
+      } else if (method_type == "original") {
+        std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, &exp_processes, state_descs, tend_descs, dt, 1, 0);
+        backing_integrators.emplace_back(local_intg);
+        std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(*local_intg);
+        backing_integrators.emplace_back(local_lim_intg);
+        std::shared_ptr<SedCflIntegrator> sed_intg = std::make_shared<SedCflIntegrator>(&constants, &grid, tend_descs, &sed);
+        backing_integrators.emplace_back(sed_intg);
+        std::shared_ptr<SequentialSplitIntegrator> step_intg = std::make_shared<SequentialSplitIntegrator>(std::vector<const RainshaftIntegrator*>({&*local_lim_intg, &*sed_intg}));
+        backing_integrators.emplace_back(step_intg);
+        return std::make_unique<FixedSubstepIntegrator>(&*step_intg, dt);
       } else {
         throw std::logic_error("Invalid time integration method type");
       }
@@ -188,7 +210,7 @@ int main(int, char* argv[])
     auto after_sol = high_resolution_clock::now();
     // Time taken for solution.
     duration<double, std::milli> walltime_ms = after_sol - before_sol;
-    std::cout << "Time: " << walltime_ms.count() << std::endl;
+    std::cout << icase << " Time: " << walltime_ms.count() << std::endl;
     // Write out grid and all states.
     writer.write_grid(grid, icase);
     writer.write_states(solution.states, icase);

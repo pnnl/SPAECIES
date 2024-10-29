@@ -4,6 +4,7 @@ add_executable(rainshaft
   imex_integrator.cpp
   mri_integrator.cpp
   fixed_substep_integrator.cpp
+  limiting_integrator.cpp
   lookup_linear.cpp
   nudging.cpp
   rainshaft_driver.cpp
