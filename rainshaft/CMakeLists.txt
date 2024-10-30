@@ -6,6 +6,7 @@ add_executable(rainshaft
   fixed_substep_integrator.cpp
   lookup_linear.cpp
   nudging.cpp
+  operator_splitting_integrator.cpp
   rainshaft_driver.cpp
   rainshaft_derived_vars.cpp
   rainshaft_grid.cpp
