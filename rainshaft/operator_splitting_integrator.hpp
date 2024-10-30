@@ -7,6 +7,8 @@ class OperatorSplittingIntegrator : public SundialsIntegrator<2>
 {
 private:
   const double dt;
+  const double dt_exp;
+  const double dt_imp;
   const int order;
 
 public:

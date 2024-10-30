@@ -20,7 +20,7 @@ OperatorSplittingIntegrator::OperatorSplittingIntegrator(const RainshaftConstant
                                        const int order,
                                        const int steps_per_output)
     : SundialsIntegrator(constants, grid, {process_exp, process_imp}, state_descs, tend_descs, steps_per_output),
-      dt(dt), order(order)
+      dt(dt), dt_exp(dt_exp), dt_imp(dt_imp), order(order)
 {
 }
 
@@ -32,7 +32,7 @@ RainshaftSolution OperatorSplittingIntegrator::integrate(double initial_time,
 
   void *exp_mem = ERKStepCreate(create_f<0>(), initial_time, y, sun_ctxt);
   ARKodeSetUserData(exp_mem, (void *)&user_data);
-  ARKodeSetFixedStep(exp_mem, dt);
+  ARKodeSetFixedStep(exp_mem, dt_exp);
   ARKodeSetOrder(exp_mem, order);
   ARKodeSetMaxNumSteps(exp_mem, -1); // Set no limit on the number of steps
   ARKodeSetStopTime(exp_mem, final_time);
@@ -46,7 +46,7 @@ RainshaftSolution OperatorSplittingIntegrator::integrate(double initial_time,
 
   void *imp_mem = ARKStepCreate(nullptr, create_f<1>(), initial_time, y, sun_ctxt);
   ARKodeSetUserData(imp_mem, (void *)&user_data);
-  ARKodeSetFixedStep(imp_mem, dt);
+  ARKodeSetFixedStep(imp_mem, dt_imp);
   ARKodeSetOrder(imp_mem, order);
   ARKodeSetMaxNumSteps(imp_mem, -1); // Set no limit on the number of steps
   ARKodeSetStopTime(imp_mem, final_time);

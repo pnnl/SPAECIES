@@ -11,7 +11,7 @@ project(SPAECIES LANGUAGES CXX VERSION 0.0.1)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(NetCDF REQUIRED)
 find_package(SUNDIALS 7.1.0 REQUIRED COMPONENTS arkode sunlinsollapackdense)
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS program_options)
 
 if (BUILD_TESTING)
   find_package(Catch2 3 REQUIRED)
@@ -21,7 +21,6 @@ if (BUILD_TESTING)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-lboost_program_options")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -fbounds-check")
