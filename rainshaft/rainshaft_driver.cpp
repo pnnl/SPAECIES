@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 		("order", po::value<int>(&order)->default_value(2), "order of method")
 		("dt", po::value<double>(&dt)->default_value(0.1), "step size. if integration type is set to MRI, this argument is the inner time step size")
     ("dt_slow", po::value<double>(&dt_slow_in), "slow/outer step size for MRI integration. negative values indicate ratios, e.g. dt_slow=-0.5 corresponds to dt_slow = dt_fast/2")
-		("type", po::value<std::string>(&name)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, IMEX, MRI)")
+		("type", po::value<std::string>(&name)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, imex, mri)")
     ("steps", po::value<int>(&steps_per_output)->default_value(-1), "frequency of saved output, e.g. write output to netCDF every steps_per_output timesteps. -1 to save only the first and last steps")
     ("simname", po::value<std::string>(), "common name for group of simulations")
   ;
@@ -210,6 +210,8 @@ int main(int argc, char* argv[])
   const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
     if (name == "explicit") {
       return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);
+    } else if (name == "implicit") {
+      return std::make_unique<IMEXIntegrator>(constants, grid, nullptr, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);
     } else if (name == "imex") {
       return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, steps_per_output);
     } else if (name == "mri") {
