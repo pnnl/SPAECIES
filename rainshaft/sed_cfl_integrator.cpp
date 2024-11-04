@@ -21,6 +21,9 @@ RainshaftSolution SedCflIntegrator::integrate(double initial_time,
   double *state_data = temp_state.data();
   Tendency tend(tend_descs);
   double *tend_data = tend.data();
+  for (std::size_t i  = 0; i != tend.size(); ++i) {
+    tend_data[i] = 0.;
+  }
   while (time_remaining > 0) {
     RainshaftDerivedVars dvar = RainshaftDerivedVars(*constants, *grid, temp_state);
     double lambdar_top = std::cbrt(constants->pi * constants->rhow
