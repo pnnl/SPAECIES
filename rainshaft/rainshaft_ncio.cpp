@@ -255,7 +255,9 @@ void NetcdfWriter::write_num_rhs_evals(std::int64_t num_rhs_evals, std::size_t c
     nc_def_var(ncid, "num_rhs_evals", NC_INT64, 1, &caseid, &evalsid);
   }
   // Write variable.
-  nc_put_var1_longlong(ncid, evalsid, &case_idx, &num_rhs_evals);
+  // Use the generic output rather than rely on "long" or "longlong" being
+  // a particular length.
+  nc_put_var1(ncid, evalsid, &case_idx, &num_rhs_evals);
 }
 
 void NetcdfWriter::write_walltime_ms(double walltime_ms, std::size_t case_idx) {
