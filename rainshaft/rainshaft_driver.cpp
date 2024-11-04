@@ -21,11 +21,13 @@
 #include <string>
 #include "imex_integrator.hpp"
 #include "mri_integrator.hpp"
+#include <boost/program_options.hpp>
 
-int main(int, char* argv[])
+int main(int argc, char* argv[])
 {
   using std::chrono::high_resolution_clock;
   using std::chrono::duration;
+  namespace po = boost::program_options;
 
   // Set up model constants.
   // SPS: Choose rho_top in a more principled way?
@@ -33,6 +35,76 @@ int main(int, char* argv[])
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
                                0.62197, 1.e-14, 9.80616, 1.e-5, 5.e-3,
                                0.988919555598356, 1.e3, 1.e-4};
+  // Parse input
+  int order;
+  double dt;
+  double dt_slow, dt_slow_in;
+  std::string name;
+  int steps_per_output;
+  std::string simulation_name;
+
+	po::options_description desc("Allowed options");
+	desc.add_options()
+		("help", "produce help message")
+		("order", po::value<int>(&order)->default_value(2), "order of method")
+		("dt", po::value<double>(&dt)->default_value(0.1), "step size. if integration type is set to MRI, this argument is the inner time step size")
+    ("dt_slow", po::value<double>(&dt_slow_in), "slow/outer step size for MRI integration. negative values indicate ratios, e.g. dt_slow=-0.5 corresponds to dt_slow = dt_fast/2")
+		("type", po::value<std::string>(&name)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, imex, mri)")
+    ("steps", po::value<int>(&steps_per_output)->default_value(-1), "frequency of saved output, e.g. write output to netCDF every steps_per_output timesteps. -1 to save only the first and last steps")
+    ("simname", po::value<std::string>(), "common name for group of simulations")
+  ;
+
+	po::variables_map vm{};
+	po::store(parse_command_line(argc, argv, desc), vm);
+	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << "\n";
+		return 1;
+	}
+ 
+	if (vm["order"].defaulted()) {
+    std::cout << "Order of integration method was not set. Defaulting to " << order << "." << std::endl;
+  } else {
+    std::cout << "Order of integration method set to " << order << "." << std::endl;
+  }
+
+	if (vm["dt"].defaulted()) {
+    std::cout << "Time step was not set. Defaulting to " << dt << "." << std::endl;
+  } else {
+    std::cout << "Time step was set to " << dt << "." << std::endl;
+  }
+
+  if (vm.count("dt_slow")) {
+    dt_slow_in = vm["dt_slow"].as<double>();
+    if (dt_slow_in < 0.0) {
+      dt_slow = abs(dt_slow_in) * dt;
+    } else {
+      dt_slow = dt_slow_in;
+    }
+    std::cout << "Slow/outer time step was set to " << dt_slow << "." << std::endl;
+  } else {
+    std::cout << "Slow/outer time step was not set." << std::endl;
+  }
+
+	if (vm["type"].defaulted()) {
+    std::cout << "Integration type was not set. Defaulting to " << name << "." << std::endl;
+  } else {
+    std::cout << "Integration type was set to " << name << "." << std::endl;
+  }
+
+  if (vm["steps"].defaulted()) {
+    std::cout << "Save frequency not set. Defaulting to " << steps_per_output << "." << std::endl;
+  } else {
+    std::cout << "Save frequency set to " << steps_per_output << "." << std::endl;
+  }
+
+  if (vm.count("simname")) {
+    simulation_name = vm["simname"].as<std::string>();
+    std::cout << "Simulation name: " << simulation_name << "." << std::endl;
+  }
+  
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
   double model_top = 2.e3;
@@ -134,19 +206,17 @@ int main(int, char* argv[])
 
   SumProcess all_processes = SumProcess{{&sed, &nudge, &self_coll, &evap}};
 
-  const auto dt = std::stod(argv[2]);
-  const auto order = std::stoi(argv[3]);
-  const auto name = std::string(argv[1]);
-  const auto steps_per_output = std::stoi(argv[4]);
   const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
-    if (name == "ex") {
+    if (name == "explicit") {
       return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);
+    } else if (name == "implicit") {
+      return std::make_unique<IMEXIntegrator>(constants, grid, nullptr, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);
     } else if (name == "imex") {
       return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, steps_per_output);
     } else if (name == "mri") {
-      return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt, order, steps_per_output, std::stoi(argv[5]));
+      return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt, dt_slow, order, steps_per_output);
     } else {
-      throw std::logic_error("Invalid name");
+      throw std::logic_error("Invalid integration method. Options: explicit, imex, mri.");
     }
   }();
 
@@ -156,8 +226,30 @@ int main(int, char* argv[])
   // Time taken for solution.
   duration<double, std::milli> walltime_ms = after_sol - before_sol;
   std::cout << "Time: " << walltime_ms.count() << std::endl;
+
+  // parse time step for savefile name
+  std::string str1 = std::to_string(dt);
+  str1.erase(str1.find_first_of('.'), 1);
+  str1.erase(0, str1.find_first_not_of('0'));
+  str1.erase ( str1.find_last_not_of('0') + 1, std::string::npos );
+
+  std::string filename;
   // Write out grid and all states.
-  NetcdfWriter writer("./rainshaft_1s_imex_test.nc");
+  if (vm.count("simname")) {
+    if (vm.count("dt_slow")) {
+      filename = "results/rainshaft_" + vm["simname"].as<std::string>() + "_order" + std::to_string(order) + "_dtslow" + std::to_string(dt_slow_in) + "_dt" + std::to_string(dt) + ".nc";
+    } else {
+      filename = "results/rainshaft_" + vm["simname"].as<std::string>() + "_order" + std::to_string(order) + "_dt" + std::to_string(dt) + ".nc";
+    }
+  } else {
+    if (vm.count("dt_slow")) {
+      filename = "results/rainshaft_order" + std::to_string(order) + "_dtslow" + std::to_string(dt_slow_in) +  "_dt" + std::to_string(dt) + ".nc";
+    } else {
+      filename = "results/rainshaft_order" + std::to_string(order) +  "_dt" + std::to_string(dt) + ".nc";
+    }
+  }
+
+  NetcdfWriter writer(filename);
   writer.write_grid(grid);
   writer.write_states(solution.states);
   std::vector<RainshaftDerivedVars> solution_dvars;
