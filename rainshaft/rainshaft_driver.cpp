@@ -4,6 +4,7 @@
 #include "fixed_substep_integrator.hpp"
 #include "limiting_integrator.hpp"
 #include "nudging.hpp"
+#include "parsing_utilities.hpp"
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_initial.hpp"
@@ -17,6 +18,9 @@
 #include "self_collision.hpp"
 #include "sequential_split_integrator.hpp"
 #include <iostream>
+#include <fstream>
+#include <filesystem>
+#include <numeric>
 #include <cmath>
 #include <chrono>
 #include <memory>
@@ -24,45 +28,94 @@
 #include <string>
 #include "imex_integrator.hpp"
 #include "mri_integrator.hpp"
+#include <boost/program_options.hpp>
 
-int main(int, char* argv[])
+namespace po = boost::program_options;
+
+int main(int argc, char* argv[])
 {
   using std::chrono::high_resolution_clock;
   using std::chrono::duration;
 
-  // Get command line arguments
-  std::size_t i = 0;
-  std::string initial_condition(argv[++i]); // File for initial conditions, or 'adiabatic'.
-  std::size_t num_cases = 1;
-  if (initial_condition != "adiabatic") {
-    num_cases = std::stoi(argv[++i]); // Number of cases to read from beginning of file.
-  }
-  double sim_len = std::stod(argv[++i]); // Length of time to integrate to
+  // Arg parser
+  double dt, dt_slow, dt_slow_in, final_time, tol_fac;
+  int steps_per_output, num_cases;
+  std::string input_file, output_file, method_type, initial_condition, initial_condition_file;
+  std::size_t order, icase_in;
   bool do_nudging;
-  std::string nudge_opt(argv[++i]); // Whether or not to do nudging
-  if (nudge_opt == "TRUE" || nudge_opt == "True" || nudge_opt == "T"
-      || nudge_opt == "true" || nudge_opt == "t") {
-    do_nudging = true;
-  } else if (nudge_opt == "FALSE" || nudge_opt == "False" || nudge_opt == "F"
-      || nudge_opt == "false" || nudge_opt == "f") {
-    do_nudging = false;
-  } else {
-    throw std::logic_error("Unrecognized nudging option");
-  }
-  std::string method_type(argv[++i]); // Time integration method type
-  std::optional<double> dt_fast; // Fast time step for MRI method
-  if (method_type == "mri") {
-    dt_fast = std::stod(argv[++i]);
-  }
-  double dt = std::stod(argv[++i]); // Overall time step size
-  int order;
-  int steps_per_output;
-  if (method_type != "original") {
-    order = std::stoi(argv[++i]); // Order of accuracy desired
-    steps_per_output = std::stoi(argv[++i]); // Number of time steps between each output
-  }
-  std::string output_file(argv[++i]); // Name of file to output to
 
+	po::options_description desc("Allowed options");
+	desc.add_options()
+		("help", "produce help message")
+    ("i", po::value<std::string>(&input_file), "(optional) input file for command line arguments")
+		("order", po::value<std::size_t>(&order)->default_value(2), "order of method")
+		("dt", po::value<double>(&dt)->default_value(0.1), "step size. if integration type is set to MRI, this argument is the inner time step size")
+    ("dt_slow", po::value<double>(&dt_slow_in), "slow/outer step size for MRI integration. negative values indicate ratios, e.g. dt_slow=-0.5 corresponds to dt_slow = dt_fast/2")
+    ("tol_fac", po::value<double>(&tol_fac)->default_value(1.0), "tolerance factor for adaptive stepping and nonlinear solvers")
+		("type", po::value<std::string>(&method_type)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, imex, mri, original)")
+    ("steps", po::value<int>(&steps_per_output)->default_value(-1), "frequency of saved output, e.g. write output to netCDF every steps_per_output timesteps. -1 to save only the first and last steps")
+    ("ic_file", po::value<std::string>(&initial_condition_file), "type of initial condiiton (e.g. 'adiabatic' or the filename of E3SM data)")
+    ("num_cases", po::value<int>(&num_cases)->default_value(1), "number of E3SM cases to load if initial_condition is set to filename. -1 for all cases.")
+    ("case_idx", po::value<std::size_t>(&icase_in), "(optional) specific E3SM case to load if initial_condition is set to filename.")
+    ("final_time", po::value<double>(&final_time)->default_value(1800.0), "stopping time for integration")
+    ("nudging", po::value<bool>(&do_nudging)->default_value(true), "boolean flag for nudging")
+    ("filename", po::value<std::string>(&output_file)->default_value("rainshaft.nc"), "savefile name")
+  ;
+
+  // Load from command line to check for input file
+  po::variables_map vm{};
+  po::store(parse_command_line(argc, argv, desc), vm);
+  po::notify(vm);  
+
+  // Load from input
+  if (vm.count("i")) {
+    std::cout << "Setting parameters from input file " << vm["i"].as<std::string>() << "..." << std::endl;
+    parse_input_file(vm["i"].as<std::string>());
+
+    std::ifstream settings_file("settings_filtered.ini");
+    vm = po::variables_map();
+    po::store(po::parse_config_file(settings_file, desc), vm);
+    po::notify(vm); 
+    std::filesystem::remove("settings_filtered.ini");
+  } else {
+    std::cout << "Setting parameters from command line arguments..." << std::endl;
+  }
+  std::cout << "---------------------------------------------------" << std::endl;
+  
+  // Setup dependencies
+  option_dependency<std::string>(vm, "type", "dt_slow", "mri");
+  option_dependency<std::string>(vm, "case_idx", "ic_file");
+
+  // Print input to program_options
+  print_variables_map(vm);
+
+  // Help message
+	if (vm.count("help"))
+	{
+		std::cout << desc << "\n";
+		return 1;
+	}
+
+  // If no IC file specified, default to adiabatic
+  if (vm.count("ic_file")) {
+    initial_condition = initial_condition_file;
+  } else {
+    initial_condition = "adiabatic";
+    std::cout << "No IC input file specified. Defaulting to adiabatic case.";
+  }
+
+  // Parse slow time steps for MRI method
+  if (vm.count("dt_slow")) {
+    dt_slow_in = vm["dt_slow"].as<double>();
+    if (dt_slow_in < 0.0) {
+      dt_slow = abs(dt_slow_in) * dt;
+    } else {
+      dt_slow = dt_slow_in;
+    }
+  }
+
+  std::cout << "The slow dt: " << dt_slow << std::endl;
+ 
   // Set up model constants.
   // SPS: Choose rho_top in a more principled way?
   RainshaftConstants constants{3.14159265358979323846,
@@ -82,30 +135,56 @@ int main(int, char* argv[])
   double nudge_time_scale = 15. * 60.;
   // Time of simulation start.
   double initial_time = 0.;
-  // Final time to integrate to.
-  double final_time = initial_time + sim_len;
   // Saturation vapor pressure formula.
   SaturationFormulae sat_form(constants);
 
   // Set up max grid size
-  std::size_t max_cases, max_levs;
+  std::size_t max_levs;
+  int max_cases;
   RainshaftGrid default_grid = make_e3sm_like_grid(constants, model_top, srf_pres,
                                                    srf_temp, lapse_rate);
   std::optional<NetcdfReader> reader;
   if (initial_condition == "adiabatic") {
     max_cases = 1;
+    num_cases = 1;
     max_levs = default_grid.nlev;
   } else {
     reader = NetcdfReader(initial_condition);
     std::tuple<std::size_t, std::size_t> cases_levs = reader->read_num_cases_and_max_levs();
     max_cases = std::get<0>(cases_levs);
-    if (max_cases < num_cases) {
-      throw std::logic_error("Requested more cases than exist on file.");
+
+    if (vm.count("num_cases")) {
+      if (max_cases < num_cases) {
+        throw std::logic_error("Requested more cases than exist on file.");
+      }
+
+      if (num_cases == -1) {
+        num_cases = max_cases;
+      }
+    }
+
+    if (vm.count("case_idx")) {
+      if (vm.count("num_cases") && (vm["num_cases"].as<int>() != 1)) {
+        num_cases = 1;
+        std::cout << "Requested a specific case_idx but also specified num_cases != 1. Defaulting to num_cases=1." << std::endl;
+      }
+
+      if (max_cases < icase_in) {
+        throw std::logic_error("Requested non-existent case_idx in file.");
+      }
     }
     // Remove cloud base from levels.
     max_levs = std::get<1>(cases_levs) - 1;
   }
   NetcdfWriter writer(output_file, num_cases, max_levs);
+
+  // Setup list of cases to run
+  std::vector<std::size_t> cases_to_run(num_cases);
+  if (vm.count("case_idx")) {
+    cases_to_run.at(0) = icase_in;
+  } else {
+    std::iota(cases_to_run.begin(), cases_to_run.end(), 0);
+  }
 
   // Physics types that won't vary between cases (declare here to avoid calculating the
   // lookup tables in the case loop).
@@ -120,7 +199,8 @@ int main(int, char* argv[])
   }
   Evaporation evap(constants, sat_form, true, false, dt_for_evap);
 
-  for (std::size_t icase = 0; icase != num_cases; ++icase) {
+  // for (std::size_t icase = 0; icase != num_cases; ++icase) {
+  for (const std::size_t &icase : cases_to_run) {
     // Grid for this case.
     RainshaftGrid grid = (initial_condition == "adiabatic")
       ? default_grid : reader->read_grid(icase);
@@ -184,14 +264,14 @@ int main(int, char* argv[])
     std::vector<std::shared_ptr<RainshaftIntegrator>> backing_integrators;
 
     const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
-      if (method_type == "ex") {
-        return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);
+      if (method_type == "explicit") {
+        return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, tol_fac, steps_per_output);
       } else if (method_type == "imex") {
-        return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, steps_per_output);
+        return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, tol_fac, steps_per_output);
       } else if (method_type == "mri") {
-        return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt_fast.value(), dt, order, steps_per_output);
+        return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt, dt_slow, order, tol_fac, steps_per_output);
       } else if (method_type == "original") {
-        std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, &exp_processes, state_descs, tend_descs, dt, 1, 0);
+        std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, &exp_processes, state_descs, tend_descs, dt, 1, tol_fac, 0);
         backing_integrators.emplace_back(local_intg);
         std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(*local_intg);
         backing_integrators.emplace_back(local_lim_intg);
@@ -201,6 +281,7 @@ int main(int, char* argv[])
         backing_integrators.emplace_back(step_intg);
         return std::make_unique<FixedSubstepIntegrator>(&*step_intg, dt);
       } else {
+        std::cout << method_type << std::endl;
         throw std::logic_error("Invalid time integration method type");
       }
     }();
@@ -210,7 +291,7 @@ int main(int, char* argv[])
     auto after_sol = high_resolution_clock::now();
     // Time taken for solution.
     duration<double, std::milli> walltime_ms = after_sol - before_sol;
-    std::cout << icase << " Time: " << walltime_ms.count() << std::endl;
+    std::cout << "Case " << icase << ", Time: " << walltime_ms.count() << std::endl;
     // Write out grid and all states.
     writer.write_grid(grid, icase);
     writer.write_states(solution.states, icase);

@@ -10,9 +10,10 @@ ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants &constants,
                                        const VarDescList& tend_descs,
                                        const double dt,
                                        const int order,
+                                       const double fac,
                                        const int steps_per_output)
     : SundialsIntegrator(constants, grid, {process}, state_descs, tend_descs, steps_per_output),
-      dt(dt), order(order)
+      dt(dt), order(order), fac(fac)
 {
 }
 
@@ -39,7 +40,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   ARKodeSetAdaptivityAdjustment(arkode_mem, 0);
   ARKodeSetFixedStepBounds(arkode_mem, 1, 1); // Remove deadzone
 
-  const sunrealtype fac = 1.;
+  // const sunrealtype fac = 1.;
   const sunrealtype reltol = fac * 1.e-2;
   const N_Vector abstol = N_VClone(y);
   double * const tol_data = N_VGetArrayPointer(abstol);
