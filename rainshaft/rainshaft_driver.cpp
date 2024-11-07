@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
   using std::chrono::duration;
 
   // Arg parser
-  double dt, dt_slow, dt_slow_in, final_time, tol_fac;
+  double dt, dt_fast, final_time, tol_fac;
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file;
   std::size_t order, icase_in;
@@ -49,8 +49,8 @@ int main(int argc, char* argv[])
 		("help", "produce help message")
     ("i", po::value<std::string>(&input_file), "(optional) input file for command line arguments")
 		("order", po::value<std::size_t>(&order)->default_value(2), "order of method")
-		("dt", po::value<double>(&dt)->default_value(0.1), "step size. if integration type is set to MRI, this argument is the inner time step size")
-    ("dt_slow", po::value<double>(&dt_slow_in), "slow/outer step size for MRI integration. negative values indicate ratios, e.g. dt_slow=-0.5 corresponds to dt_slow = dt_fast/2")
+		("dt", po::value<double>(&dt)->default_value(0.1), "step size. if integration type is set to MRI, this argument is the slow/outer time step size. negative values indicate ratios, e.g. dt_slow=-0.5 corresponds to dt_slow = dt_fast/2")
+    ("dt_fast", po::value<double>(&dt_fast), "fast/inner step size")
     ("tol_fac", po::value<double>(&tol_fac)->default_value(1.0), "tolerance factor for adaptive stepping and nonlinear solvers")
 		("type", po::value<std::string>(&method_type)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, imex, mri, original)")
     ("steps", po::value<int>(&steps_per_output)->default_value(-1), "frequency of saved output, e.g. write output to netCDF every steps_per_output timesteps. -1 to save only the first and last steps")
@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
   std::cout << "---------------------------------------------------" << std::endl;
   
   // Setup dependencies
-  option_dependency<std::string>(vm, "type", "dt_slow", "mri");
+  option_dependency<std::string>(vm, "type", "dt_fast", "mri");
   option_dependency<std::string>(vm, "case_idx", "ic_file");
 
   // Print input to program_options
@@ -105,16 +105,15 @@ int main(int argc, char* argv[])
   }
 
   // Parse slow time steps for MRI method
-  if (vm.count("dt_slow")) {
-    dt_slow_in = vm["dt_slow"].as<double>();
-    if (dt_slow_in < 0.0) {
-      dt_slow = abs(dt_slow_in) * dt;
-    } else {
-      dt_slow = dt_slow_in;
+  if (method_type == "mri") {
+    if (vm["dt"].as<double>() < 0.0) {
+      dt = abs(dt) * dt_fast;
+    }
+  } else {
+    if (vm["dt"].as<double>() < 0.0) {
+      throw std::logic_error("Negative time step not permitted!");
     }
   }
-
-  std::cout << "The slow dt: " << dt_slow << std::endl;
  
   // Set up model constants.
   // SPS: Choose rho_top in a more principled way?
@@ -189,7 +188,7 @@ int main(int argc, char* argv[])
   // Physics types that won't vary between cases (declare here to avoid calculating the
   // lookup tables in the case loop).
   // Sedimentation process.
-  Sedimentation sed(constants, true, false);
+  Sedimentation sed(constants, false, false);
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
@@ -197,7 +196,7 @@ int main(int argc, char* argv[])
   if (method_type == "original") {
     dt_for_evap = dt;
   }
-  Evaporation evap(constants, sat_form, true, false, dt_for_evap);
+  Evaporation evap(constants, sat_form, false, false, dt_for_evap);
 
   // for (std::size_t icase = 0; icase != num_cases; ++icase) {
   for (const std::size_t &icase : cases_to_run) {
@@ -249,7 +248,7 @@ int main(int argc, char* argv[])
       }
       nudge = std::make_shared<Nudging>(nudge_time_scale, t_vec, q_vec);
       exp_process_vec = {&evap, &*nudge, &self_coll};
-      all_process_vec = {&sed, &*nudge, &self_coll, &evap};
+      all_process_vec = {&*nudge, &self_coll, &evap};
     } else {
       exp_process_vec = {&evap, &self_coll};
       all_process_vec = {&sed, &self_coll, &evap};
@@ -266,10 +265,12 @@ int main(int argc, char* argv[])
     const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
       if (method_type == "explicit") {
         return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, tol_fac, steps_per_output);
+      } else if (method_type == "implicit") {
+        return std::make_unique<IMEXIntegrator>(constants, grid, nullptr, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);  
       } else if (method_type == "imex") {
         return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, tol_fac, steps_per_output);
       } else if (method_type == "mri") {
-        return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt, dt_slow, order, tol_fac, steps_per_output);
+        return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt_fast, dt, order, tol_fac, steps_per_output);
       } else if (method_type == "original") {
         std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, &exp_processes, state_descs, tend_descs, dt, 1, tol_fac, 0);
         backing_integrators.emplace_back(local_intg);
@@ -289,20 +290,27 @@ int main(int argc, char* argv[])
     auto before_sol = high_resolution_clock::now();
     RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state);
     auto after_sol = high_resolution_clock::now();
+
     // Time taken for solution.
     duration<double, std::milli> walltime_ms = after_sol - before_sol;
     std::cout << "Case " << icase << ", Time: " << walltime_ms.count() << std::endl;
     // Write out grid and all states.
-    writer.write_grid(grid, icase);
-    writer.write_states(solution.states, icase);
+    std::size_t icase_writer;
+    if (vm.count("case_idx")) {
+      icase_writer = 0;
+    } else {
+      icase_writer = icase;
+    }
+    writer.write_grid(grid, icase_writer);
+    writer.write_states(solution.states, icase_writer);
     std::vector<RainshaftDerivedVars> solution_dvars;
     solution_dvars.reserve(solution.states.size());
     for (StateConst state : solution.states) {
       solution_dvars.emplace_back(constants, grid, state);
     }
-    writer.write_derived_vars(solution_dvars, icase);
-    writer.write_num_rhs_evals(solution.num_rhs_evals, icase);
-    writer.write_walltime_ms(walltime_ms.count(), icase);
+    writer.write_derived_vars(solution_dvars, icase_writer);
+    writer.write_num_rhs_evals(solution.num_rhs_evals, icase_writer);
+    writer.write_walltime_ms(walltime_ms.count(), icase_writer);
   }
   return 0;
 }

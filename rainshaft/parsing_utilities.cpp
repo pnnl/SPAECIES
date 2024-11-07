@@ -29,8 +29,7 @@ void parse_input_file(const std::string input_file)
         // Split the string
         std::vector<std::string> v = split_string(line, '=');
 
-        // If variable on the line had a set value, i.e. key=value, write it to the filtered file
-        if(v[1].find_first_not_of(' ') != std::string::npos) {
+        if(v.size() == 2 && v[1].find_first_not_of(' ') != std::string::npos) {
             outfile << line << "\n"; 
         } 
       } else {

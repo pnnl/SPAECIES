@@ -78,10 +78,10 @@ do
                     printf "nudging = ${NUDGING_FLAG}\n" >> "${RAINSHAFT_DIR}/settings_i.ini"
 
                     ${RAINSHAFT_EXE} --i "settings_i.ini"
-                    # ./rainshaft --order ${ORDERS[k]} --dt ${TIMESTEPS[i]} --dt_slow ${SLOW_TIMESTEPS[j]} --type $INTEGRATION_TYPE --simname $SIMULATION_NAME
+                    # ./rainshaft --order ${ORDERS[k]} --dt_fast ${TIMESTEPS[i]} --dt ${SLOW_TIMESTEPS[j]} --type $INTEGRATION_TYPE --simname $SIMULATION_NAME
                 done
             done
-        else # otherwise, only loop over fast time steps
+        else # otherwise, only loop over the single time steps
             for i in $(seq 0 $((${#TIMESTEPS[@]} - 1)))
             do
                 OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
