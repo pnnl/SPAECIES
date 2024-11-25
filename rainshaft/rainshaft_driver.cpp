@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
   po::store(parse_command_line(argc, argv, desc), vm);
   po::notify(vm);  
 
-  // Load from input
+  // Load from settings file if available
   if (vm.count("i")) {
     std::cout << "Setting parameters from input file " << vm["i"].as<std::string>() << "..." << std::endl;
     parse_input_file(vm["i"].as<std::string>());
@@ -83,8 +83,8 @@ int main(int argc, char* argv[])
   std::cout << "---------------------------------------------------" << std::endl;
   
   // Setup dependencies
-  option_dependency<std::string>(vm, "type", "dt_fast", "mri");
-  option_dependency<std::string>(vm, "case_idx", "ic_file");
+  option_dependency<std::string>(vm, "type", "dt_fast", "mri"); // mri integrator requires specification of fast time step as well
+  option_dependency<std::string>(vm, "case_idx", "ic_file");    // specifying a particular case_idx requires input E3SM data file
 
   // Print input to program_options
   print_variables_map(vm);
@@ -96,22 +96,22 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-  // If no IC file specified, default to adiabatic
+  // If no IC file specified, default to adiabatic IC
   if (vm.count("ic_file")) {
     initial_condition = initial_condition_file;
   } else {
     initial_condition = "adiabatic";
-    std::cout << "No IC input file specified. Defaulting to adiabatic case.";
+    std::cout << "No IC input file specified. Defaulting to adiabatic case." << std::endl;
   }
 
   // Parse slow time steps for MRI method
   if (method_type == "mri") {
-    if (vm["dt"].as<double>() < 0.0) {
+    if (vm["dt"].as<double>() < 0.0) { // negative slow time step corresponds to setting dt_slow as multiple of dt_fast
       dt = abs(dt) * dt_fast;
     }
   } else {
-    if (vm["dt"].as<double>() < 0.0) {
-      throw std::logic_error("Negative time step not permitted!");
+    if (vm["dt"].as<double>() < 0.0) { // positive slow time step is taken at face value
+      throw std::logic_error("Negative time step not permitted!"); 
     }
   }
  
@@ -248,7 +248,7 @@ int main(int argc, char* argv[])
       }
       nudge = std::make_shared<Nudging>(nudge_time_scale, t_vec, q_vec);
       exp_process_vec = {&evap, &*nudge, &self_coll};
-      all_process_vec = {&*nudge, &self_coll, &evap};
+      all_process_vec = {&sed, &*nudge, &self_coll, &evap};
     } else {
       exp_process_vec = {&evap, &self_coll};
       all_process_vec = {&sed, &self_coll, &evap};
