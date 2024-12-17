@@ -10,10 +10,10 @@ ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants &constants,
                                        const VarDescList& tend_descs,
                                        const double dt,
                                        const int order,
-                                       const double fac,
+                                       const double rel_tol,
                                        const int steps_per_output)
     : SundialsIntegrator(constants, grid, {process}, state_descs, tend_descs, steps_per_output),
-      dt(dt), order(order), fac(fac)
+      dt(dt), order(order), rel_tol(rel_tol)
 {
 }
 
@@ -40,29 +40,9 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   ARKodeSetAdaptivityAdjustment(arkode_mem, 0);
   ARKodeSetFixedStepBounds(arkode_mem, 1, 1); // Remove deadzone
 
-  // const sunrealtype fac = 1.;
-  const sunrealtype reltol = fac * 1.e-2;
-  const N_Vector abstol = N_VClone(y);
-  double * const tol_data = N_VGetArrayPointer(abstol);
-  const std::size_t nz = user_data.grid.nlev;
-  for (std::size_t j = 0; j != nz; ++j)
-  {
-    tol_data[j] = fac * 1.e-1;
-  }
-  for (std::size_t j = 0; j != nz; ++j)
-  {
-    tol_data[nz + j] = fac * 1.e-5;
-  }
-  for (std::size_t j = 0; j != nz; ++j)
-  {
-    tol_data[2 * nz + j] = fac * 1.e-1;
-  }
-  for (std::size_t j = 0; j != nz; ++j)
-  {
-    tol_data[3 * nz + j] = fac * 1.e-8;
-  }
-  ARKodeSVtolerances(arkode_mem, reltol, abstol);
-  N_VDestroy(abstol);
+  const N_Vector abs_tol = fill_abs_tol_vector(N_VClone(y));
+  ARKodeSVtolerances(arkode_mem, rel_tol, abs_tol);
+  N_VDestroy(abs_tol);
 
   const RainshaftSolution solution = evolve(
       ARKodeEvolve,

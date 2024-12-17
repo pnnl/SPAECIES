@@ -153,6 +153,16 @@ protected:
     return y;
   }
 
+  N_Vector fill_abs_tol_vector(N_Vector abs_tol) const {
+    double * const tol_data = N_VGetArrayPointer(abs_tol);
+    const std::size_t nz = user_data.grid.nlev;
+    std::fill_n(tol_data, nz, 1.e-3);
+    std::fill_n(&tol_data[nz], nz, 1.e-7);
+    std::fill_n(&tol_data[2 * nz], nz, 1.e-3);
+    std::fill_n(&tol_data[3 * nz], nz, 1.e-10);
+    return abs_tol;
+  }
+
 private:
   // The state and tendency conversions below are currently duplicated, but
   // in the future the arguments to the state and tendency constructors will be different...
