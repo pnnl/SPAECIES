@@ -28,6 +28,7 @@ target_link_libraries(rainshaft
   SUNDIALS::sunlinsollapackdense
   Boost::boost
   Boost::program_options
+  stdc++fs
   spaecies)
 target_include_directories(rainshaft PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
