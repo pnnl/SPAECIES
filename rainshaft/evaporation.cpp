@@ -22,9 +22,10 @@ std::optional<LookupLinear> Evaporation::create_lookup(const RainshaftConstants 
 Evaporation::Evaporation(const RainshaftConstants &constants,
                          const SaturationFormulae &sat_form_in,
                          const bool use_v_table,
-                         const bool use_numerical_integration)
+                         const bool use_numerical_integration,
+                         std::optional<double> dt)
     : use_numerical_integration(use_numerical_integration), sat_form(sat_form_in),
-    v_table(create_lookup(constants, use_v_table, use_numerical_integration))
+      v_table(create_lookup(constants, use_v_table, use_numerical_integration)), dt(dt)
 {
 }
 

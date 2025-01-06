@@ -9,6 +9,7 @@ private:
   const double dt_fast;
   const double dt_slow;
   const int order;
+  const double rel_tol;
 
 public:
   MRIIntegrator(const RainshaftConstants &constants,
@@ -21,6 +22,7 @@ public:
                 const double dt_fast,
                 const double dt_slow,
                 const int order = 3,
+                const double rel_tol = 1.e-4, 
                 const int steps_per_output = -1);
 
   RainshaftSolution integrate(double initial_time,

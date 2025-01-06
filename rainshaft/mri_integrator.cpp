@@ -24,9 +24,10 @@ MRIIntegrator::MRIIntegrator(const RainshaftConstants &constants,
                              const double dt_fast,
                              const double dt_slow,
                              const int order,
+                             const double rel_tol,
                              const int steps_per_output)
     : SundialsIntegrator(constants, grid, {process_fast, process_slow_exp, process_slow_imp}, state_descs, tend_descs, steps_per_output),
-      dt_fast(dt_fast), dt_slow(dt_slow), order(order)
+      dt_fast(dt_fast), dt_slow(dt_slow), order(order), rel_tol(rel_tol)
 {
 }
 

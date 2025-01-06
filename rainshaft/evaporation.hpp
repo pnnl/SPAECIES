@@ -144,21 +144,80 @@ private:
     }
   }
 
+  // Calculation for weight used by exponential integrator of original method.
+  // Probably unnecessary to implement derivative for this, but done for consistency.
   template <bool WithGrad = false>
-  RealOptGrad<WithGrad, 4> calc_q_evap(const double q, const RealOptGrad<WithGrad, 1> q_sat_dry, const RealOptGrad<WithGrad, 1> abl, const RealOptGrad<WithGrad, 4> tau_inv) const {
+  RealOptGrad<WithGrad, 4> calc_dt_weight(const RealOptGrad<WithGrad, 4> tau_inv) const {
+    if (!dt.has_value()) {
+      // Weight is always 1 in this case.
+      if constexpr (WithGrad) {
+        return {1, {0, 0, 0, 0}};
+      } else {
+        return 1;
+      }
+    }
+    // From here on, dt has a value.
+    const double dtfac = dt.value() * get_val(tau_inv);
+    const double exp_dt = exp(-dtfac);
+    const double weight_numer = 1. - exp_dt;
+    const double weight = weight_numer / dtfac;
+
+    if constexpr (WithGrad) {
+      const double dweight_dtfac = (exp_dt * dtfac - weight_numer) / (dtfac*dtfac);
+      const double dweight_dinv = dt.value() * dweight_dtfac;
+      const auto [inv_dT, inv_dq, inv_dnr, inv_dqr] = get_grad(tau_inv);
+
+      return {weight, {
+        inv_dT * dweight_dinv, // Derivative with respect to t
+        inv_dq * dweight_dinv, // Derivative with respect to q
+        inv_dnr * dweight_dinv, // Derivative with respect to nr
+        inv_dqr * dweight_dinv // Derivative with respect to qr
+      }};
+    } else {
+      return weight;
+    }
+  }
+
+  template <bool WithGrad = false>
+  RealOptGrad<WithGrad, 4> calc_q_evap(const double q, const RealOptGrad<WithGrad, 1> q_sat_dry,
+                                       const RealOptGrad<WithGrad, 1> abl, const RealOptGrad<WithGrad, 4> tau_inv,
+                                       const RealOptGrad<WithGrad, 4> weight) const {
     const double subsat = get_val(q_sat_dry) - q;
     const double q_evap_num = subsat * get_val(tau_inv);
-    const double q_evap = q_evap_num / get_val(abl);
+    const double q_evap_unweighted = q_evap_num / get_val(abl);
+    const double q_evap = get_val(weight) * q_evap_unweighted;
+    if (dt.has_value()) {
+      const double limited_q_evap = subsat / (get_val(abl) * dt.value());
+      if (q_evap > limited_q_evap) {
+        if constexpr (WithGrad) {
+          const auto [abl_dT] = get_grad(abl);
+          const auto [q_sat_dry_dT] = get_grad(q_sat_dry);
+          return {limited_q_evap, {
+              (q_sat_dry_dT * get_val(abl) - subsat * abl_dT) / (get_val(abl) * get_val(abl) * dt.value()),
+              -1. / (get_val(abl) * dt.value()),
+              0,
+              0,
+            }};
+        } else {
+          return limited_q_evap;
+        }
+      }
+    }
 
     if constexpr (WithGrad) {
       const auto [tau_inv_dT, tau_inv_dq, tau_inv_dnr, tau_inv_dqr] = get_grad(tau_inv);
       const auto [abl_dT] = get_grad(abl);
       const auto [q_sat_dry_dT] = get_grad(q_sat_dry);
+      const auto [weight_dT, weight_dq, weight_dnr, weight_dqr] = get_grad(weight);
       return {q_evap, {
-        (subsat * (tau_inv_dT - get_val(tau_inv) * abl_dT / get_val(abl)) + get_val(tau_inv) * q_sat_dry_dT) / get_val(abl),
-        (subsat * tau_inv_dq - get_val(tau_inv)) / get_val(abl),
-        subsat * tau_inv_dnr / get_val(abl),
-        subsat * tau_inv_dqr / get_val(abl)
+          get_val(weight) * ((subsat * (tau_inv_dT - get_val(tau_inv) * abl_dT / get_val(abl)) + get_val(tau_inv) * q_sat_dry_dT) / get_val(abl))
+          + weight_dT * q_evap_unweighted,
+          get_val(weight) * ((subsat * tau_inv_dq - get_val(tau_inv)) / get_val(abl))
+          + weight_dq * q_evap_unweighted,
+          get_val(weight) * (subsat * tau_inv_dnr / get_val(abl))
+          + weight_dnr * q_evap_unweighted,
+          get_val(weight) * (subsat * tau_inv_dqr / get_val(abl))
+          + weight_dqr * q_evap_unweighted
       }};
     } else {
       return q_evap;
@@ -208,7 +267,8 @@ public:
   // does not outlast the sat_form object.
   Evaporation(const RainshaftConstants &constants,
               const SaturationFormulae &sat_form_in, bool use_v_table,
-              bool use_numerical_integration);
+              bool use_numerical_integration,
+              std::optional<double> dt = std::nullopt);
 
   // Calculate tendency from current state.
   void calc_tend(const RainshaftConstants &constants,
@@ -265,7 +325,8 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
     const RealOptGrad<WithGrad, 1> abl = calc_abl<WithGrad>(constants, t, q_sat_dry);
     const RealOptGrad<WithGrad, 1> v_evap = calc_v_evap<WithGrad>(constants, get_val(lambdar));
     const RealOptGrad<WithGrad, 4> tau_inv = calc_tau_inv<WithGrad>(constants, nr, diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
-    const RealOptGrad<WithGrad, 4> q_evap = calc_q_evap<WithGrad>(q, q_sat_dry, abl, tau_inv);
+    const RealOptGrad<WithGrad, 4> weight = calc_dt_weight<WithGrad>(tau_inv);
+    const RealOptGrad<WithGrad, 4> q_evap = calc_q_evap<WithGrad>(q, q_sat_dry, abl, tau_inv, weight);
     const RealOptGrad<WithGrad, 4> n_evap = calc_n_evap<WithGrad>(nr, qr, q_evap);
     const RealOptGrad<WithGrad, 4> t_evap = calc_T_evap<WithGrad>(constants, q_evap);
 
@@ -277,6 +338,8 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
 private:
   // Water vapor saturation formulae.
   const SaturationFormulae &sat_form;
+
+  const std::optional<double> dt;
 
   // Particle velocity lookup table.
   // This is currently hard-coded to P3 settings, i.e. it contains 20 entries

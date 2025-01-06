@@ -4,11 +4,14 @@ add_executable(rainshaft
   imex_integrator.cpp
   mri_integrator.cpp
   fixed_substep_integrator.cpp
+  limiting_integrator.cpp
   lookup_linear.cpp
   nudging.cpp
+  parsing_utilities.cpp
   rainshaft_driver.cpp
   rainshaft_derived_vars.cpp
   rainshaft_grid.cpp
+  rainshaft_initial.cpp
   rainshaft_ncio.cpp
   rainshaft_solution.cpp
   rainshaft_sum_process.cpp
@@ -24,6 +27,8 @@ target_link_libraries(rainshaft
   SUNDIALS::arkode
   SUNDIALS::sunlinsollapackdense
   Boost::boost
+  Boost::program_options
+  stdc++fs
   spaecies)
 target_include_directories(rainshaft PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}

@@ -39,8 +39,8 @@ std::vector<double> calc_rho_dry(const RainshaftConstants& constants,
   VarConst t = state.get_variable("T");
   VarConst q = state.get_variable("q");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
-    rho_dry[il] = grid.p_mid[il] / (constants.rdry * t[il] *
-                                  (1 + q[il]/constants.epsilon_h2o));
+    rho_dry[il] = rho_dry_from_ideal_gas_law(constants.rdry, constants.epsilon_h2o,
+                                             grid.p_mid[il], t[il], q[il]);
   }
   return rho_dry;
 }

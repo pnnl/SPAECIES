@@ -8,6 +8,7 @@ class ExplicitIntegrator : public SundialsIntegrator<1>
 private:
   const double dt;
   const int order;
+  const double rel_tol;
 
 public:
   ExplicitIntegrator(const RainshaftConstants &constants,
@@ -17,6 +18,7 @@ public:
                      const VarDescList& tend_descs,
                      const double dt = 0,
                      const int order = 4,
+                     const double rel_tol = 1.e-4,
                      const int steps_per_output = -1);
 
   RainshaftSolution integrate(double initial_time,
