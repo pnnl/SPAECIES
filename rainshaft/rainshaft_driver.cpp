@@ -266,7 +266,7 @@ int main(int argc, char* argv[])
       if (method_type == "explicit") {
         return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, rel_tol, steps_per_output);
       } else if (method_type == "implicit") {
-        return std::make_unique<IMEXIntegrator>(constants, grid, nullptr, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);  
+        return std::make_unique<IMEXIntegrator>(constants, grid, nullptr, &all_processes, state_descs, tend_descs, dt, order, rel_tol, steps_per_output);  
       } else if (method_type == "imex") {
         return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, rel_tol, steps_per_output);
       } else if (method_type == "mri") {
