@@ -1,5 +1,4 @@
 #include "mri_integrator.hpp"
-#include "arkode/arkode_arkstep.h"
 #include "arkode/arkode_erkstep.h"
 #include "arkode/arkode_mristep.h"
 #include <iostream>
@@ -38,9 +37,9 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
 {
   const N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
 
-  /* create an ARKStep object, setting fast (inner) right-hand side
+  /* create an ERKStep object, setting fast (inner) right-hand side
      functions and the initial condition */
-  void *inner_arkode_mem = ARKStepCreate(create_f<0>(), nullptr, initial_time, y, sun_ctxt);
+  void *inner_arkode_mem = ERKStepCreate(create_f<0>(), initial_time, y, sun_ctxt);
   ARKodeSetOrder(inner_arkode_mem, order);
   ARKodeSetUserData(inner_arkode_mem, (void *)&user_data);
   ARKodeSetMaxNumSteps(inner_arkode_mem, -1);
@@ -48,9 +47,9 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
   // fixed step for fast solver
   ARKodeSetFixedStep(inner_arkode_mem, dt_fast);
 
-  /* create MRIStepInnerStepper wrapper for the ARKStep memory block */
+  /* create MRIStepInnerStepper wrapper for the ERKStep memory block */
   MRIStepInnerStepper stepper = nullptr;
-  ARKStepCreateMRIStepInnerStepper(inner_arkode_mem, &stepper);
+  ARKodeCreateMRIStepInnerStepper(inner_arkode_mem, &stepper);
 
   /* create an MRIStep object, setting the slow (outer) right-hand side
      functions and the initial condition */
@@ -71,12 +70,12 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
       {
         long int nfse = 0;
         long int nfsi = 0;
-        MRIStepGetNumRhsEvals(outer_arkode_mem, &nfse, &nfsi);
+        ARKodeGetNumRhsEvals(outer_arkode_mem, 0, &nfse);
+        ARKodeGetNumRhsEvals(outer_arkode_mem, 1, &nfsi);
 
-        long int nffe = 0;
-        long int nffi = 0;
-        ARKStepGetNumRhsEvals(inner_arkode_mem, &nffe, &nffi);
-        return nfse + nfsi + nffe + nffi;
+        long int nff = 0;
+        ARKodeGetNumRhsEvals(outer_arkode_mem, 0, &nff);
+        return nfse + nfsi + nff;
       },
       []() {},
       outer_arkode_mem,

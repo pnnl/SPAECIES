@@ -60,7 +60,8 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
       {
         long int nfe = 0;
         long int nfi = 0;
-        ARKStepGetNumRhsEvals(arkode_mem, &nfe, &nfi);
+        ARKodeGetNumRhsEvals(arkode_mem, 0, &nfe);
+        ARKodeGetNumRhsEvals(arkode_mem, 1, &nfi);
         return nfe + nfi;
       },
       [&]()

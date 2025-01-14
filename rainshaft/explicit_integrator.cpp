@@ -49,7 +49,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
       [arkode_mem]()
       {
         long int num_rhs_evals = 0;
-        ERKStepGetNumRhsEvals(arkode_mem, &num_rhs_evals);
+        ARKodeGetNumRhsEvals(arkode_mem, 0, &num_rhs_evals);
         return num_rhs_evals;
       },
       []() {},
