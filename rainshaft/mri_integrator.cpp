@@ -24,9 +24,10 @@ MRIIntegrator::MRIIntegrator(const RainshaftConstants &constants,
                              const double dt_slow,
                              const int order,
                              const double rel_tol,
+                             const bool postprocess,
                              const int steps_per_output)
     : SundialsIntegrator(constants, grid, {process_fast, process_slow_exp, process_slow_imp}, state_descs, tend_descs, steps_per_output),
-      dt_fast(dt_fast), dt_slow(dt_slow), order(order), rel_tol(rel_tol)
+      dt_fast(dt_fast), dt_slow(dt_slow), order(order), rel_tol(rel_tol), postprocess(postprocess)
 {
 }
 
@@ -43,6 +44,10 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
   ARKodeSetOrder(inner_arkode_mem, order);
   ARKodeSetUserData(inner_arkode_mem, (void *)&user_data);
   ARKodeSetMaxNumSteps(inner_arkode_mem, -1);
+  if (postprocess) {
+    ARKodeSetPostprocessStageFn(inner_arkode_mem, postprocess_positive);
+    ARKodeSetPostprocessStepFn(inner_arkode_mem, postprocess_positive);
+  }
 
   // fixed step for fast solver
   ARKodeSetFixedStep(inner_arkode_mem, dt_fast);
@@ -60,6 +65,10 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
   ARKodeSetOrder(outer_arkode_mem, order);
   ARKodeSetMaxNumSteps(outer_arkode_mem, -1);
   ARKodeSetStopTime(outer_arkode_mem, final_time);
+  if (postprocess) {
+    ARKodeSetPostprocessStageFn(outer_arkode_mem, postprocess_positive);
+    ARKodeSetPostprocessStepFn(outer_arkode_mem, postprocess_positive);
+  }
 
   /* Set the slow step size */
   ARKodeSetFixedStep(outer_arkode_mem, dt_slow);

@@ -158,6 +158,15 @@ protected:
     return RainshaftSolution(std::move(states), countFun());
   }
 
+  static int postprocess_positive(sunrealtype, N_Vector y, void*) {
+    sunrealtype * const data = N_VGetArrayPointer(y);
+    const sunindextype len = N_VGetLength(y);
+    for (sunindextype i = 0; i < len; i++) {
+      data[i] = std::max(0.0, data[i]);
+    }
+    return 0;
+  }
+
   // Create an N_Vector from a StateConst. To preserve const correctness, this
   // makes a copy of the data.
   static N_Vector view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<const double> &view)
