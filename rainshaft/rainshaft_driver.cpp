@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     ("i", po::value<std::string>(&input_file), "(optional) input file for command line arguments")
 		("order", po::value<std::size_t>(&order)->default_value(2), "order of method")
 		("dt", po::value<double>(&dt)->default_value(0.1), "step size. if integration type is set to MRI, this argument is the slow/outer time step size. negative values indicate ratios, e.g. dt_slow=-0.5 corresponds to dt_slow = dt_fast/2")
-    ("dt_fast", po::value<double>(&dt_fast), "fast/inner step size")
+    ("dt_fast", po::value<double>(&dt_fast)->default_value(0), "fast/inner step size")
     ("rel_tol", po::value<double>(&rel_tol)->default_value(1.e-4), "relative tolerance for adaptive stepping and nonlinear solvers")
     ("postprocess", po::value<bool>(&postprocess)->default_value(false), "postprocesses stages and steps to be positive")
 		("type", po::value<std::string>(&method_type)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, imex, mri, original)")
@@ -84,7 +84,6 @@ int main(int argc, char* argv[])
   std::cout << "---------------------------------------------------" << std::endl;
   
   // Setup dependencies
-  option_dependency<std::string>(vm, "type", "dt_fast", "mri"); // mri integrator requires specification of fast time step as well
   option_dependency<std::string>(vm, "case_idx", "ic_file");    // specifying a particular case_idx requires input E3SM data file
 
   // Print input to program_options
