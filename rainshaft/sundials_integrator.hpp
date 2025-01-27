@@ -14,6 +14,7 @@
 #include "rainshaft_solution.hpp"
 #include "rainshaft_types.hpp"
 #include "variable_array_view.hpp"
+#include <iostream>
 
 static_assert(std::is_same_v<sunrealtype, double>, "sunrealtype must be double");
 
@@ -43,9 +44,16 @@ private:
     // Zero out ydot so that we don't have to remember to zero every value in calc_tend.
     N_VConst(0., ydot);
     Tendency tend = n_vector_to_tendency(ydot, cast_data->tend_descs);
-    cast_data->processes[PARTITION]->calc_tend(cast_data->constants,
-                                               cast_data->grid,
-                                               state, dvars, tend);
+
+    try {
+      cast_data->processes[PARTITION]->calc_tend(cast_data->constants,
+                                                cast_data->grid,
+                                                state, dvars, tend);
+    } catch (const std::domain_error &) {
+      // Attempt recovery on domain error, e.g., gamma function with negative
+      // input
+      return 1;
+    }
     return 0;
   }
 
@@ -63,10 +71,16 @@ private:
       return SM_ELEMENT_D(Jac, i, j);
     };
 
-    cast_data->processes[PARTITION]->calc_tend_jac(cast_data->constants,
-                                                   cast_data->grid,
-                                                   state, dvars,
-                                                   mat);
+    try {
+      cast_data->processes[PARTITION]->calc_tend_jac(cast_data->constants,
+                                                     cast_data->grid,
+                                                     state, dvars,
+                                                     mat);
+    } catch (const std::domain_error &) {
+      // Attempt recovery on domain error, e.g., gamma function with negative
+      // input
+      return 1;
+    }
     return 0;
   }
 
@@ -142,6 +156,15 @@ protected:
     outputFun();
 
     return RainshaftSolution(std::move(states), countFun());
+  }
+
+  static int postprocess_positive(sunrealtype, N_Vector y, void*) {
+    sunrealtype * const data = N_VGetArrayPointer(y);
+    const sunindextype len = N_VGetLength(y);
+    for (sunindextype i = 0; i < len; i++) {
+      data[i] = std::max(0.0, data[i]);
+    }
+    return 0;
   }
 
   // Create an N_Vector from a StateConst. To preserve const correctness, this

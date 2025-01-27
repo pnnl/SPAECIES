@@ -11,6 +11,7 @@ private:
   const double dt;
   const int order;
   const double rel_tol;
+  const bool postprocess;
   const std::optional<std::string> jacobian_file;
 
 public:
@@ -24,6 +25,7 @@ public:
                      const int order = 4,
                      const double rel_tol = 1.e-4,
                      const int steps_per_output = -1,
+                     const bool postprocess = false,
                      const std::optional<std::string> jacobian_file = std::nullopt);
 
   RainshaftSolution integrate(double initial_time,

@@ -11,9 +11,10 @@ ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants &constants,
                                        const double dt,
                                        const int order,
                                        const double rel_tol,
+                                       const bool postprocess,
                                        const int steps_per_output)
     : SundialsIntegrator(constants, grid, {process}, state_descs, tend_descs, steps_per_output),
-      dt(dt), order(order), rel_tol(rel_tol)
+      dt(dt), order(order), rel_tol(rel_tol), postprocess(postprocess)
 {
 }
 
@@ -29,6 +30,10 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   ARKodeSetOrder(arkode_mem, order);
   ARKodeSetMaxNumSteps(arkode_mem, -1); // Set no limit on the number of steps
   ARKodeSetStopTime(arkode_mem, final_time);
+  if (postprocess) {
+    ARKodeSetPostprocessStageFn(arkode_mem, postprocess_positive);
+    ARKodeSetPostprocessStepFn(arkode_mem, postprocess_positive);
+  }
 
   SUNAdaptController controller = SUNAdaptController_I(sun_ctxt);
   ARKodeSetAdaptController(arkode_mem, controller);
@@ -49,7 +54,7 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
       [arkode_mem]()
       {
         long int num_rhs_evals = 0;
-        ERKStepGetNumRhsEvals(arkode_mem, &num_rhs_evals);
+        ARKodeGetNumRhsEvals(arkode_mem, 0, &num_rhs_evals);
         return num_rhs_evals;
       },
       []() {},

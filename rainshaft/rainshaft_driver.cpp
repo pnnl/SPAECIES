@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file;
   std::size_t order, icase_in;
-  bool do_nudging;
+  bool do_nudging, postprocess;
 
 	po::options_description desc("Allowed options");
 	desc.add_options()
@@ -52,6 +52,7 @@ int main(int argc, char* argv[])
 		("dt", po::value<double>(&dt)->default_value(0.1), "step size. if integration type is set to MRI, this argument is the slow/outer time step size. negative values indicate ratios, e.g. dt_slow=-0.5 corresponds to dt_slow = dt_fast/2")
     ("dt_fast", po::value<double>(&dt_fast), "fast/inner step size")
     ("rel_tol", po::value<double>(&rel_tol)->default_value(1.e-4), "relative tolerance for adaptive stepping and nonlinear solvers")
+    ("postprocess", po::value<bool>(&postprocess)->default_value(false), "postprocesses stages and steps to be positive")
 		("type", po::value<std::string>(&method_type)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, imex, mri, original)")
     ("steps", po::value<int>(&steps_per_output)->default_value(-1), "frequency of saved output, e.g. write output to netCDF every steps_per_output timesteps. -1 to save only the first and last steps")
     ("ic_file", po::value<std::string>(&initial_condition_file), "type of initial condiiton (e.g. 'adiabatic' or the filename of E3SM data)")
@@ -264,15 +265,15 @@ int main(int argc, char* argv[])
 
     const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
       if (method_type == "explicit") {
-        return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, rel_tol, steps_per_output);
+        return std::make_unique<ExplicitIntegrator>(constants, grid, &all_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);
       } else if (method_type == "implicit") {
-        return std::make_unique<IMEXIntegrator>(constants, grid, nullptr, &all_processes, state_descs, tend_descs, dt, order, steps_per_output);  
+        return std::make_unique<IMEXIntegrator>(constants, grid, nullptr, &all_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);  
       } else if (method_type == "imex") {
-        return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, rel_tol, steps_per_output);
+        return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);
       } else if (method_type == "mri") {
-        return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt_fast, dt, order, rel_tol, steps_per_output);
+        return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt_fast, dt, order, rel_tol, postprocess, steps_per_output);
       } else if (method_type == "original") {
-        std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, &exp_processes, state_descs, tend_descs, dt, 1, rel_tol, 0);
+        std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, &exp_processes, state_descs, tend_descs, dt, 1, rel_tol);
         backing_integrators.emplace_back(local_intg);
         std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(*local_intg);
         backing_integrators.emplace_back(local_lim_intg);

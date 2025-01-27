@@ -14,9 +14,10 @@ IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
                                const int order,
                                const double rel_tol,
                                const int steps_per_output,
+                               const bool postprocess,
                                const std::optional<std::string> jacobian_file)
     : SundialsIntegrator(constants, grid, {process_exp, process_imp}, state_descs, tend_descs, steps_per_output),
-      dt(dt), order(order), rel_tol(rel_tol), jacobian_file(jacobian_file)
+      dt(dt), order(order), rel_tol(rel_tol), postprocess(postprocess), jacobian_file(jacobian_file)
 {
 }
 
@@ -32,6 +33,10 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   ARKodeSetOrder(arkode_mem, order);
   ARKodeSetMaxNumSteps(arkode_mem, -1); // Set no limit on the number of steps
   ARKodeSetStopTime(arkode_mem, final_time);
+  if (postprocess) {
+    ARKodeSetPostprocessStageFn(arkode_mem, postprocess_positive);
+    ARKodeSetPostprocessStepFn(arkode_mem, postprocess_positive);
+  }
 
   SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
   SUNLinearSolver LS = SUNLinSol_LapackDense(y, jac, sun_ctxt);
@@ -60,7 +65,8 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
       {
         long int nfe = 0;
         long int nfi = 0;
-        ARKStepGetNumRhsEvals(arkode_mem, &nfe, &nfi);
+        ARKodeGetNumRhsEvals(arkode_mem, 0, &nfe);
+        ARKodeGetNumRhsEvals(arkode_mem, 1, &nfi);
         return nfe + nfi;
       },
       [&]()
