@@ -2,7 +2,9 @@
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
 #include "fixed_substep_integrator.hpp"
+#include "forcing_integrator.hpp"
 #include "limiting_integrator.hpp"
+#include "operator_splitting_integrator.hpp"
 #include "nudging.hpp"
 #include "parsing_utilities.hpp"
 #include "rainshaft_constants.hpp"
@@ -38,7 +40,7 @@ int main(int argc, char* argv[])
   using std::chrono::duration;
 
   // Arg parser
-  double dt, dt_fast, final_time, rel_tol;
+  double dt, dt_partition_1, dt_partition_2, final_time, rel_tol;
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file;
   std::size_t order, icase_in;
@@ -49,8 +51,9 @@ int main(int argc, char* argv[])
 		("help", "produce help message")
     ("i", po::value<std::string>(&input_file), "(optional) input file for command line arguments")
 		("order", po::value<std::size_t>(&order)->default_value(2), "order of method")
-		("dt", po::value<double>(&dt)->default_value(0.1), "step size. if integration type is set to MRI, this argument is the slow/outer time step size. negative values indicate ratios, e.g. dt_slow=-0.5 corresponds to dt_slow = dt_fast/2")
-    ("dt_fast", po::value<double>(&dt_fast)->default_value(0), "fast/inner step size")
+		("dt", po::value<double>(&dt)->default_value(0.1), "step size. if integration type is set to MRI/splitting/forcing, this argument is the outer time step size")
+    ("dt_partition_1", po::value<double>(&dt_partition_1)->default_value(0), "step size of partition 1 for MRI/splitting/forcing methods. negative values indicate ratios, e.g. dt_partition_1=-0.5 corresponds to dt_partition_1 = dt/2")
+    ("dt_partition_2", po::value<double>(&dt_partition_2)->default_value(0), "step size of partition 2 for MRI/splitting/forcing methods. negative values indicate ratios, e.g. dt_partition_2=-0.5 corresponds to dt_partition_2 = dt/2")
     ("rel_tol", po::value<double>(&rel_tol)->default_value(1.e-4), "relative tolerance for adaptive stepping and nonlinear solvers")
     ("postprocess", po::value<bool>(&postprocess)->default_value(false), "postprocesses stages and steps to be positive")
 		("type", po::value<std::string>(&method_type)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, imex, mri, original)")
@@ -104,15 +107,12 @@ int main(int argc, char* argv[])
     std::cout << "No IC input file specified. Defaulting to adiabatic case." << std::endl;
   }
 
-  // Parse slow time steps for MRI method
-  if (method_type == "mri") {
-    if (vm["dt"].as<double>() < 0.0) { // negative slow time step corresponds to setting dt_slow as multiple of dt_fast
-      dt = abs(dt) * dt_fast;
-    }
-  } else {
-    if (vm["dt"].as<double>() < 0.0) { // positive slow time step is taken at face value
-      throw std::logic_error("Negative time step not permitted!"); 
-    }
+  // negative partition time steps corresponds to scalings of dt
+  if (dt_partition_1 < 0.0) {
+    dt_partition_1 = abs(dt_partition_1) * dt;
+  }
+  if (dt_partition_2 < 0.0) {
+    dt_partition_2 = abs(dt_partition_2) * dt;
   }
  
   // Set up model constants.
@@ -235,7 +235,7 @@ int main(int argc, char* argv[])
     // Nudging to initial condition.
     std::shared_ptr<Nudging> nudge;
     // Sum of all processes.
-    std::vector<const RainshaftProcess *> exp_process_vec{}, all_process_vec{};
+    std::vector<const RainshaftProcess *> partition_2_process_vec{}, all_process_vec{};
     if (do_nudging) {
       // SPS: Need some kind of span-like interface to avoid having to
       // do this copy.
@@ -247,15 +247,15 @@ int main(int argc, char* argv[])
         q_vec.push_back(q[i]);
       }
       nudge = std::make_shared<Nudging>(nudge_time_scale, t_vec, q_vec);
-      exp_process_vec = {&evap, &*nudge, &self_coll};
+      partition_2_process_vec = {&evap, &*nudge, &self_coll};
       all_process_vec = {&sed, &*nudge, &self_coll, &evap};
     } else {
-      exp_process_vec = {&evap, &self_coll};
+      partition_2_process_vec = {&evap, &self_coll};
       all_process_vec = {&sed, &self_coll, &evap};
     }
-    SumProcess exp_processes(exp_process_vec);
+    SumProcess partition_2_processes(partition_2_process_vec);
     // Sum of local processes.
-    SumProcess imp_processes = SumProcess{{&sed}};
+    SumProcess partition_1_processes = SumProcess{{&sed}};
 
     SumProcess all_processes = SumProcess{all_process_vec};
 
@@ -268,11 +268,15 @@ int main(int argc, char* argv[])
       } else if (method_type == "implicit") {
         return std::make_unique<IMEXIntegrator>(constants, grid, nullptr, &all_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);  
       } else if (method_type == "imex") {
-        return std::make_unique<IMEXIntegrator>(constants, grid, &exp_processes, &imp_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);
+        return std::make_unique<IMEXIntegrator>(constants, grid, &partition_2_processes, &partition_1_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);
       } else if (method_type == "mri") {
-        return std::make_unique<MRIIntegrator>(constants, grid, &imp_processes, &exp_processes, nullptr, state_descs, tend_descs, dt_fast, dt, order, rel_tol, postprocess, steps_per_output);
+        return std::make_unique<MRIIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, nullptr, state_descs, tend_descs, dt_partition_1, dt, order, rel_tol, postprocess, steps_per_output);
+      } else if (method_type == "splitting") {
+        return std::make_unique<OperatorSplittingIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, order, rel_tol, postprocess, steps_per_output);
+      } else if (method_type == "forcing") {
+        return std::make_unique<ForcingIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, postprocess, steps_per_output);
       } else if (method_type == "original") {
-        std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, &exp_processes, state_descs, tend_descs, dt, 1, rel_tol);
+        std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, &partition_2_processes, state_descs, tend_descs, dt, 1, rel_tol);
         backing_integrators.emplace_back(local_intg);
         std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(*local_intg);
         backing_integrators.emplace_back(local_lim_intg);
