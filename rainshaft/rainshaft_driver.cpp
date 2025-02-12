@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file;
   std::size_t order, icase_in;
-  bool do_nudging, postprocess;
+  bool do_nudging, postprocess, use_lookup;
 
 	po::options_description desc("Allowed options");
 	desc.add_options()
@@ -53,6 +53,7 @@ int main(int argc, char* argv[])
     ("dt_fast", po::value<double>(&dt_fast)->default_value(0), "fast/inner step size")
     ("rel_tol", po::value<double>(&rel_tol)->default_value(1.e-4), "relative tolerance for adaptive stepping and nonlinear solvers")
     ("postprocess", po::value<bool>(&postprocess)->default_value(false), "postprocesses stages and steps to be positive")
+    ("use_lookup", po::value<bool>(&use_lookup)->default_value(false), "uses lookup tables to evaluate fall speeds")
 		("type", po::value<std::string>(&method_type)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, imex, mri, original)")
     ("steps", po::value<int>(&steps_per_output)->default_value(-1), "frequency of saved output, e.g. write output to netCDF every steps_per_output timesteps. -1 to save only the first and last steps")
     ("ic_file", po::value<std::string>(&initial_condition_file), "type of initial condiiton (e.g. 'adiabatic' or the filename of E3SM data)")
@@ -188,7 +189,7 @@ int main(int argc, char* argv[])
   // Physics types that won't vary between cases (declare here to avoid calculating the
   // lookup tables in the case loop).
   // Sedimentation process.
-  Sedimentation sed(constants, false, false);
+  Sedimentation sed(constants, use_lookup, false);
   // Self-collision processes.
   SelfCollision self_coll;
   // Evaporation process.
@@ -196,7 +197,7 @@ int main(int argc, char* argv[])
   if (method_type == "original") {
     dt_for_evap = dt;
   }
-  Evaporation evap(constants, sat_form, false, false, dt_for_evap);
+  Evaporation evap(constants, sat_form, use_lookup, false, dt_for_evap);
 
   // for (std::size_t icase = 0; icase != num_cases; ++icase) {
   for (const std::size_t &icase : cases_to_run) {
