@@ -10,7 +10,24 @@ endif()
 project(SPAECIES LANGUAGES CXX VERSION 0.0.1)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(NetCDF REQUIRED)
-find_package(SUNDIALS 7.2.0 REQUIRED COMPONENTS arkode sunlinsollapackdense)
+find_package(SUNDIALS 7.2.0 QUIET COMPONENTS arkode sunlinsollapackdense)
+if (NOT SUNDIALS_FOUND)
+  include(FetchContent)
+  set(FETCHCONTENT_QUIET OFF)
+  FetchContent_Declare(sundials
+    GIT_REPOSITORY https://github.com/LLNL/sundials.git
+    GIT_TAG 0eff39663606f2ff280c4059a947ed62ae38180a # Release 7.2.0
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE
+  )
+  set(BUILD_CVODE OFF)
+  set(BUILD_CVODES OFF)
+  set(BUILD_IDA OFF)
+  set(BUILD_IDAS OFF)
+  set(BUILD_KINSOL OFF)
+  set(ENABLE_LAPACK ON)
+  FetchContent_MakeAvailable(sundials)
+endif()
 find_package(Boost REQUIRED COMPONENTS program_options)
 
 if (BUILD_TESTING)
