@@ -7,7 +7,7 @@ if( "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}" )
     " (e.g. the CMakeFiles/ directory), then build in a separate source tree.")
 endif()
 
-set(BUILD_TESTING OFF CACHE BOOL "Enable testing.")
+option(BUILD_TESTING "Enable testing." OFF)
 
 project(SPAECIES LANGUAGES CXX VERSION 0.0.1)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
