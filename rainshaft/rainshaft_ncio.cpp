@@ -273,3 +273,64 @@ void NetcdfWriter::write_walltime_ms(double walltime_ms, std::size_t case_idx) {
   // Write variable.
   nc_put_var1_double(ncid, walltime_msid, &case_idx, &walltime_ms);
 }
+
+void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, double dt_partition_2, double rel_tol,
+                                  bool postprocess, bool use_lookup, std::string method_type, int steps_per_output,
+                                  std::string initial_condition_file, int num_cases, int icase_in, double final_time,
+                                  bool do_nudging) {
+  int orderid, dtid, dt_partition_1id, dt_partition_2id, rel_tolid;
+  int postprocessid, use_lookupid, method_typeid, steps_per_outputid;
+  int initial_condition_fileid, num_casesid, icase_inid, final_timeid, do_nudgingid;
+
+  // method order
+  nc_def_var(ncid, "method_order", NC_INT, 0, NULL, &orderid);
+  nc_put_var_int(ncid, orderid, &order);
+  
+  // coupling time step
+  nc_def_var(ncid, "dt", NC_DOUBLE, 0, NULL, &dtid);
+  nc_put_var_double(ncid, dtid, &dt);
+
+  // partition time steps
+  nc_def_var(ncid, "dt_partition_1", NC_DOUBLE, 0, NULL, &dt_partition_1id);
+  nc_put_var_double(ncid, dt_partition_1id, &dt_partition_1);
+  nc_def_var(ncid, "dt_partition_2", NC_DOUBLE, 0, NULL, &dt_partition_2id);
+  nc_put_var_double(ncid, dt_partition_2id, &dt_partition_2);
+
+  // rel tol
+  nc_def_var(ncid, "rel_tol", NC_DOUBLE, 0, NULL, &rel_tolid);
+  nc_put_var_double(ncid, rel_tolid, &rel_tol);
+
+  // limiter and lookup tables
+  nc_def_var(ncid, "postprocess", NC_UBYTE, 0, NULL, &postprocessid);
+  nc_put_var(ncid, postprocessid, &postprocess);
+  nc_def_var(ncid, "use_lookup", NC_UBYTE, 0, NULL, &use_lookupid);
+  nc_put_var(ncid, use_lookupid, &use_lookup);
+
+  // type of integrator
+  nc_def_var(ncid, "method_type", NC_STRING, 0, NULL, &method_typeid);
+  nc_put_var(ncid, method_typeid, &method_type);
+
+  // frequency of solution states
+  nc_def_var(ncid, "steps_per_output", NC_INT, 0, NULL, &steps_per_outputid);
+  nc_put_var_int(ncid, steps_per_outputid, &steps_per_output);
+
+  // initial condition file
+  nc_def_var(ncid, "initial_condition_file", NC_STRING, 0, NULL, &initial_condition_fileid);
+  nc_put_var(ncid, initial_condition_fileid, &initial_condition_file);
+
+  // number of cases simulated in this file
+  nc_def_var(ncid, "num_cases", NC_INT, 0, NULL, &num_casesid);
+  nc_put_var_int(ncid, num_casesid, &num_cases);
+
+  // case index (-1 for all columns)
+  nc_def_var(ncid, "icase_in", NC_INT, 0, NULL, &icase_inid);
+  nc_put_var_int(ncid, icase_inid, &icase_in);
+
+  // final time
+  nc_def_var(ncid, "final_time", NC_DOUBLE, 0, NULL, &final_timeid);
+  nc_put_var_double(ncid, final_timeid, &final_time);
+
+  // nudging flag
+  nc_def_var(ncid, "do_nudging", NC_UBYTE, 0, NULL, &do_nudgingid);
+  nc_put_var(ncid, do_nudgingid, &do_nudging);
+}
