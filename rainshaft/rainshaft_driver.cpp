@@ -269,7 +269,7 @@ int main(int argc, char* argv[])
       } else if (method_type == "implicit") {
         return std::make_unique<IMEXIntegrator>(constants, grid, nullptr, &all_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);  
       } else if (method_type == "imex") {
-        return std::make_unique<IMEXIntegrator>(constants, grid, &partition_2_processes, &partition_1_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);
+        return std::make_unique<IMEXIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);
       } else if (method_type == "mri") {
         return std::make_unique<MRIIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, nullptr, state_descs, tend_descs, dt_partition_1, dt, order, rel_tol, postprocess, steps_per_output);
       } else if (method_type == "splitting") {

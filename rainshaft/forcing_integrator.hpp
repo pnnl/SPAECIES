@@ -14,8 +14,8 @@ private:
 public:
   ForcingIntegrator(const RainshaftConstants &constants,
                     const RainshaftGrid &grid,
-                    const RainshaftProcess *const process_unforced,
                     const RainshaftProcess *const process_forced,
+                    const RainshaftProcess *const process_unforced,
                     const VarDescList &state_descs,
                     const VarDescList &tend_descs,
                     const double dt,

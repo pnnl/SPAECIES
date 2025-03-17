@@ -9,8 +9,8 @@
 
 ForcingIntegrator::ForcingIntegrator(const RainshaftConstants &constants,
                                      const RainshaftGrid &grid,
-                                     const RainshaftProcess *const process_unforced,
                                      const RainshaftProcess *const process_forced,
+                                     const RainshaftProcess *const process_unforced,
                                      const VarDescList &state_descs,
                                      const VarDescList &tend_descs,
                                      const double dt,
@@ -18,7 +18,7 @@ ForcingIntegrator::ForcingIntegrator(const RainshaftConstants &constants,
                                      const double dt_forced,
                                      const bool postprocess,
                                      const int steps_per_output)
-    : SundialsIntegrator(constants, grid, {process_unforced, process_forced}, state_descs, tend_descs, steps_per_output),
+    : SundialsIntegrator(constants, grid, {process_forced, process_unforced}, state_descs, tend_descs, steps_per_output),
       dt(dt), dt_unforced(dt_unforced), dt_forced(dt_forced), postprocess(postprocess)
 {
   if (dt == 0.0 || dt_unforced == 0.0 || dt_forced == 0)
