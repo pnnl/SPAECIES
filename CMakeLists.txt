@@ -18,7 +18,7 @@ if (NOT SUNDIALS_FOUND)
   set(FETCHCONTENT_QUIET OFF)
   FetchContent_Declare(sundials
     GIT_REPOSITORY https://github.com/LLNL/sundials.git
-    GIT_TAG 0eff39663606f2ff280c4059a947ed62ae38180a # Release 7.2.0
+    GIT_TAG v7.2.1
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
   )
