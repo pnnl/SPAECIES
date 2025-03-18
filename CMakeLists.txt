@@ -13,11 +13,23 @@ project(SPAECIES LANGUAGES CXX VERSION 0.0.1)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_CXX_STANDARD 17)
 
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build." FORCE)
+endif()
+
+set(C_DBG_FLAGS "")
+set(C_OPT_FLAGS -fno-math-errno -march=native)
+
+set(CXX_DBG_FLAGS -Wall -fbounds-check)
+set(CXX_OPT_FLAGS -fno-math-errno -march=native)
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_compile_options("$<$<COMPILE_LANGUAGE:C>:${C_DBG_FLAGS}>")
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${CXX_DBG_FLAGS}>")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
   set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-  set(OPT_FLAGS "-fno-math-errno -march=native")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OPT_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPT_FLAGS}")
+  add_compile_options("$<$<COMPILE_LANGUAGE:C>:${C_OPT_FLAGS}>")
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:${CXX_OPT_FLAGS}>")
 endif()
 
 find_package(NetCDF REQUIRED)
@@ -48,11 +60,6 @@ if (BUILD_TESTING)
   include(CTest)
   include(Catch)
   add_subdirectory(tests)
-endif()
-
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -fbounds-check")
 endif()
 
 add_subdirectory(libspaecies)
