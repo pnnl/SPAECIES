@@ -316,6 +316,11 @@ int main(int argc, char* argv[])
     writer.write_derived_vars(solution_dvars, icase_writer);
     writer.write_num_rhs_evals(solution.num_rhs_evals, icase_writer);
     writer.write_walltime_ms(walltime_ms.count(), icase_writer);
+
+    // write settings as metadata
+    writer.write_metadata(order, dt, dt_partition_1, dt_partition_2, rel_tol, postprocess,
+      use_lookup, method_type, steps_per_output, initial_condition_file,
+      num_cases, icase_in, final_time, do_nudging);
   }
   return 0;
 }
