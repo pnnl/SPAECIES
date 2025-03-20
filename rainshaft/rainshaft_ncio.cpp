@@ -308,7 +308,12 @@ void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, d
 
   // type of integrator
   nc_def_var(ncid, "method_type", NC_STRING, 0, NULL, &method_typeid);
-  nc_put_var(ncid, method_typeid, &method_type);
+  { // Logic to deal with the NC_STRING interface expecting char**.
+    char* temp = new char[method_type.length()+1];
+    std::strcpy(temp, method_type.c_str());
+    nc_put_var(ncid, method_typeid, &temp);
+    delete[] temp;
+  }
 
   // frequency of solution states
   nc_def_var(ncid, "steps_per_output", NC_INT, 0, NULL, &steps_per_outputid);
@@ -316,7 +321,12 @@ void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, d
 
   // initial condition file
   nc_def_var(ncid, "initial_condition_file", NC_STRING, 0, NULL, &initial_condition_fileid);
-  nc_put_var(ncid, initial_condition_fileid, &initial_condition_file);
+  { // Logic to deal with the NC_STRING interface expecting char**.
+    char* temp = new char[initial_condition_file.length()+1];
+    std::strcpy(temp, initial_condition_file.c_str());
+    nc_put_var(ncid, initial_condition_fileid, &temp);
+    delete[] temp;
+  }
 
   // number of cases simulated in this file
   nc_def_var(ncid, "num_cases", NC_INT, 0, NULL, &num_casesid);
