@@ -7,13 +7,16 @@ class LimitingIntegrator : public RainshaftIntegrator {
 
 public:
 
-  LimitingIntegrator(const RainshaftIntegrator& sub_integrator);
+  LimitingIntegrator(const RainshaftConstants &constants,
+                     const RainshaftIntegrator& sub_integrator);
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
                               const StateConst& initial_state) const;
 
 private:
+
+  const RainshaftConstants &constants;
 
   const RainshaftIntegrator &integrator;
 
