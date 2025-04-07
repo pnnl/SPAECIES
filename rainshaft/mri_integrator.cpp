@@ -51,15 +51,6 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
 
   // fixed step for fast solver
   ARKodeSetFixedStep(inner_arkode_mem, dt_fast);
-  SUNAdaptController inner_controller = SUNAdaptController_I(sun_ctxt);
-  ARKodeSetAdaptController(inner_arkode_mem, inner_controller);
-  // Use no bias and instead rely on a safety factor. Shampine uses these values in the MATLAB ODE suite
-  SUNAdaptController_SetErrorBias(inner_controller, 1);
-  ARKodeSetSafetyFactor(inner_arkode_mem, 0.9);
-  // ARKODE currently approximates the optimal step size with (err)^(-1/(embedded order)), but it's more common to use
-  // (err)^(-1/(min(embedded order, order) + 1)). This adjusts the exponent to use the latter.
-  ARKodeSetAdaptivityAdjustment(inner_arkode_mem, 0);
-  ARKodeSetFixedStepBounds(inner_arkode_mem, 1, 1); // Remove deadzone
 
   const N_Vector abs_tol = fill_abs_tol_vector(N_VClone(y));
   ARKodeSVtolerances(inner_arkode_mem, rel_tol, abs_tol);
@@ -84,15 +75,6 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
 
   /* Set the slow step size */
   ARKodeSetFixedStep(outer_arkode_mem, dt_slow);
-  SUNAdaptController outer_controller = SUNAdaptController_I(sun_ctxt);
-  ARKodeSetAdaptController(outer_arkode_mem, outer_controller);
-  // Use no bias and instead rely on a safety factor. Shampine uses these values in the MATLAB ODE suite
-  SUNAdaptController_SetErrorBias(outer_controller, 1);
-  ARKodeSetSafetyFactor(outer_arkode_mem, 0.9);
-  // ARKODE currently approximates the optimal step size with (err)^(-1/(embedded order)), but it's more common to use
-  // (err)^(-1/(min(embedded order, order) + 1)). This adjusts the exponent to use the latter.
-  ARKodeSetAdaptivityAdjustment(outer_arkode_mem, 0);
-  ARKodeSetFixedStepBounds(outer_arkode_mem, 1, 1); // Remove deadzone
 
   ARKodeSVtolerances(outer_arkode_mem, rel_tol, abs_tol);
   N_VDestroy(abs_tol);
@@ -118,8 +100,6 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
       ARK_ONE_STEP);
 
   N_VDestroy(y);
-  SUNAdaptController_Destroy(inner_controller);
-  SUNAdaptController_Destroy(outer_controller);
   MRIStepInnerStepper_Free(&stepper);
   ARKodeFree(&inner_arkode_mem);
   ARKodeFree(&outer_arkode_mem);
