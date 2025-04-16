@@ -42,18 +42,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   SUNLinearSolver LS = SUNLinSol_LapackDense(y, jac, sun_ctxt);
   ARKodeSetLinearSolver(arkode_mem, LS, jac);
   ARKodeSetJacFn(arkode_mem, create_jac<1>());
-  ARKodeSetMaxNonlinIters(arkode_mem, 100);
   ARKodeSetDeduceImplicitRhs(arkode_mem, true);
-
-  SUNAdaptController controller = SUNAdaptController_I(sun_ctxt);
-  ARKodeSetAdaptController(arkode_mem, controller);
-  // Use no bias and instead rely on a safety factor. Shampine uses these values in the MATLAB ODE suite
-  SUNAdaptController_SetErrorBias(controller, 1);
-  ARKodeSetSafetyFactor(arkode_mem, 0.9);
-  // ARKODE currently approximates the optimal step size with (err)^(-1/(embedded order)), but it's more common to use
-  // (err)^(-1/(min(embedded order, order) + 1)). This adjusts the exponent to use the latter.
-  ARKodeSetAdaptivityAdjustment(arkode_mem, 0);
-  ARKodeSetFixedStepBounds(arkode_mem, 1, 1); // Remove deadzone
 
   const N_Vector abs_tol = fill_abs_tol_vector(N_VClone(y));
   ARKodeSVtolerances(arkode_mem, rel_tol, abs_tol);
@@ -95,7 +84,6 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
       ARK_ONE_STEP);
 
   N_VDestroy(y);
-  SUNAdaptController_Destroy(controller);
   // SPS: Make RAII wrapper for this.
   ARKodeFree(&arkode_mem);
   SUNMatDestroy(jac);

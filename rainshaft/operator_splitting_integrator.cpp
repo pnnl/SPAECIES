@@ -26,6 +26,20 @@ OperatorSplittingIntegrator::OperatorSplittingIntegrator(const RainshaftConstant
 {
 }
 
+static void setPartitionOrder(void *partition_mem, int order) {
+  /* The default 2nd and 3rd order ERK methods have the first same as last
+   * (FSAL) property. This can't be exploited with operator splitting so they
+   * effectively have a redundant stage. We override the defaults with methods
+   * without the FSAL property. */
+  if (order == 2) {
+    ERKStepSetTableNum(partition_mem, ARKODE_RALSTON_EULER_2_1_2);
+  } else if (order == 3) {
+    ERKStepSetTableNum(partition_mem, ARKODE_SHU_OSHER_3_2_3);
+  } else {
+    ARKodeSetOrder(partition_mem, order);
+  }
+}
+
 RainshaftSolution OperatorSplittingIntegrator::integrate(double initial_time,
                                                          double final_time,
                                                          const StateConst &initial_state) const
@@ -35,7 +49,7 @@ RainshaftSolution OperatorSplittingIntegrator::integrate(double initial_time,
   void *partition_1_mem = ERKStepCreate(create_f<0>(), initial_time, y, sun_ctxt);
   ARKodeSetUserData(partition_1_mem, (void *)&user_data);
   ARKodeSetFixedStep(partition_1_mem, dt_partition_1);
-  ARKodeSetOrder(partition_1_mem, order);
+  setPartitionOrder(partition_1_mem, order);
   ARKodeSetMaxNumSteps(partition_1_mem, -1); // Set no limit on the number of steps
   if (postprocess)
   {
@@ -43,30 +57,16 @@ RainshaftSolution OperatorSplittingIntegrator::integrate(double initial_time,
     ARKodeSetPostprocessStepFn(partition_1_mem, postprocess_positive);
   }
 
-  SUNAdaptController partition_1_controller = SUNAdaptController_I(sun_ctxt);
-  ARKodeSetAdaptController(partition_1_mem, partition_1_controller);
-  SUNAdaptController_SetErrorBias(partition_1_controller, 1);
-  ARKodeSetSafetyFactor(partition_1_mem, 0.9);
-  ARKodeSetAdaptivityAdjustment(partition_1_mem, 0);
-  ARKodeSetFixedStepBounds(partition_1_mem, 1, 1);
-
   void *partition_2_mem = ERKStepCreate(create_f<1>(), initial_time, y, sun_ctxt);
   ARKodeSetUserData(partition_2_mem, (void *)&user_data);
   ARKodeSetFixedStep(partition_2_mem, dt_partition_2);
-  ARKodeSetOrder(partition_2_mem, order);
+  setPartitionOrder(partition_2_mem, order);
   ARKodeSetMaxNumSteps(partition_2_mem, -1); // Set no limit on the number of steps
   if (postprocess)
   {
     ARKodeSetPostprocessStageFn(partition_2_mem, postprocess_positive);
     ARKodeSetPostprocessStepFn(partition_2_mem, postprocess_positive);
   }
-
-  SUNAdaptController partition_2_controller = SUNAdaptController_I(sun_ctxt);
-  ARKodeSetAdaptController(partition_2_mem, partition_2_controller);
-  SUNAdaptController_SetErrorBias(partition_2_controller, 1);
-  ARKodeSetSafetyFactor(partition_2_mem, 0.9);
-  ARKodeSetAdaptivityAdjustment(partition_2_mem, 0);
-  ARKodeSetFixedStepBounds(partition_2_mem, 1, 1);
 
   const N_Vector abs_tol = fill_abs_tol_vector(N_VClone(y));
   ARKodeSVtolerances(partition_1_mem, rel_tol, abs_tol);
@@ -100,8 +100,6 @@ RainshaftSolution OperatorSplittingIntegrator::integrate(double initial_time,
       ARK_ONE_STEP);
 
   N_VDestroy(y);
-  SUNAdaptController_Destroy(partition_1_controller);
-  SUNAdaptController_Destroy(partition_2_controller);
   SUNStepper_Destroy(&steppers[0]);
   SUNStepper_Destroy(&steppers[1]);
   ARKodeFree(&partition_1_mem);
