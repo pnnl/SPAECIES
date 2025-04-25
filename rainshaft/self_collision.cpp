@@ -12,7 +12,7 @@ void SelfCollision::calc_tend(const RainshaftConstants& constants,
   VarMut nr_tend = tend.get_variable("nr_tend");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     const auto breakup = breakup_fac(constants, nr[il], qr[il]);
-    nr_tend[il] = calc_nr_tend(nr[il], qr[il], breakup, dvars.rho_dry[il]);
+    nr_tend[il] += calc_nr_tend(nr[il], qr[il], breakup, dvars.rho_dry[il]);
   }
 }
 

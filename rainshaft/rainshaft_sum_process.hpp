@@ -28,11 +28,8 @@ public:
 
 private:
 
-  // Number of subprocesses in this process.
-  std::size_t nsub;
-
   // Sub-processes that this process is a sum of.
-  std::vector<const RainshaftProcess *> sub_processes;
+  const std::vector<const RainshaftProcess *> sub_processes;
 
 };
 

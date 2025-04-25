@@ -46,10 +46,10 @@ void Evaporation::calc_tend(const RainshaftConstants& constants,
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
     const auto [q_evap, n_evap, t_evap] = calc_evap(constants, t[il], q[il], nr[il], qr[il], grid.p_mid[il], dvars.rho_dry[il], dvars.lambdar[il]);
-    t_tend[il] = t_evap;
-    q_tend[il] = q_evap;
-    nr_tend[il] = -n_evap;
-    qr_tend[il] = -q_evap;
+    t_tend[il] += t_evap;
+    q_tend[il] += q_evap;
+    nr_tend[il] -= n_evap;
+    qr_tend[il] -= q_evap;
   }
 }
 
