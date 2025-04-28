@@ -54,8 +54,8 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
     const double nr_flux = calc_nr_flux(nr[il], dvars.rho_dry[il], v0);
     const double qr_flux = calc_qr_flux(qr[il], dvars.rho_dry[il], v3);
     
-    nr_tend[il] = calc_nr_tend(dvars.dz[il], dvars.rho_dry[il], nr_flux, nr_flux_prev);
-    qr_tend[il] = calc_qr_tend(dvars.dz[il], dvars.rho_dry[il], qr_flux, qr_flux_prev);
+    nr_tend[il] += calc_nr_tend(dvars.dz[il], dvars.rho_dry[il], nr_flux, nr_flux_prev);
+    qr_tend[il] += calc_qr_tend(dvars.dz[il], dvars.rho_dry[il], qr_flux, qr_flux_prev);
 
     rho_prev = dvars.rho_dry[il];
     nr_flux_prev = nr_flux;

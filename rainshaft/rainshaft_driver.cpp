@@ -49,22 +49,22 @@ int main(int argc, char* argv[])
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		("help", "produce help message")
-    ("i", po::value<std::string>(&input_file), "(optional) input file for command line arguments")
-		("order", po::value<std::size_t>(&order)->default_value(2), "order of method")
-		("dt", po::value<double>(&dt)->default_value(0.1), "step size. if integration type is set to MRI/splitting/forcing, this argument is the outer time step size")
-    ("dt_partition_1", po::value<double>(&dt_partition_1)->default_value(0), "step size of partition 1 for MRI/splitting/forcing methods. negative values indicate ratios, e.g. dt_partition_1=-0.5 corresponds to dt_partition_1 = dt/2")
-    ("dt_partition_2", po::value<double>(&dt_partition_2)->default_value(0), "step size of partition 2 for MRI/splitting/forcing methods. negative values indicate ratios, e.g. dt_partition_2=-0.5 corresponds to dt_partition_2 = dt/2")
-    ("rel_tol", po::value<double>(&rel_tol)->default_value(1.e-4), "relative tolerance for adaptive stepping and nonlinear solvers")
-    ("postprocess", po::value<bool>(&postprocess)->default_value(false), "postprocesses stages and steps to be positive")
-    ("use_lookup", po::value<bool>(&use_lookup)->default_value(false), "uses lookup tables to evaluate fall speeds")
-		("type", po::value<std::string>(&method_type)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, imex, mri, original)")
-    ("steps", po::value<int>(&steps_per_output)->default_value(-1), "frequency of saved output, e.g. write output to netCDF every steps_per_output timesteps. -1 to save only the first and last steps")
-    ("ic_file", po::value<std::string>(&initial_condition_file), "type of initial condiiton (e.g. 'adiabatic' or the filename of E3SM data)")
-    ("num_cases", po::value<int>(&num_cases)->default_value(1), "number of E3SM cases to load if initial_condition is set to filename. -1 for all cases.")
-    ("case_idx", po::value<std::size_t>(&icase_in), "(optional) specific E3SM case to load if initial_condition is set to filename.")
-    ("final_time", po::value<double>(&final_time)->default_value(1800.0), "stopping time for integration")
-    ("nudging", po::value<bool>(&do_nudging)->default_value(true), "boolean flag for nudging")
-    ("filename", po::value<std::string>(&output_file)->default_value("rainshaft.nc"), "savefile name")
+    ("i", po::value(&input_file), "(optional) input file for command line arguments")
+		("order", po::value(&order)->default_value(2), "order of method")
+		("dt", po::value(&dt)->default_value(0.1), "step size. if integration type is set to MRI/splitting/forcing, this argument is the outer time step size")
+    ("dt_partition_1", po::value(&dt_partition_1)->default_value(0), "step size of partition 1 for MRI/splitting/forcing methods. negative values indicate ratios, e.g. dt_partition_1=-0.5 corresponds to dt_partition_1 = dt/2")
+    ("dt_partition_2", po::value(&dt_partition_2)->default_value(0), "step size of partition 2 for MRI/splitting/forcing methods. negative values indicate ratios, e.g. dt_partition_2=-0.5 corresponds to dt_partition_2 = dt/2")
+    ("rel_tol", po::value(&rel_tol)->default_value(1.e-4), "relative tolerance for adaptive stepping and nonlinear solvers")
+    ("postprocess", po::value(&postprocess)->default_value(false), "postprocesses stages and steps to be positive")
+    ("use_lookup", po::value(&use_lookup)->default_value(false), "uses lookup tables to evaluate fall speeds")
+		("type", po::value(&method_type)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, imex, mri, original)")
+    ("steps", po::value(&steps_per_output)->default_value(-1), "frequency of saved output, e.g. write output to netCDF every steps_per_output timesteps. -1 to save only the first and last steps")
+    ("ic_file", po::value(&initial_condition_file), "type of initial condiiton (e.g. 'adiabatic' or the filename of E3SM data)")
+    ("num_cases", po::value(&num_cases)->default_value(1), "number of E3SM cases to load if initial_condition is set to filename. -1 for all cases.")
+    ("case_idx", po::value(&icase_in), "(optional) specific E3SM case to load if initial_condition is set to filename.")
+    ("final_time", po::value(&final_time)->default_value(1800.0), "stopping time for integration")
+    ("nudging", po::value(&do_nudging)->default_value(true), "boolean flag for nudging")
+    ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")
   ;
 
   // Load from command line to check for input file
@@ -256,9 +256,9 @@ int main(int argc, char* argv[])
     }
     SumProcess partition_2_processes(partition_2_process_vec);
     // Sum of local processes.
-    SumProcess partition_1_processes = SumProcess{{&sed}};
+    const auto& partition_1_processes = sed;
 
-    SumProcess all_processes = SumProcess{all_process_vec};
+    SumProcess all_processes{all_process_vec};
 
     // List of integrators that need to remain allocated for use by original scheme.
     std::vector<std::shared_ptr<RainshaftIntegrator>> backing_integrators;

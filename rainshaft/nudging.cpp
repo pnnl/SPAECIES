@@ -23,8 +23,8 @@ void Nudging::calc_tend(const RainshaftConstants&,
   VarMut t_tend = tend.get_variable("T_tend");
   VarMut q_tend = tend.get_variable("q_tend");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
-    t_tend[il] = (t0[il] - t[il]) / time_scale;
-    q_tend[il] = (q0[il] - q[il]) / time_scale;
+    t_tend[il] += (t0[il] - t[il]) / time_scale;
+    q_tend[il] += (q0[il] - q[il]) / time_scale;
   }
 }
 
