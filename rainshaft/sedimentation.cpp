@@ -11,8 +11,8 @@ std::optional<LookupLinear> Sedimentation::create_lookup(const RainshaftConstant
 {
   if (use_v_table) {
     return std::make_optional<LookupLinear>(
-      std::vector{5., 195., 8595.},
-      std::vector{1., 1.},
+      std::vector{5., 8595., 360000.},
+      std::vector{0.001, 1.},
       [=] (const double x) {
           const auto [v0, v3] = rain_fall_speeds(constants, 1.e6 / x, use_numerical_integration);
           return create_v0 ? v0 : v3;
