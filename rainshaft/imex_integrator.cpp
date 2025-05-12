@@ -43,6 +43,8 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   ARKodeSetLinearSolver(arkode_mem, LS, jac);
   ARKodeSetJacFn(arkode_mem, create_jac<1>());
   ARKodeSetDeduceImplicitRhs(arkode_mem, true);
+  // ARKodeSetJacEvalFrequency(arkode_mem, 1);
+  // ARKodeSetMaxNonlinIters(arkode_mem, 1000000);
 
   const N_Vector abs_tol = fill_abs_tol_vector(N_VClone(y));
   ARKodeSVtolerances(arkode_mem, rel_tol, abs_tol);
