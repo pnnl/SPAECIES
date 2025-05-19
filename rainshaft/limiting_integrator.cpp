@@ -9,6 +9,11 @@ LimitingIntegrator::LimitingIntegrator(const RainshaftConstants &constants,
 RainshaftSolution LimitingIntegrator::integrate(double initial_time,
                                                 double final_time,
                                                 const StateConst& initial_state) const {
+  // Below constants all assume mu_r = 0!
+  const double min_lambdar = 1. / 0.005; // Max size is 500 micron.
+  const double max_lambdar = 1. / 1.e-5; // Min size is 10 micron.
+  const double min_nr_fac = min_lambdar*min_lambdar*min_lambdar / (constants.pi * constants.rhow);
+  const double max_nr_fac = max_lambdar*max_lambdar*max_lambdar / (constants.pi * constants.rhow);
   RainshaftSolution solution = integrator.integrate(initial_time, final_time, initial_state);
   State limited_state = solution.states.back().deep_copy();
   VarMut t = limited_state.get_variable("T");
@@ -18,7 +23,7 @@ RainshaftSolution LimitingIntegrator::integrate(double initial_time,
   for (std::size_t i = 0; i != t.size(); ++i) {
     // If qr has to be corrected, reduce q and increase T to allow for better
     // water and energy conservation.
-    if (qr[i] < 0.) {
+    if (qr[i] < constants.qsmall) {
       // Note that for the "original" P3 method applied to the rainshaft model,
       // which this class was designed for, the only way to get significant
       // negative qr is from excessive evaporation (a source of q), so this
@@ -30,7 +35,8 @@ RainshaftSolution LimitingIntegrator::integrate(double initial_time,
       qr[i] = 0.;
     }
     // nr is not conserved by local processes; no special logic required here.
-    nr[i] = std::max(nr[i], 0.);
+    nr[i] = std::max(nr[i], min_nr_fac * qr[i]);
+    nr[i] = std::min(nr[i], max_nr_fac * qr[i]);
     // Note: This t limiter is not in the original P3 code, which may silently
     // accept negative t or crash on negative t, depending on treatment of
     // floating point exceptions and where the negative t occurs.
