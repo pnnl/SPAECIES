@@ -29,6 +29,25 @@ Sedimentation::Sedimentation(const RainshaftConstants &constants, bool use_v_tab
       v3_table(create_lookup(constants, use_v_table, false, use_numerical_integration))
 {}
 
+double Sedimentation::calc_max_step(const RainshaftConstants &constants,
+                                    const RainshaftGrid &grid,
+                                    const RainshaftDerivedVars& dvars,
+                                    double cfl) const
+{
+  double lambdar_top = std::cbrt(constants.pi * constants.rhow
+                                  * constants.nr_top / constants.qr_top);
+  const auto [v0, v3] = rain_fall_speeds(constants, dvars.rho_dry[0],
+                                      lambdar_top);
+  double spatial_frequency = v3 / dvars.dz[0];
+  for (std::size_t il = 0; il != grid.nlev; ++il) {
+    const auto [v0, v3] = rain_fall_speeds(constants, dvars.rho_dry[il],
+                                    dvars.lambdar[il]);
+    spatial_frequency = std::max(spatial_frequency, v3 / dvars.dz[il]);
+  }
+
+  return cfl / spatial_frequency;
+}
+
 void Sedimentation::calc_tend(const RainshaftConstants &constants,
                               const RainshaftGrid &grid,
                               const StateConst &state,

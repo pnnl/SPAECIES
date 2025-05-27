@@ -10,19 +10,20 @@
 
 OperatorSplittingIntegrator::OperatorSplittingIntegrator(const RainshaftConstants &constants,
                                                          const RainshaftGrid &grid,
-                                                         const RainshaftProcess *const process_partition_1,
+                                                         const Sedimentation *const process_partition_1,
                                                          const RainshaftProcess *const process_partition_2,
                                                          const VarDescList &state_descs,
                                                          const VarDescList &tend_descs,
                                                          const double dt,
                                                          const double dt_partition_1,
                                                          const double dt_partition_2,
+                                                         const bool cfl_substep,
                                                          const int order,
                                                          const double rel_tol,
                                                          const bool postprocess,
                                                          const int steps_per_output)
     : SundialsIntegrator(constants, grid, {process_partition_1, process_partition_2}, state_descs, tend_descs, steps_per_output),
-      dt(dt), dt_partition_1(dt_partition_1), dt_partition_2(dt_partition_2), order(order), rel_tol(rel_tol), postprocess(postprocess)
+      dt(dt), dt_partition_1(dt_partition_1), dt_partition_2(dt_partition_2), cfl_substep(cfl_substep), order(order), rel_tol(rel_tol), postprocess(postprocess)
 {
 }
 
@@ -51,6 +52,13 @@ RainshaftSolution OperatorSplittingIntegrator::integrate(double initial_time,
   ARKodeSetFixedStep(partition_1_mem, dt_partition_1);
   setPartitionOrder(partition_1_mem, order);
   ARKodeSetMaxNumSteps(partition_1_mem, -1); // Set no limit on the number of steps
+  if (cfl_substep)
+  {
+    // Currently a CFL fraction of 1 isn't allowed so use the largest floating
+    // point number less than 1.
+    ARKodeSetCFLFraction(partition_1_mem, std::nextafter(1.0, 0.0));
+    ARKodeSetStabilityFn(partition_1_mem, create_stability<0, Sedimentation>(), (void*)&user_data);
+  }
   if (postprocess)
   {
     ARKodeSetPostprocessStageFn(partition_1_mem, postprocess_positive);
