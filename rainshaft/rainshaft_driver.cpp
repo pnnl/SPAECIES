@@ -276,7 +276,7 @@ int main(int argc, char* argv[])
       } else if (method_type == "splitting") {
         return std::make_unique<OperatorSplittingIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, cfl_substep, order, rel_tol, postprocess, steps_per_output);
       } else if (method_type == "forcing") {
-        return std::make_unique<ForcingIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, postprocess, steps_per_output);
+        return std::make_unique<ForcingIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, cfl_substep, postprocess, steps_per_output);
       } else if (method_type == "original") {
         std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, &partition_2_processes, state_descs, tend_descs, dt, 1, rel_tol);
         backing_integrators.emplace_back(local_intg);
