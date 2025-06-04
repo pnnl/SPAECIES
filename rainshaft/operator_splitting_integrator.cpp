@@ -27,12 +27,20 @@ OperatorSplittingIntegrator::OperatorSplittingIntegrator(const RainshaftConstant
 {
 }
 
-static void setPartitionOrder(void *partition_mem, int order) {
-  /* The default 2nd and 3rd order ERK methods have the first same as last
-   * (FSAL) property. This can't be exploited with operator splitting so they
-   * effectively have a redundant stage. We override the defaults with methods
-   * without the FSAL property. */
-  if (order == 2) {
+static void setPartitionOrder(void *partition_mem, int order, bool cfl_substep=false) {
+  if (order == 1 && cfl_substep) {
+      /* A bit of a hack to get 1st order methods working. Currently ARKODE
+       * requires the method to have an embedding to use a stability function */
+      sunrealtype a[] = {0.0};
+      sunrealtype b[] = {1.0};
+      ARKodeButcherTable euler = ARKodeButcherTable_Create(1, 1, 1, a, a, b, b);
+      ERKStepSetTable(partition_mem, euler);
+      ARKodeButcherTable_Free(euler);
+  } else if (order == 2) {
+    /* The default 2nd and 3rd order ERK methods have the first same as last
+     * (FSAL) property. This can't be exploited with operator splitting so they
+     * effectively have a redundant stage. We override the defaults with methods
+     * without the FSAL property. */
     ERKStepSetTableNum(partition_mem, ARKODE_RALSTON_EULER_2_1_2);
   } else if (order == 3) {
     ERKStepSetTableNum(partition_mem, ARKODE_SHU_OSHER_3_2_3);
@@ -50,12 +58,13 @@ RainshaftSolution OperatorSplittingIntegrator::integrate(double initial_time,
   void *partition_1_mem = ERKStepCreate(create_f<0>(), initial_time, y, sun_ctxt);
   ARKodeSetUserData(partition_1_mem, (void *)&user_data);
   ARKodeSetFixedStep(partition_1_mem, dt_partition_1);
-  setPartitionOrder(partition_1_mem, order);
+  setPartitionOrder(partition_1_mem, order, cfl_substep);
   ARKodeSetMaxNumSteps(partition_1_mem, -1); // Set no limit on the number of steps
   if (cfl_substep)
   {
-    // Currently a CFL fraction of 1 isn't allowed so use the largest floating
-    // point number less than 1.
+    /* Currently a CFL fraction of 1 isn't allowed so use the largest floating
+     * point number less than 1. This should be resolved in the next SUNDIALS
+     * release */
     ARKodeSetCFLFraction(partition_1_mem, std::nextafter(1.0, 0.0));
     ARKodeSetStabilityFn(partition_1_mem, create_stability<0, Sedimentation>(), (void*)&user_data);
   }
