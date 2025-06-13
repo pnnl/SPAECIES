@@ -2,8 +2,9 @@
 #include <algorithm>
 
 LimitingIntegrator::LimitingIntegrator(const RainshaftConstants &constants,
+                                       const SizeLimiters& size_limiters,
                                        const RainshaftIntegrator& sub_integrator)
-  : constants(constants), integrator(sub_integrator) {
+  : constants(constants), size_limiters(size_limiters), integrator(sub_integrator) {
 }
 
 RainshaftSolution LimitingIntegrator::integrate(double initial_time,
@@ -34,9 +35,8 @@ RainshaftSolution LimitingIntegrator::integrate(double initial_time,
       t[i] -= qr[i] * constants.latvap / constants.cp;
       qr[i] = 0.;
     }
-    // nr is not conserved by local processes; no special logic required here.
-    nr[i] = std::max(nr[i], min_nr_fac * qr[i]);
-    nr[i] = std::min(nr[i], max_nr_fac * qr[i]);
+    // nr is not conserved by local processes, but we do apply size limiters.
+    nr[i] = size_limiters.limited_nr(nr[i], qr[i]);
     // Note: This t limiter is not in the original P3 code, which may silently
     // accept negative t or crash on negative t, depending on treatment of
     // floating point exceptions and where the negative t occurs.

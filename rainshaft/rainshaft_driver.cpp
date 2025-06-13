@@ -19,6 +19,7 @@
 #include "sedimentation.hpp"
 #include "self_collision.hpp"
 #include "sequential_split_integrator.hpp"
+#include "size_limiters.hpp"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -278,11 +279,13 @@ int main(int argc, char* argv[])
       } else if (method_type == "forcing") {
         return std::make_unique<ForcingIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, cfl_substep, postprocess, steps_per_output);
       } else if (method_type == "original") {
+        // Borrowed from original P3 settings, minimum diameter is 10 micron and maximum is 5 millimeter, mu = 0.
+        SizeLimiters size_limiters(constants, 10.e-6, 5.e-3, 0.);
         std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, &partition_2_processes, state_descs, tend_descs, dt, 1, rel_tol);
         backing_integrators.emplace_back(local_intg);
-        std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(constants, *local_intg);
+        std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(constants, size_limiters, *local_intg);
         backing_integrators.emplace_back(local_lim_intg);
-        std::shared_ptr<SedCflIntegrator> sed_intg = std::make_shared<SedCflIntegrator>(constants, grid, tend_descs, sed);
+        std::shared_ptr<SedCflIntegrator> sed_intg = std::make_shared<SedCflIntegrator>(constants, grid, size_limiters, tend_descs, sed);
         backing_integrators.emplace_back(sed_intg);
         std::shared_ptr<SequentialSplitIntegrator> step_intg = std::make_shared<SequentialSplitIntegrator>(std::vector<const RainshaftIntegrator*>({&*local_lim_intg, &*sed_intg}));
         backing_integrators.emplace_back(step_intg);
