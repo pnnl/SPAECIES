@@ -8,10 +8,10 @@ class SedCflIntegrator : public RainshaftIntegrator {
 
 public:
 
-  SedCflIntegrator(const RainshaftConstants* constants,
-                   const RainshaftGrid* grid,
+  SedCflIntegrator(const RainshaftConstants& constants,
+                   const RainshaftGrid& grid,
                    const VarDescList& tend_descs,
-                   const Sedimentation *sedimentation);
+                   const Sedimentation& sedimentation);
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
@@ -19,13 +19,13 @@ public:
 
 private:
 
-  const RainshaftConstants* constants;
+  const RainshaftConstants& constants;
 
-  const RainshaftGrid* grid;
+  const RainshaftGrid& grid;
 
   const VarDescList tend_descs;
 
-  const Sedimentation *sed;
+  const Sedimentation &sed;
 
 };
 

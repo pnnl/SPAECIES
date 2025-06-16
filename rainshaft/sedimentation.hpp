@@ -137,6 +137,11 @@ public:
   Sedimentation(const RainshaftConstants& constants, bool use_v_table,
                 bool use_numerical_integration);
 
+  double calc_max_step(const RainshaftConstants &constants,
+                       const RainshaftGrid &grid,
+                       const RainshaftDerivedVars& dvars, 
+                       double cfl=1) const;
+
   // Calculate tendency from current state.
   void calc_tend(const RainshaftConstants& constants,
                  const RainshaftGrid& grid,

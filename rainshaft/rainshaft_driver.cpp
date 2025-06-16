@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file;
   std::size_t order, icase_in;
-  bool do_nudging, postprocess, use_lookup;
+  bool do_nudging, cfl_substep, postprocess, use_lookup;
 
 	po::options_description desc("Allowed options");
 	desc.add_options()
@@ -54,6 +54,7 @@ int main(int argc, char* argv[])
 		("dt", po::value(&dt)->default_value(0.1), "step size. if integration type is set to MRI/splitting/forcing, this argument is the outer time step size")
     ("dt_partition_1", po::value(&dt_partition_1)->default_value(0), "step size of partition 1 for MRI/splitting/forcing methods. negative values indicate ratios, e.g. dt_partition_1=-0.5 corresponds to dt_partition_1 = dt/2")
     ("dt_partition_2", po::value(&dt_partition_2)->default_value(0), "step size of partition 2 for MRI/splitting/forcing methods. negative values indicate ratios, e.g. dt_partition_2=-0.5 corresponds to dt_partition_2 = dt/2")
+    ("cfl_substep", po::value(&cfl_substep)->default_value(false), "substep sedimentation using the CFL condition with operator splitting")
     ("rel_tol", po::value(&rel_tol)->default_value(1.e-4), "relative tolerance for adaptive stepping and nonlinear solvers")
     ("postprocess", po::value(&postprocess)->default_value(false), "postprocesses stages and steps to be positive")
     ("use_lookup", po::value(&use_lookup)->default_value(false), "uses lookup tables to evaluate fall speeds")
@@ -273,15 +274,15 @@ int main(int argc, char* argv[])
       } else if (method_type == "mri") {
         return std::make_unique<MRIIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, nullptr, state_descs, tend_descs, dt_partition_1, dt, order, rel_tol, postprocess, steps_per_output);
       } else if (method_type == "splitting") {
-        return std::make_unique<OperatorSplittingIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, order, rel_tol, postprocess, steps_per_output);
+        return std::make_unique<OperatorSplittingIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, cfl_substep, order, rel_tol, postprocess, steps_per_output);
       } else if (method_type == "forcing") {
-        return std::make_unique<ForcingIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, postprocess, steps_per_output);
+        return std::make_unique<ForcingIntegrator>(constants, grid, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, cfl_substep, postprocess, steps_per_output);
       } else if (method_type == "original") {
         std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, &partition_2_processes, state_descs, tend_descs, dt, 1, rel_tol);
         backing_integrators.emplace_back(local_intg);
         std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(constants, *local_intg);
         backing_integrators.emplace_back(local_lim_intg);
-        std::shared_ptr<SedCflIntegrator> sed_intg = std::make_shared<SedCflIntegrator>(&constants, &grid, tend_descs, &sed);
+        std::shared_ptr<SedCflIntegrator> sed_intg = std::make_shared<SedCflIntegrator>(constants, grid, tend_descs, sed);
         backing_integrators.emplace_back(sed_intg);
         std::shared_ptr<SequentialSplitIntegrator> step_intg = std::make_shared<SequentialSplitIntegrator>(std::vector<const RainshaftIntegrator*>({&*local_lim_intg, &*sed_intg}));
         backing_integrators.emplace_back(step_intg);

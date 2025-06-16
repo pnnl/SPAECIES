@@ -36,19 +36,19 @@ private:
   template <int PARTITION>
   static int rainshaft_f(sunrealtype, N_Vector y, N_Vector ydot, void *user_data)
   {
-    RainshaftUserData *cast_data = static_cast<RainshaftUserData *>(user_data);
-    const StateConst state = n_vector_to_state(y, cast_data->state_descs);
-    const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data->constants,
-                                                      cast_data->grid,
+    const RainshaftUserData& cast_data = *static_cast<RainshaftUserData *>(user_data);
+    const StateConst state = n_vector_to_state(y, cast_data.state_descs);
+    const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data.constants,
+                                                      cast_data.grid,
                                                       state);
     // Zero out ydot so that we don't have to remember to zero every value in calc_tend.
     N_VConst(0., ydot);
-    Tendency tend = n_vector_to_tendency(ydot, cast_data->tend_descs);
+    Tendency tend = n_vector_to_tendency(ydot, cast_data.tend_descs);
 
     try {
-      cast_data->processes[PARTITION]->calc_tend(cast_data->constants,
-                                                cast_data->grid,
-                                                state, dvars, tend);
+      cast_data.processes[PARTITION]->calc_tend(cast_data.constants,
+                                               cast_data.grid,
+                                               state, dvars, tend);
     } catch (const std::domain_error &) {
       // Attempt recovery on domain error, e.g., gamma function with negative
       // input
@@ -61,10 +61,10 @@ private:
   static int rainshaft_jac(sunrealtype, N_Vector y, N_Vector, SUNMatrix Jac, void *user_data, N_Vector, N_Vector, N_Vector)
   {
     SUNMatZero(Jac);
-    RainshaftUserData *cast_data = static_cast<RainshaftUserData *>(user_data);
-    const StateConst state = n_vector_to_state(y, cast_data->state_descs);
-    const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data->constants,
-                                      cast_data->grid,
+    const RainshaftUserData& cast_data = *static_cast<RainshaftUserData *>(user_data);
+    const StateConst state = n_vector_to_state(y, cast_data.state_descs);
+    const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data.constants,
+                                      cast_data.grid,
                                       state);
 
     RainshaftProcess::Matrix mat = [Jac](const std::size_t i, const std::size_t j) -> sunrealtype & {
@@ -72,15 +72,28 @@ private:
     };
 
     try {
-      cast_data->processes[PARTITION]->calc_tend_jac(cast_data->constants,
-                                                     cast_data->grid,
-                                                     state, dvars,
-                                                     mat);
+      cast_data.processes[PARTITION]->calc_tend_jac(cast_data.constants,
+                                                    cast_data.grid,
+                                                    state, dvars,
+                                                    mat);
     } catch (const std::domain_error &) {
       // Attempt recovery on domain error, e.g., gamma function with negative
       // input
       return 1;
     }
+    return 0;
+  }
+
+  template <int PARTITION, typename P>
+  static int rainshaft_stability(N_Vector y, sunrealtype, sunrealtype *hstab, void *user_data) {
+    
+    const RainshaftUserData& cast_data = *static_cast<RainshaftUserData *>(user_data);
+    const StateConst state = n_vector_to_state(y, cast_data.state_descs);
+    const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data.constants,
+                                      cast_data.grid,
+                                      state);
+    const auto &process = *static_cast<const P*>(cast_data.processes[PARTITION]);
+    *hstab = process.calc_max_step(cast_data.constants, cast_data.grid, dvars);
     return 0;
   }
 
@@ -122,6 +135,12 @@ protected:
   auto create_jac() const
   {
     return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_jac<PARTITION>;
+  }
+
+  template <int PARTITION, typename P>
+  auto create_stability() const
+  {
+    return (user_data.processes[PARTITION] == nullptr) ? nullptr : rainshaft_stability<PARTITION, P>;
   }
 
   template <typename E, typename C, typename O, typename Mode>
