@@ -21,8 +21,8 @@ RainshaftSolution SedCflIntegrator::integrate(double initial_time,
   double *state_data = temp_state.data();
   Tendency tend(tend_descs);
   double *tend_data = tend.data();
-  std::fill_n(tend_data, tend.size(), 0.0);
   while (time_remaining > 0) {
+    std::fill_n(tend_data, tend.size(), 0.0);
     RainshaftDerivedVars dvars = RainshaftDerivedVars(constants, grid, temp_state);
     const double max_cfl_num = time_remaining / sed.calc_max_step(constants, grid, dvars);
     const std::size_t estimated_steps_left = ((std::size_t) max_cfl_num) + 1;
