@@ -17,14 +17,14 @@ private:
                      const double nr, const double qr) const
   {
     const auto mean_mass_diam = std::cbrt(qr / (constants.pi * constants.rhow * nr));
-    const auto breakup_exp_term = std::exp(2300. * (2.8e-4 - mean_mass_diam));
+    const auto breakup_exp_term = std::exp(2300. * (mean_mass_diam - 2.8e-4));
     const auto breakup = 2. - breakup_exp_term;
 
     if (breakup <= 1.0) {
       if constexpr (WithGrad) {
         return {breakup, {
-          -2300. * breakup_exp_term * mean_mass_diam / (3. * nr),
-          2300. * breakup_exp_term * mean_mass_diam / (3. * qr)
+          2300. * breakup_exp_term * mean_mass_diam / (3. * nr),
+          -2300. * breakup_exp_term * mean_mass_diam / (3. * qr)
         }};
       } else {
         return breakup;
