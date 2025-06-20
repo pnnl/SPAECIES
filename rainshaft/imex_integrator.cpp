@@ -43,7 +43,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   ARKodeSetLinearSolver(arkode_mem, LS, jac);
   ARKodeSetJacFn(arkode_mem, create_jac<1>());
   ARKodeSetDeduceImplicitRhs(arkode_mem, true);
-  if (dt == 0) {
+  if (dt > 0) {
     // Settings to help nonlinear solver converge with fixed steps
     ARKodeSetJacEvalFrequency(arkode_mem, 1);
     ARKodeSetMaxNonlinIters(arkode_mem, 100);
