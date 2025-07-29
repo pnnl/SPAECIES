@@ -3,6 +3,7 @@
 #include "nvector/nvector_serial.h"
 #include "sunmatrix/sunmatrix_dense.h"
 #include "sunlinsol/sunlinsol_lapackdense.h"
+#include "sunnonlinsol/sunnonlinsol_fixedpoint.h"
 
 IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
                                const RainshaftGrid &grid,
@@ -38,15 +39,22 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
     ARKodeSetPostprocessStepFn(arkode_mem, postprocess_positive);
   }
 
-  SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
-  SUNLinearSolver LS = SUNLinSol_LapackDense(y, jac, sun_ctxt);
-  ARKodeSetLinearSolver(arkode_mem, LS, jac);
-  ARKodeSetJacFn(arkode_mem, create_jac<1>());
-  ARKodeSetDeduceImplicitRhs(arkode_mem, true);
+  SUNMatrix jac = nullptr;
+  SUNLinearSolver ls = nullptr;
+  SUNNonlinearSolver nls = nullptr;
+
   if (dt > 0) {
     // Settings to help nonlinear solver converge with fixed steps
-    ARKodeSetJacEvalFrequency(arkode_mem, 1);
+    nls = SUNNonlinSol_FixedPoint(y, 3, sun_ctxt);
+    ARKodeSetNonlinearSolver(arkode_mem, nls);
     ARKodeSetMaxNonlinIters(arkode_mem, 100);
+  } else {
+    jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
+    ls = SUNLinSol_LapackDense(y, jac, sun_ctxt);
+    ARKodeSetLinearSolver(arkode_mem, ls, jac);
+    ARKodeSetJacFn(arkode_mem, create_jac<1>());
+    ARKodeSetPredictorMethod(arkode_mem, 1);
+    ARKodeSetDeduceImplicitRhs(arkode_mem, true);
   }
 
   const N_Vector abs_tol = fill_abs_tol_vector(N_VClone(y));
@@ -92,6 +100,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   // SPS: Make RAII wrapper for this.
   ARKodeFree(&arkode_mem);
   SUNMatDestroy(jac);
-  SUNLinSolFree(LS);
+  SUNLinSolFree(ls);
+  SUNNonlinSolFree(nls);
   return solution;
 }
