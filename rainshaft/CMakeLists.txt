@@ -23,6 +23,7 @@ add_executable(rainshaft
   sedimentation.cpp
   self_collision.cpp
   sequential_split_integrator.cpp
+  size_limiters.cpp
 )
 target_link_libraries(rainshaft
   NetCDF::NetCDF
