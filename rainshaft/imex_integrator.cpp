@@ -3,7 +3,6 @@
 #include "nvector/nvector_serial.h"
 #include "sunmatrix/sunmatrix_dense.h"
 #include "sunlinsol/sunlinsol_lapackdense.h"
-#include "sunnonlinsol/sunnonlinsol_fixedpoint.h"
 
 IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
                                const RainshaftGrid &grid,
@@ -14,8 +13,8 @@ IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
                                const double dt,
                                const int order,
                                const double rel_tol,
-                               const int steps_per_output,
                                const bool postprocess,
+                               const int steps_per_output,
                                const std::optional<std::string> jacobian_file)
     : SundialsIntegrator(constants, grid, {process_exp, process_imp}, state_descs, tend_descs, steps_per_output),
       dt(dt), order(order), rel_tol(rel_tol), postprocess(postprocess), jacobian_file(jacobian_file)
@@ -39,22 +38,16 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
     ARKodeSetPostprocessStepFn(arkode_mem, postprocess_positive);
   }
 
-  SUNMatrix jac = nullptr;
-  SUNLinearSolver ls = nullptr;
-  SUNNonlinearSolver nls = nullptr;
+  SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
+  SUNLinearSolver ls = SUNLinSol_LapackDense(y, jac, sun_ctxt);
+  ARKodeSetLinearSolver(arkode_mem, ls, jac);
+  ARKodeSetJacFn(arkode_mem, create_jac<1>());
+  ARKodeSetDeduceImplicitRhs(arkode_mem, true);
 
   if (dt > 0) {
-    // Settings to help nonlinear solver converge with fixed steps
-    nls = SUNNonlinSol_FixedPoint(y, 3, sun_ctxt);
-    ARKodeSetNonlinearSolver(arkode_mem, nls);
-    ARKodeSetMaxNonlinIters(arkode_mem, 100);
+    ARKodeSetMaxNonlinIters(arkode_mem, 30);
   } else {
-    jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
-    ls = SUNLinSol_LapackDense(y, jac, sun_ctxt);
-    ARKodeSetLinearSolver(arkode_mem, ls, jac);
-    ARKodeSetJacFn(arkode_mem, create_jac<1>());
     ARKodeSetPredictorMethod(arkode_mem, 1);
-    ARKodeSetDeduceImplicitRhs(arkode_mem, true);
   }
 
   const N_Vector abs_tol = fill_abs_tol_vector(N_VClone(y));
@@ -101,6 +94,5 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   ARKodeFree(&arkode_mem);
   SUNMatDestroy(jac);
   SUNLinSolFree(ls);
-  SUNNonlinSolFree(nls);
   return solution;
 }

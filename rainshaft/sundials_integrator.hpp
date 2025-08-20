@@ -14,7 +14,6 @@
 #include "rainshaft_solution.hpp"
 #include "rainshaft_types.hpp"
 #include "variable_array_view.hpp"
-#include <iostream>
 
 static_assert(std::is_same_v<sunrealtype, double>, "sunrealtype must be double");
 
