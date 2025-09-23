@@ -30,6 +30,9 @@ struct RainshaftConstants {
   double nr_top;
   // qr at top of column (kg/kg)
   double qr_top;
+  // constant factor for determining q_sat_dry regularization in the 
+  // interval (q_sat_dry, q_sat_dry + epsilon_qsat_dry*q_sat_dry)
+  double epsilon_qsat_fac;
 };
 
 #endif // RAINSHAFT_CONSTANTS_HPP
