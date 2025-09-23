@@ -53,11 +53,9 @@ std::vector<double> calc_lambdar(const RainshaftConstants& constants,
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
-    if (qr[il] >= constants.qsmall) {
-      double lambda_cubed = constants.pi * constants.rhow * nr[il]
-        / qr[il];
-      lambdar[il] = std::cbrt(lambda_cubed);
-    }
+    double lambda_cubed = constants.pi * constants.rhow * (nr[il] + constants.qsmall * (1.e8))
+      / (qr[il] + constants.qsmall);
+    lambdar[il] = std::cbrt(lambda_cubed);
   }
   return lambdar;
 }

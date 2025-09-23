@@ -32,8 +32,8 @@ public:
 
     if constexpr (WithGrad) {
       return {lam, {
-        qr >= constants.qsmall ? lam / (3. * nr) : 0.0,
-        qr >= constants.qsmall ? -lam / (3. * qr) : 0.0
+        lam / (3. * (nr + constants.qsmall * (1.e8))),
+        -lam / (3. * (qr + constants.qsmall))
       }};
     } else {
       return lam;

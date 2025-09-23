@@ -46,6 +46,7 @@ int main(int argc, char* argv[])
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file;
   std::size_t order, icase_in;
   bool do_nudging, cfl_substep, postprocess, use_lookup;
+  double qsmall;
 
 	po::options_description desc("Allowed options");
 	desc.add_options()
@@ -66,6 +67,7 @@ int main(int argc, char* argv[])
     ("case_idx", po::value(&icase_in), "(optional) specific E3SM case to load if initial_condition is set to filename.")
     ("final_time", po::value(&final_time)->default_value(1800.0), "stopping time for integration")
     ("nudging", po::value(&do_nudging)->default_value(true), "boolean flag for nudging")
+    ("qsmall", po::value(&qsmall)->default_value(1.e-10), "smallest permissible non-zero value of qr")
     ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")
   ;
 
@@ -122,7 +124,7 @@ int main(int argc, char* argv[])
   // SPS: Choose rho_top in a more principled way?
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
-                               0.62197, 1.e-14, 9.80616, 1.e-5, 5.e-3,
+                               0.62197, qsmall, 9.80616, 1.e-5, 5.e-3,
                                0.988919555598356, 1.e3, 1.e-4};
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
