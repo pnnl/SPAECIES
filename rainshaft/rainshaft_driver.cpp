@@ -301,31 +301,66 @@ int main(int argc, char* argv[])
       }
     }();
 
-    auto before_sol = high_resolution_clock::now();
-    RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state);
-    auto after_sol = high_resolution_clock::now();
+    // auto before_sol = high_resolution_clock::now();
+    // RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state);
+    // auto after_sol = high_resolution_clock::now();
 
-    // Time taken for solution.
-    duration<double, std::milli> walltime_ms = after_sol - before_sol;
-    std::cout << "Case " << icase << ", Time: " << walltime_ms.count() << std::endl;
-    // Write out grid and all states.
-    std::size_t icase_writer;
-    if (vm.count("case_idx")) {
-      icase_writer = 0;
-    } else {
-      icase_writer = icase;
+    // // Time taken for solution.
+    // duration<double, std::milli> walltime_ms = after_sol - before_sol;
+    // std::cout << "Case " << icase << ", Time: " << walltime_ms.count() << std::endl;
+    // // Write out grid and all states.
+    // std::size_t icase_writer;
+    // if (vm.count("case_idx")) {
+    //   icase_writer = 0;
+    // } else {
+    //   icase_writer = icase;
+    // }
+    // writer.write_grid(grid, icase_writer);
+    // writer.write_states(solution.states, icase_writer);
+    // std::vector<RainshaftDerivedVars> solution_dvars;
+    // solution_dvars.reserve(solution.states.size());
+    // for (StateConst state : solution.states) {
+    //   solution_dvars.emplace_back(constants, grid, state);
+    // }
+    // writer.write_derived_vars(solution_dvars, icase_writer);
+    // writer.write_num_rhs_evals(solution.num_rhs_evals, icase_writer);
+    // writer.write_walltime_ms(walltime_ms.count(), icase_writer);
+
+    try {
+      auto before_sol = high_resolution_clock::now();
+      int error_flag;
+      RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state, error_flag);
+      auto after_sol = high_resolution_clock::now();
+  
+      // Time taken for solution.
+      duration<double, std::milli> walltime_ms = after_sol - before_sol;
+      std::cout << "Case " << icase << ", Time: " << walltime_ms.count() << std::endl;
+      // Write out grid and all states.
+      std::size_t icase_writer;
+      if (vm.count("case_idx")) {
+        icase_writer = 0;
+      } else {
+        icase_writer = icase;
+      }
+      if (error_flag > 0) {
+        writer.write_grid(grid, icase_writer);
+        writer.write_states(solution.states, icase_writer);
+        std::vector<RainshaftDerivedVars> solution_dvars;
+        solution_dvars.reserve(solution.states.size());
+        for (StateConst state : solution.states) {
+          solution_dvars.emplace_back(constants, grid, state);
+        }
+        writer.write_derived_vars(solution_dvars, icase_writer);
+        writer.write_num_rhs_evals(solution.num_rhs_evals, icase_writer);
+        writer.write_walltime_ms(walltime_ms.count(), icase_writer);
+      } else {
+        throw(error_flag);
+      }
+    } catch (int error) {
+      std::cout << "Column " << icase << " crashed, continuing..." << std::endl;
     }
-    writer.write_grid(grid, icase_writer);
-    writer.write_states(solution.states, icase_writer);
-    std::vector<RainshaftDerivedVars> solution_dvars;
-    solution_dvars.reserve(solution.states.size());
-    for (StateConst state : solution.states) {
-      solution_dvars.emplace_back(constants, grid, state);
-    }
-    writer.write_derived_vars(solution_dvars, icase_writer);
-    writer.write_num_rhs_evals(solution.num_rhs_evals, icase_writer);
-    writer.write_walltime_ms(walltime_ms.count(), icase_writer);
   }
+
   // write settings as metadata
   writer.write_metadata(order, dt, dt_partition_1, dt_partition_2, rel_tol, postprocess,
     use_lookup, method_type, steps_per_output, initial_condition_file,

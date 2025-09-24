@@ -137,7 +137,8 @@ protected:
                            const double final_time,
                            const N_Vector y,
                            const Mode normal,
-                           const Mode one_step) const
+                           const Mode one_step,
+                           int& error_flag) const
   {
     std::vector<StateConst> states;
     sunrealtype tret = -std::numeric_limits<sunrealtype>::infinity();
@@ -149,12 +150,12 @@ protected:
           states.emplace_back(n_vector_to_state(y, user_data.state_descs).deep_copy());
           outputFun();
         }
-        evolveFun(mem, final_time, y, &tret, one_step);
+        error_flag = evolveFun(mem, final_time, y, &tret, one_step);
       }
     }
     else
     {
-      evolveFun(mem, final_time, y, &tret, normal);
+      error_flag = evolveFun(mem, final_time, y, &tret, normal);
     }
 
     states.emplace_back(n_vector_to_state(y, user_data.state_descs).deep_copy());

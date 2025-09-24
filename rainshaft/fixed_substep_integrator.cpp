@@ -8,7 +8,8 @@ FixedSubstepIntegrator::FixedSubstepIntegrator(const RainshaftIntegrator *inner_
 
 RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
                                                     double final_time,
-                                                    const StateConst& initial_state) const {
+                                                    const StateConst& initial_state,
+                                                    int& error_flag) const {
   double time_interval = final_time - initial_time;
   double approx_num_steps = time_interval / dt;
   double rounded_num_steps = std::round(approx_num_steps);
@@ -32,7 +33,8 @@ RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
     double next_time = current_time + dt;
     RainshaftSolution step_solution = integrator->integrate(current_time,
                                                        next_time,
-                                                       solution.states.back());
+                                                       solution.states.back(),
+                                                       error_flag);
     if (it != 0) {
       solution.pop_back();
     }
@@ -44,7 +46,8 @@ RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
     double next_time = current_time + partial_step_size;
     RainshaftSolution step_solution = integrator->integrate(current_time,
                                                        next_time,
-                                                       solution.states.back());
+                                                       solution.states.back(),
+                                                       error_flag);
     if (num_full_steps != 0) {
       solution.pop_back();
     }

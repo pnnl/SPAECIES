@@ -13,7 +13,8 @@ SedCflIntegrator::SedCflIntegrator(const RainshaftConstants& constants,
 
 RainshaftSolution SedCflIntegrator::integrate(double initial_time,
                                               double final_time,
-                                              const StateConst& initial_state) const {
+                                              const StateConst& initial_state,
+                                              int& error_flag) const {
   int num_rhs_evals = 0;
   double current_time = initial_time;
   double time_remaining = final_time - current_time;

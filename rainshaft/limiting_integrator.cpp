@@ -9,8 +9,9 @@ LimitingIntegrator::LimitingIntegrator(const RainshaftConstants &constants,
 
 RainshaftSolution LimitingIntegrator::integrate(double initial_time,
                                                 double final_time,
-                                                const StateConst& initial_state) const {
-  RainshaftSolution solution = integrator.integrate(initial_time, final_time, initial_state);
+                                                const StateConst& initial_state,
+                                                int& error_flag) const {
+  RainshaftSolution solution = integrator.integrate(initial_time, final_time, initial_state, error_flag);
   State limited_state = solution.states.back().deep_copy();
   VarMut t = limited_state.get_variable("T");
   VarMut q = limited_state.get_variable("q");

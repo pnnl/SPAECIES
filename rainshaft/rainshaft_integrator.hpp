@@ -10,7 +10,8 @@ public:
 
   virtual RainshaftSolution integrate(double initial_time,
                                       double final_time,
-                                      const StateConst& initial_state) const = 0;
+                                      const StateConst& initial_state,
+                                      int& error_flag) const = 0;
 
   virtual ~RainshaftIntegrator() {}
 

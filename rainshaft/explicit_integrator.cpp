@@ -21,7 +21,8 @@ ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants &constants,
 // SPS: Need to generalize this to get output states at arbitary times.
 RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
                                                 double final_time,
-                                                const StateConst& initial_state) const
+                                                const StateConst& initial_state,
+                                                int& error_flag) const
 {
   const N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
   void *arkode_mem = ERKStepCreate(create_f<0>(), initial_time, y, sun_ctxt);
@@ -52,7 +53,8 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
       final_time,
       y,
       ARK_NORMAL,
-      ARK_ONE_STEP);
+      ARK_ONE_STEP,
+      error_flag);
 
   N_VDestroy(y);
   // SPS: Make RAII wrapper for this.
