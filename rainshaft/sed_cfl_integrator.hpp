@@ -3,6 +3,7 @@
 
 #include "rainshaft_integrator.hpp"
 #include "sedimentation.hpp"
+#include "size_limiters.hpp"
 
 class SedCflIntegrator : public RainshaftIntegrator {
 
@@ -10,6 +11,7 @@ public:
 
   SedCflIntegrator(const RainshaftConstants& constants,
                    const RainshaftGrid& grid,
+                   const SizeLimiters& size_limiters,
                    const VarDescList& tend_descs,
                    const Sedimentation& sedimentation);
 
@@ -22,6 +24,8 @@ private:
   const RainshaftConstants& constants;
 
   const RainshaftGrid& grid;
+
+  const SizeLimiters size_limiters;
 
   const VarDescList tend_descs;
 

@@ -2,8 +2,9 @@
 #include <algorithm>
 
 LimitingIntegrator::LimitingIntegrator(const RainshaftConstants &constants,
+                                       const SizeLimiters& size_limiters,
                                        const RainshaftIntegrator& sub_integrator)
-  : constants(constants), integrator(sub_integrator) {
+  : constants(constants), size_limiters(size_limiters), integrator(sub_integrator) {
 }
 
 RainshaftSolution LimitingIntegrator::integrate(double initial_time,
@@ -18,7 +19,7 @@ RainshaftSolution LimitingIntegrator::integrate(double initial_time,
   for (std::size_t i = 0; i != t.size(); ++i) {
     // If qr has to be corrected, reduce q and increase T to allow for better
     // water and energy conservation.
-    if (qr[i] < 0.) {
+    if (qr[i] < constants.qsmall) {
       // Note that for the "original" P3 method applied to the rainshaft model,
       // which this class was designed for, the only way to get significant
       // negative qr is from excessive evaporation (a source of q), so this
@@ -29,8 +30,8 @@ RainshaftSolution LimitingIntegrator::integrate(double initial_time,
       t[i] -= qr[i] * constants.latvap / constants.cp;
       qr[i] = 0.;
     }
-    // nr is not conserved by local processes; no special logic required here.
-    nr[i] = std::max(nr[i], 0.);
+    // nr is not conserved by local processes, but we do apply size limiters.
+    nr[i] = size_limiters.limited_nr(nr[i], qr[i]);
     // Note: This t limiter is not in the original P3 code, which may silently
     // accept negative t or crash on negative t, depending on treatment of
     // floating point exceptions and where the negative t occurs.
