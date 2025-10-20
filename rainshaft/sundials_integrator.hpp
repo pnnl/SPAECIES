@@ -14,7 +14,6 @@
 #include "rainshaft_solution.hpp"
 #include "rainshaft_types.hpp"
 #include "variable_array_view.hpp"
-#include <iostream>
 
 static_assert(std::is_same_v<sunrealtype, double>, "sunrealtype must be double");
 
@@ -97,17 +96,6 @@ private:
     return 0;
   }
 
-  static void handle_error(int,
-                           const char *,
-                           const char *,
-                           const char *msg,
-                           SUNErrCode,
-                           void *,
-                           SUNContext)
-  {
-    throw std::logic_error(msg);
-  }
-
 public:
   SundialsIntegrator(const RainshaftConstants &constants,
                      const RainshaftGrid &grid,
@@ -116,9 +104,7 @@ public:
                      const VarDescList& tend_descs,
                      const int steps_per_output)
       : user_data{constants, grid, processes, state_descs, tend_descs}, steps_per_output(steps_per_output)
-  {
-    SUNContext_PushErrHandler(sun_ctxt, SundialsIntegrator::handle_error, nullptr);
-  }
+  {}
 
 protected:
   const RainshaftUserData user_data;

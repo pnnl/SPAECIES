@@ -37,6 +37,7 @@ namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
 {
+
   using std::chrono::high_resolution_clock;
   using std::chrono::duration;
 
@@ -65,8 +66,8 @@ int main(int argc, char* argv[])
     ("ic_file", po::value(&initial_condition_file), "type of initial condiiton (e.g. 'adiabatic' or the filename of E3SM data)")
     ("num_cases", po::value(&num_cases)->default_value(1), "number of E3SM cases to load if initial_condition is set to filename. -1 for all cases.")
     ("case_idx", po::value(&icase_in), "(optional) specific E3SM case to load if initial_condition is set to filename.")
-    ("final_time", po::value(&final_time)->default_value(1800.0), "stopping time for integration")
-    ("nudging", po::value(&do_nudging)->default_value(true), "boolean flag for nudging")
+    ("final_time", po::value(&final_time)->default_value(300.0), "stopping time for integration")
+    ("nudging", po::value(&do_nudging)->default_value(false), "boolean flag for nudging")
     ("regularize_qsat", po::value(&regularize_qsat)->default_value(true), "boolean flag for q_sat_dry regularization")
     ("qsmall", po::value(&qsmall)->default_value(1.e-10), "smallest permissible non-zero value of qr")
     ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")

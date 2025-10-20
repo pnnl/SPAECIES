@@ -13,8 +13,8 @@ IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
                                const double dt,
                                const int order,
                                const double rel_tol,
-                               const int steps_per_output,
                                const bool postprocess,
+                               const int steps_per_output,
                                const std::optional<std::string> jacobian_file)
     : SundialsIntegrator(constants, grid, {process_exp, process_imp}, state_descs, tend_descs, steps_per_output),
       dt(dt), order(order), rel_tol(rel_tol), postprocess(postprocess), jacobian_file(jacobian_file)
@@ -39,12 +39,16 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   }
 
   SUNMatrix jac = SUNDenseMatrix(N_VGetLength(y), N_VGetLength(y), sun_ctxt);
-  SUNLinearSolver LS = SUNLinSol_LapackDense(y, jac, sun_ctxt);
-  ARKodeSetLinearSolver(arkode_mem, LS, jac);
+  SUNLinearSolver ls = SUNLinSol_LapackDense(y, jac, sun_ctxt);
+  ARKodeSetLinearSolver(arkode_mem, ls, jac);
   ARKodeSetJacFn(arkode_mem, create_jac<1>());
   ARKodeSetDeduceImplicitRhs(arkode_mem, true);
-  // ARKodeSetJacEvalFrequency(arkode_mem, 1);
-  // ARKodeSetMaxNonlinIters(arkode_mem, 1000000);
+
+  if (dt > 0) {
+    ARKodeSetMaxNonlinIters(arkode_mem, 1000);
+  } else {
+    ARKodeSetPredictorMethod(arkode_mem, 1);
+  }
 
   const N_Vector abs_tol = fill_abs_tol_vector(N_VClone(y));
   ARKodeSVtolerances(arkode_mem, rel_tol, abs_tol);
@@ -89,6 +93,6 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   // SPS: Make RAII wrapper for this.
   ARKodeFree(&arkode_mem);
   SUNMatDestroy(jac);
-  SUNLinSolFree(LS);
+  SUNLinSolFree(ls);
   return solution;
 }
