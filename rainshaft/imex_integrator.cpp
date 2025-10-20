@@ -45,7 +45,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   ARKodeSetDeduceImplicitRhs(arkode_mem, true);
 
   if (dt > 0) {
-    ARKodeSetMaxNonlinIters(arkode_mem, 30);
+    ARKodeSetMaxNonlinIters(arkode_mem, 1000);
   } else {
     ARKodeSetPredictorMethod(arkode_mem, 1);
   }
