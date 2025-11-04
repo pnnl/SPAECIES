@@ -18,6 +18,7 @@ private:
 public:
   OperatorSplittingIntegrator(const RainshaftConstants &constants,
                               const RainshaftGrid &grid,
+                              const SizeLimiters &size_limiters,
                               const Sedimentation *const process_partition_1,
                               const RainshaftProcess *const process_partition_2,
                               const VarDescList &state_descs,
