@@ -29,6 +29,7 @@ public:
                               const int order = 1,
                               const double rel_tol = 1.e-4,
                               const bool postprocess = false,
+                              const bool regularize_lambdar = true,
                               const int steps_per_output = -1);
 
   RainshaftSolution integrate(double initial_time,

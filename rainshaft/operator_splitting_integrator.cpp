@@ -21,8 +21,9 @@ OperatorSplittingIntegrator::OperatorSplittingIntegrator(const RainshaftConstant
                                                          const int order,
                                                          const double rel_tol,
                                                          const bool postprocess,
+                                                         const bool regularize_lambdar,
                                                          const int steps_per_output)
-    : SundialsIntegrator(constants, grid, {process_partition_1, process_partition_2}, state_descs, tend_descs, steps_per_output),
+    : SundialsIntegrator(constants, grid, {process_partition_1, process_partition_2}, state_descs, tend_descs, steps_per_output, regularize_lambdar),
       dt(dt), dt_partition_1(dt_partition_1), dt_partition_2(dt_partition_2), cfl_substep(cfl_substep), order(order), rel_tol(rel_tol), postprocess(postprocess)
 {
 }

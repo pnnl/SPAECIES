@@ -13,7 +13,8 @@ public:
                    const RainshaftGrid& grid,
                    const SizeLimiters& size_limiters,
                    const VarDescList& tend_descs,
-                   const Sedimentation& sedimentation);
+                   const Sedimentation& sedimentation,
+                   const bool regularize_lambdar);
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
@@ -31,6 +32,8 @@ private:
   const VarDescList tend_descs;
 
   const Sedimentation &sed;
+
+  const bool regularize_lambdar;
 
 };
 

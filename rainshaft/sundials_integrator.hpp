@@ -30,6 +30,7 @@ private:
     const PartitionArray processes;
     const VarDescList state_descs;
     const VarDescList tend_descs;
+    const bool regularize_lambdar;
   };
 
   template <int PARTITION>
@@ -39,7 +40,8 @@ private:
     const StateConst state = n_vector_to_state(y, cast_data.state_descs);
     const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data.constants,
                                                       cast_data.grid,
-                                                      state);
+                                                      state,
+                                                      cast_data.regularize_lambdar);
     // Zero out ydot so that we don't have to remember to zero every value in calc_tend.
     N_VConst(0., ydot);
     Tendency tend = n_vector_to_tendency(ydot, cast_data.tend_descs);
@@ -64,7 +66,8 @@ private:
     const StateConst state = n_vector_to_state(y, cast_data.state_descs);
     const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data.constants,
                                       cast_data.grid,
-                                      state);
+                                      state,
+                                      cast_data.regularize_lambdar);
 
     RainshaftProcess::Matrix mat = [Jac](const std::size_t i, const std::size_t j) -> sunrealtype & {
       return SM_ELEMENT_D(Jac, i, j);
@@ -90,7 +93,8 @@ private:
     const StateConst state = n_vector_to_state(y, cast_data.state_descs);
     const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data.constants,
                                       cast_data.grid,
-                                      state);
+                                      state,
+                                      cast_data.regularize_lambdar);
     const auto &process = *static_cast<const P*>(cast_data.processes[PARTITION]);
     *hstab = process.calc_max_step(cast_data.constants, cast_data.grid, dvars);
     return 0;
@@ -102,8 +106,9 @@ public:
                      const PartitionArray processes,
                      const VarDescList& state_descs,
                      const VarDescList& tend_descs,
-                     const int steps_per_output)
-      : user_data{constants, grid, processes, state_descs, tend_descs}, steps_per_output(steps_per_output)
+                     const int steps_per_output,
+                     const bool regularize_lambdar)
+      : user_data{constants, grid, processes, state_descs, tend_descs, regularize_lambdar}, steps_per_output(steps_per_output)
   {}
 
 protected:

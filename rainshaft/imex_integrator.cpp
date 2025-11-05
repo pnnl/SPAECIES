@@ -8,15 +8,16 @@ IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
                                const RainshaftGrid &grid,
                                const RainshaftProcess *const process_imp,
                                const RainshaftProcess *const process_exp,
-                                       const VarDescList& state_descs,
-                                       const VarDescList& tend_descs,
+                               const VarDescList& state_descs,
+                               const VarDescList& tend_descs,
                                const double dt,
                                const int order,
                                const double rel_tol,
                                const bool postprocess,
+                               const bool regularize_lambdar,
                                const int steps_per_output,
                                const std::optional<std::string> jacobian_file)
-    : SundialsIntegrator(constants, grid, {process_exp, process_imp}, state_descs, tend_descs, steps_per_output),
+    : SundialsIntegrator(constants, grid, {process_exp, process_imp}, state_descs, tend_descs, steps_per_output, regularize_lambdar),
       dt(dt), order(order), rel_tol(rel_tol), postprocess(postprocess), jacobian_file(jacobian_file)
 {
 }

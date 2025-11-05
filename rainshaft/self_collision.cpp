@@ -2,6 +2,11 @@
 #include "derivatives.hpp"
 #include <stdexcept>
 
+SelfCollision::SelfCollision(const bool regularize_lambdar)
+  : regularize_lambdar(regularize_lambdar)
+{
+}
+
 void SelfCollision::calc_tend(const RainshaftConstants& constants,
                               const RainshaftGrid& grid,
                               const StateConst& state,

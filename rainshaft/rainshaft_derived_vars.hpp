@@ -15,7 +15,8 @@ public:
   // Constructor from state.
   RainshaftDerivedVars(const RainshaftConstants& constants,
                        const RainshaftGrid& grid,
-                       const StateConst& state);
+                       const StateConst& state,
+                       const bool regularize_lambdar);
 
   // Cell heights (m)
   const std::vector<double> dz;
@@ -25,19 +26,33 @@ public:
   const std::vector<double> rho_dry;
   // Rain size parameter (1/m)
   const std::vector<double> lambdar;
+  // regularization flag
+  const bool regularize;
 
   template <bool WithGrad=false>
   RealOptGrad<WithGrad, 2> get_lambdar(const RainshaftConstants& constants, const double nr, const double qr, std::size_t i) const {
     const double lam = lambdar[i];
 
-    if constexpr (WithGrad) {
-      return {lam, {
-        lam / (3. * (nr + constants.qsmall * (1.e8))),
-        -lam / (3. * (qr + constants.qsmall))
-      }};
+    if (regularize) {
+      if constexpr (WithGrad) {
+        return {lam, {
+          lam / (3. * (nr + constants.qsmall * (1.e8))),
+          -lam / (3. * (qr + constants.qsmall))
+        }};
+      } else {
+        return lam;
+      }
     } else {
-      return lam;
+      if constexpr (WithGrad) {
+        return {lam, {
+          lam / (3. * nr),
+          -lam / (3. * qr)
+        }};
+      } else {
+        return lam;
+      }
     }
+
   }
 
   template <bool WithGrad=false>
