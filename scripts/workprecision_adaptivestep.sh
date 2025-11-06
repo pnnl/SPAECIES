@@ -34,7 +34,7 @@ CASE_IDX=
 POSTPROCESS="false"
 
 # toggle lookup tables
-LOOKUP_FLAG="false"
+LOOKUP_FLAG="true"
 
 # toggle q_sat_dry regularization
 REGULARIZE_QSAT="true"
