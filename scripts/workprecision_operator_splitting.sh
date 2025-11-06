@@ -29,7 +29,7 @@ NUM_CASES=-1
 CASE_IDX=
 
 # toggle limiting
-POSTPROCESS="false"
+POSTPROCESS="true"
 
 # toggle lookup tables
 LOOKUP_FLAG="true"
