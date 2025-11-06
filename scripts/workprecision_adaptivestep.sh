@@ -49,8 +49,6 @@ cd ${RAINSHAFT_DIR}
 
 for kk in $(seq 0 $((${#INTEGRATION_TYPES[@]} - 1)))
 do
-    # name for this collection of simulations. to be used in plot_workprecision.py to gather the data
-    SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_adaptivestep_regularized"
     # loop over requested orders
     for k in $(seq 0 $((${#ORDERS[@]} - 1)))
     do
@@ -62,11 +60,12 @@ do
                 do 
                     if [[ $REGULARIZE_LAMBDAR == "true" && $REGULARIZE_QSAT == "true" ]]
                     then
+                        # name for this collection of simulations. to be used in plot_workprecision.py to gather the data
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_adaptivestep_regularized"
                         OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_qsmall${QSMALLS[ii]}_epsilonqsat${EPSILON_QSAT_FACS[j]}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
-                        echo "regularized"
                     else 
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_adaptivestep_unregularized"
                         OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
-                        echo "unregularized"
                     fi
 
                     printf "# [Integrator settings]\n" > "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"

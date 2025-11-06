@@ -47,8 +47,6 @@ cd ${RAINSHAFT_DIR}
 
 for kk in $(seq 0 $((${#INTEGRATION_TYPES[@]} - 1)))
 do
-    # name for this collection of simulations. to be used in plot_workprecision.py to gather the data
-    SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_fixedstep_unregularized"
     if [[ ${INTEGRATION_TYPES[kk]} == "original" ]]
     then 
         for i in $(seq 0 $((${#TIMESTEPS[@]} - 1)))
@@ -59,8 +57,11 @@ do
                 do 
                     if [[ $REGULARIZE_LAMBDAR == "true" && $REGULARIZE_QSAT == "true" ]]
                     then
+                        # name for this collection of simulations. to be used in plot_workprecision.py to gather the data
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_fixedstep_regularized"
                         OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_qsmall${QSMALLS[ii]}_epsilonqsat${EPSILON_QSAT_FACS[j]}_dt${TIMESTEPS[i]}.nc"
                     else 
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_fixedstep_unregularized"
                         OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_dt${TIMESTEPS[i]}.nc"
                     fi
 
