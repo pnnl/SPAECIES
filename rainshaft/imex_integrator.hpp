@@ -17,6 +17,7 @@ private:
 public:
   IMEXIntegrator(const RainshaftConstants &constants,
                      const RainshaftGrid &grid,
+                     const SizeLimiters &size_limiters,
                      const RainshaftProcess *const process_imp,
                      const RainshaftProcess *const process_exp,
                      const VarDescList& state_descs,

@@ -8,6 +8,7 @@
 
 ForcingIntegrator::ForcingIntegrator(const RainshaftConstants &constants,
                                      const RainshaftGrid &grid,
+                                     const SizeLimiters &size_limiters,
                                      const Sedimentation *const process_forced,
                                      const RainshaftProcess *const process_unforced,
                                      const VarDescList &state_descs,
@@ -19,7 +20,7 @@ ForcingIntegrator::ForcingIntegrator(const RainshaftConstants &constants,
                                      const bool postprocess,
                                      const bool regularize_lambdar,
                                      const int steps_per_output)
-    : SundialsIntegrator(constants, grid, {process_forced, process_unforced}, state_descs, tend_descs, steps_per_output, regularize_lambdar),
+    : SundialsIntegrator(constants, grid, size_limiters, {process_forced, process_unforced}, state_descs, tend_descs, steps_per_output, regularize_lambdar),
       dt(dt), dt_forced(dt_forced), dt_unforced(dt_unforced), cfl_substep(cfl_substep), postprocess(postprocess)
 {
   if (dt == 0.0 || (dt_forced == 0.0 && !cfl_substep) || dt_unforced == 0)

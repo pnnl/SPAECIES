@@ -14,6 +14,7 @@
 #include "rainshaft_solution.hpp"
 #include "rainshaft_types.hpp"
 #include "variable_array_view.hpp"
+#include "size_limiters.hpp"
 
 static_assert(std::is_same_v<sunrealtype, double>, "sunrealtype must be double");
 
@@ -27,6 +28,7 @@ private:
   {
     const RainshaftConstants &constants;
     const RainshaftGrid &grid;
+    const SizeLimiters &size_limiters;
     const PartitionArray processes;
     const VarDescList state_descs;
     const VarDescList tend_descs;
@@ -103,12 +105,14 @@ private:
 public:
   SundialsIntegrator(const RainshaftConstants &constants,
                      const RainshaftGrid &grid,
-                     const PartitionArray processes,
+                     const SizeLimiters &size_limiters,
+                     PartitionArray processes,
                      const VarDescList& state_descs,
                      const VarDescList& tend_descs,
                      const int steps_per_output,
                      const bool regularize_lambdar)
-      : user_data{constants, grid, processes, state_descs, tend_descs, regularize_lambdar}, steps_per_output(steps_per_output)
+      : user_data{constants, grid, size_limiters, std::move(processes), state_descs, tend_descs, regularize_lambdar}, 
+      steps_per_output(steps_per_output)
   {}
 
 protected:
@@ -169,12 +173,39 @@ protected:
     return RainshaftSolution(std::move(states), countFun());
   }
 
-  static int postprocess_positive(sunrealtype, N_Vector y, void*) {
-    sunrealtype * const data = N_VGetArrayPointer(y);
-    const sunindextype len = N_VGetLength(y);
-    for (sunindextype i = 0; i < len; i++) {
-      data[i] = std::max(0.0, data[i]);
+  static int postprocess_positive(sunrealtype, N_Vector y, void* user_data) {
+    const RainshaftUserData& cast_data = *static_cast<RainshaftUserData *>(user_data);
+    State state = n_vector_to_state(y, cast_data.state_descs);
+    VarMut t = state.get_variable("T");
+    VarMut q = state.get_variable("q");
+    VarMut nr = state.get_variable("nr");
+    VarMut qr = state.get_variable("qr");
+
+    for (std::size_t i = 0; i != t.size(); ++i) {
+      if (qr[i] < cast_data.constants.qsmall) {
+        // Note that for the "original" P3 method applied to the rainshaft model,
+        // which this class was designed for, the only way to get significant
+        // negative qr is from excessive evaporation (a source of q), so this
+        // should never drive q negative. Notably, this is only true so long as
+        // the CFL condition is not violated in the sedimentation of qr (which
+        // should not be a problem so long as sed_cfl_integrator is used).
+        q[i] += qr[i];
+        t[i] -= qr[i] * cast_data.constants.latvap / cast_data.constants.cp;
+        qr[i] = 0.;
+      }
+      // nr is not conserved by local processes, but we do apply size limiters.
+      nr[i] = cast_data.size_limiters.limited_nr(nr[i], qr[i]);
+      // Note: This t limiter is not in the original P3 code, which may silently
+      // accept negative t or crash on negative t, depending on treatment of
+      // floating point exceptions and where the negative t occurs.
+      t[i] = std::max(t[i], 0.);
+      // In the rainshaft model, large negative q values should not be produced
+      // since there is no "sink" except nudging (which should only be used with
+      // time scales >> dt), but the below will violate energy/mass conservation
+      // if more processes are added without adapting more of P3's limiter logic.
+      q[i] = std::max(q[i], 0.);
     }
+
     return 0;
   }
 
