@@ -14,6 +14,7 @@ private:
 public:
   ExplicitIntegrator(const RainshaftConstants &constants,
                      const RainshaftGrid &grid,
+                     const SizeLimiters &size_limiters,
                      const RainshaftProcess *const process,
                      const VarDescList& state_descs,
                      const VarDescList& tend_descs,

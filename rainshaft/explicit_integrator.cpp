@@ -5,6 +5,7 @@
 
 ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants &constants,
                                        const RainshaftGrid &grid,
+                                       const SizeLimiters &size_limiters,
                                        const RainshaftProcess *const process,
                                        const VarDescList& state_descs,
                                        const VarDescList& tend_descs,
@@ -13,7 +14,7 @@ ExplicitIntegrator::ExplicitIntegrator(const RainshaftConstants &constants,
                                        const double rel_tol,
                                        const bool postprocess,
                                        const int steps_per_output)
-    : SundialsIntegrator(constants, grid, {process}, state_descs, tend_descs, steps_per_output),
+    : SundialsIntegrator(constants, grid, size_limiters, {process}, state_descs, tend_descs, steps_per_output),
       dt(dt), order(order), rel_tol(rel_tol), postprocess(postprocess)
 {
 }
