@@ -26,8 +26,9 @@ MRIIntegrator::MRIIntegrator(const RainshaftConstants &constants,
                              const int order,
                              const double rel_tol,
                              const bool postprocess,
+                             const bool regularize_lambdar,
                              const int steps_per_output)
-    : SundialsIntegrator(constants, grid, size_limiters, {process_fast, process_slow_exp, process_slow_imp}, state_descs, tend_descs, steps_per_output),
+    : SundialsIntegrator(constants, grid, size_limiters, {process_fast, process_slow_exp, process_slow_imp}, state_descs, tend_descs, steps_per_output, regularize_lambdar),
       dt_fast(dt_fast), dt_slow(dt_slow), order(order), rel_tol(rel_tol), postprocess(postprocess)
 {
 }
@@ -35,7 +36,8 @@ MRIIntegrator::MRIIntegrator(const RainshaftConstants &constants,
 // SPS: Need to generalize this to get output states at arbitary times.
 RainshaftSolution MRIIntegrator::integrate(double initial_time,
                                            double final_time,
-                                           const StateConst &initial_state) const
+                                           const StateConst &initial_state,
+                                           int& error_flag) const
 {
   const N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
 
@@ -98,7 +100,8 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
       final_time,
       y,
       ARK_NORMAL,
-      ARK_ONE_STEP);
+      ARK_ONE_STEP,
+      error_flag);
 
   N_VDestroy(y);
   MRIStepInnerStepper_Free(&stepper);

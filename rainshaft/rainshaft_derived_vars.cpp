@@ -47,14 +47,20 @@ std::vector<double> calc_rho_dry(const RainshaftConstants& constants,
 
 std::vector<double> calc_lambdar(const RainshaftConstants& constants,
                                  const RainshaftGrid& grid,
-                                 const StateConst& state) {
+                                 const StateConst& state,
+                                 const bool regularize) {
   // SPS: If not doing nr limiter here, do it somewhere?
   std::vector<double> lambdar(grid.nlev);
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");
   for (std::size_t il = 0; il != grid.nlev; ++il) {
-    double lambda_cubed = constants.pi * constants.rhow * (nr[il] + constants.qsmall * (1.e8))
-      / (qr[il] + constants.qsmall);
+    double lambda_cubed;
+    if (regularize) {
+      lambda_cubed = constants.pi * constants.rhow * (nr[il] + constants.qsmall * (1.e8))
+        / (qr[il] + constants.qsmall);
+    } else {
+      lambda_cubed = constants.pi * constants.rhow * nr[il] / qr[il];
+    }
     lambdar[il] = std::cbrt(lambda_cubed);
   }
   return lambdar;
@@ -62,11 +68,13 @@ std::vector<double> calc_lambdar(const RainshaftConstants& constants,
 
 RainshaftDerivedVars::RainshaftDerivedVars(const RainshaftConstants& constants,
                                            const RainshaftGrid& grid,
-                                           const StateConst& state)
+                                           const StateConst& state,
+                                           const bool regularize_lambdar)
   : dz(calc_dz(constants, grid,state)),
     z_int(dz_to_z_int(dz)),
     rho_dry(calc_rho_dry(constants, grid, state)),
-    lambdar(calc_lambdar(constants, grid, state)) {
+    lambdar(calc_lambdar(constants, grid, state, regularize_lambdar)),
+    regularize(regularize_lambdar) {
   // Check vector sizes.
   // SPS: Should actually print out mismatched dimensions on failure.
   if (grid.nlev != state.get_variable("T").size()) {

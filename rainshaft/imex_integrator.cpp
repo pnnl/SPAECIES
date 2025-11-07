@@ -9,15 +9,16 @@ IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
                                const SizeLimiters &size_limiters,
                                const RainshaftProcess *const process_imp,
                                const RainshaftProcess *const process_exp,
-                                       const VarDescList& state_descs,
-                                       const VarDescList& tend_descs,
+                               const VarDescList& state_descs,
+                               const VarDescList& tend_descs,
                                const double dt,
                                const int order,
                                const double rel_tol,
                                const bool postprocess,
+                               const bool regularize_lambdar,
                                const int steps_per_output,
                                const std::optional<std::string> jacobian_file)
-    : SundialsIntegrator(constants, grid, size_limiters, {process_exp, process_imp}, state_descs, tend_descs, steps_per_output),
+    : SundialsIntegrator(constants, grid, size_limiters, {process_exp, process_imp}, state_descs, tend_descs, steps_per_output, regularize_lambdar),
       dt(dt), order(order), rel_tol(rel_tol), postprocess(postprocess), jacobian_file(jacobian_file)
 {
 }
@@ -25,7 +26,8 @@ IMEXIntegrator::IMEXIntegrator(const RainshaftConstants &constants,
 // SPS: Need to generalize this to get output states at arbitary times.
 RainshaftSolution IMEXIntegrator::integrate(double initial_time,
                                                 double final_time,
-                                                const StateConst &initial_state) const
+                                                const StateConst &initial_state,
+                                                int& error_flag) const
 {
   const N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
   void *arkode_mem = ARKStepCreate(create_f<0>(), create_f<1>(), initial_time, y, sun_ctxt);
@@ -88,7 +90,8 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
       final_time,
       y,
       ARK_NORMAL,
-      ARK_ONE_STEP);
+      ARK_ONE_STEP,
+      error_flag);
 
   N_VDestroy(y);
   // SPS: Make RAII wrapper for this.

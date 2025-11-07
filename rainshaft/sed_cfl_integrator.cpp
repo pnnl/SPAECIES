@@ -7,13 +7,16 @@ SedCflIntegrator::SedCflIntegrator(const RainshaftConstants& constants,
                                    const RainshaftGrid& grid,
                                    const SizeLimiters& size_limiters,
                                    const VarDescList& tend_descs,
-                                   const Sedimentation& sedimentation)
-  : constants(constants), grid(grid), size_limiters(size_limiters), sed(sedimentation), tend_descs(tend_descs) {
+                                   const Sedimentation& sedimentation,
+                                   const bool regularize_lambdar)
+  : constants(constants), grid(grid), size_limiters(size_limiters), sed(sedimentation), tend_descs(tend_descs),
+    regularize_lambdar(regularize_lambdar) {
 }
 
 RainshaftSolution SedCflIntegrator::integrate(double initial_time,
                                               double final_time,
-                                              const StateConst& initial_state) const {
+                                              const StateConst& initial_state,
+                                              int& error_flag) const {
   int num_rhs_evals = 0;
   double current_time = initial_time;
   double time_remaining = final_time - current_time;
@@ -26,7 +29,7 @@ RainshaftSolution SedCflIntegrator::integrate(double initial_time,
   VarConst qr = temp_state.get_variable("qr");
   while (time_remaining > 0) {
     std::fill_n(tend_data, tend.size(), 0.0);
-    RainshaftDerivedVars dvars = RainshaftDerivedVars(constants, grid, temp_state);
+    RainshaftDerivedVars dvars = RainshaftDerivedVars(constants, grid, temp_state, regularize_lambdar);
     const double max_cfl_num = time_remaining / sed.calc_max_step(constants, grid, dvars);
     const std::size_t estimated_steps_left = ((std::size_t) max_cfl_num) + 1;
     const double step_size = time_remaining / estimated_steps_left;

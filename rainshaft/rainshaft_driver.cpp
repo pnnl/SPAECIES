@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file;
   std::size_t order, icase_in;
-  bool do_nudging, cfl_substep, postprocess, use_lookup, regularize_qsat;
+  bool do_nudging, cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar;
   double qsmall, epsilon_qsat_fac;
 
 	po::options_description desc("Allowed options");
@@ -69,6 +69,7 @@ int main(int argc, char* argv[])
     ("final_time", po::value(&final_time)->default_value(300.0), "stopping time for integration")
     ("nudging", po::value(&do_nudging)->default_value(false), "boolean flag for nudging")
     ("regularize_qsat", po::value(&regularize_qsat)->default_value(true), "boolean flag for q_sat_dry regularization")
+    ("regularize_lambdar", po::value(&regularize_lambdar)->default_value(true), "boolean flag for lambdar regularization")
     ("qsmall", po::value(&qsmall)->default_value(1.e-10), "smallest permissible non-zero value of qr")
     ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")
     ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(1.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
@@ -198,7 +199,7 @@ int main(int argc, char* argv[])
   // Sedimentation process.
   Sedimentation sed(constants, use_lookup, false);
   // Self-collision processes.
-  SelfCollision self_coll;
+  SelfCollision self_coll(regularize_lambdar);
   // Evaporation process.
   std::optional<double> dt_for_evap = std::nullopt;
   if (method_type == "original") {
@@ -238,7 +239,7 @@ int main(int argc, char* argv[])
     } else {
       reader->read_initial_conditions(icase, initial_state);
     }
-    RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state);
+    RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state, regularize_lambdar);
 
     // Nudging to initial condition.
     std::shared_ptr<Nudging> nudge;
@@ -274,24 +275,25 @@ int main(int argc, char* argv[])
 
     const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
       if (method_type == "explicit") {
-        return std::make_unique<ExplicitIntegrator>(constants, grid, size_limiters, &all_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);
+        return std::make_unique<ExplicitIntegrator>(constants, grid, size_limiters, &all_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "implicit") {
-        return std::make_unique<IMEXIntegrator>(constants, grid, size_limiters, &all_processes, nullptr, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);  
+        return std::make_unique<IMEXIntegrator>(constants, grid, size_limiters, &all_processes, nullptr, state_descs, tend_descs, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);  
       } else if (method_type == "imex") {
-        return std::make_unique<IMEXIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, steps_per_output);
+        return std::make_unique<IMEXIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "mri") {
-        return std::make_unique<MRIIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, nullptr, state_descs, tend_descs, dt_partition_1, dt, order, rel_tol, postprocess, steps_per_output);
+        return std::make_unique<MRIIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, nullptr, state_descs, tend_descs, dt_partition_1, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "splitting") {
-        return std::make_unique<OperatorSplittingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, cfl_substep, order, rel_tol, postprocess, steps_per_output);
+        return std::make_unique<OperatorSplittingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, cfl_substep, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "forcing") {
-        return std::make_unique<ForcingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, cfl_substep, postprocess, steps_per_output);
+        return std::make_unique<ForcingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, cfl_substep, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "original") {
         // Borrowed from original P3 settings, minimum diameter is 10 micron and maximum is 5 millimeter, mu = 0.
-        std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, size_limiters, &partition_2_processes, state_descs, tend_descs, dt, 1, rel_tol);
+        SizeLimiters size_limiters(constants, 10.e-6, 5.e-3, 0.);
+        std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, size_limiters, &partition_2_processes, state_descs, tend_descs, dt, 1, rel_tol, false, regularize_lambdar);
         backing_integrators.emplace_back(local_intg);
         std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(constants, size_limiters, *local_intg);
         backing_integrators.emplace_back(local_lim_intg);
-        std::shared_ptr<SedCflIntegrator> sed_intg = std::make_shared<SedCflIntegrator>(constants, grid, size_limiters, tend_descs, sed);
+        std::shared_ptr<SedCflIntegrator> sed_intg = std::make_shared<SedCflIntegrator>(constants, grid, size_limiters, tend_descs, sed, regularize_lambdar);
         backing_integrators.emplace_back(sed_intg);
         std::shared_ptr<SequentialSplitIntegrator> step_intg = std::make_shared<SequentialSplitIntegrator>(std::vector<const RainshaftIntegrator*>({&*local_lim_intg, &*sed_intg}));
         backing_integrators.emplace_back(step_intg);
@@ -302,31 +304,41 @@ int main(int argc, char* argv[])
       }
     }();
 
-    auto before_sol = high_resolution_clock::now();
-    RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state);
-    auto after_sol = high_resolution_clock::now();
-
-    // Time taken for solution.
-    duration<double, std::milli> walltime_ms = after_sol - before_sol;
-    std::cout << "Case " << icase << ", Time: " << walltime_ms.count() << std::endl;
-    // Write out grid and all states.
-    std::size_t icase_writer;
-    if (vm.count("case_idx")) {
-      icase_writer = 0;
-    } else {
-      icase_writer = icase;
+    try {
+      auto before_sol = high_resolution_clock::now();
+      int error_flag;
+      RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state, error_flag);
+      auto after_sol = high_resolution_clock::now();
+  
+      // Time taken for solution.
+      duration<double, std::milli> walltime_ms = after_sol - before_sol;
+      std::cout << "Case " << icase << ", Time: " << walltime_ms.count() << std::endl;
+      // Write out grid and all states.
+      std::size_t icase_writer;
+      if (vm.count("case_idx")) {
+        icase_writer = 0;
+      } else {
+        icase_writer = icase;
+      }
+      if (error_flag > 0) {
+        writer.write_grid(grid, icase_writer);
+        writer.write_states(solution.states, icase_writer);
+        std::vector<RainshaftDerivedVars> solution_dvars;
+        solution_dvars.reserve(solution.states.size());
+        for (StateConst state : solution.states) {
+          solution_dvars.emplace_back(constants, grid, state, regularize_lambdar);
+        }
+        writer.write_derived_vars(solution_dvars, icase_writer);
+        writer.write_num_rhs_evals(solution.num_rhs_evals, icase_writer);
+        writer.write_walltime_ms(walltime_ms.count(), icase_writer);
+      } else {
+        throw(error_flag);
+      }
+    } catch (int error) {
+      std::cout << "Column " << icase << " crashed, continuing..." << std::endl;
     }
-    writer.write_grid(grid, icase_writer);
-    writer.write_states(solution.states, icase_writer);
-    std::vector<RainshaftDerivedVars> solution_dvars;
-    solution_dvars.reserve(solution.states.size());
-    for (StateConst state : solution.states) {
-      solution_dvars.emplace_back(constants, grid, state);
-    }
-    writer.write_derived_vars(solution_dvars, icase_writer);
-    writer.write_num_rhs_evals(solution.num_rhs_evals, icase_writer);
-    writer.write_walltime_ms(walltime_ms.count(), icase_writer);
   }
+
   // write settings as metadata
   writer.write_metadata(order, dt, dt_partition_1, dt_partition_2, rel_tol, postprocess,
     use_lookup, method_type, steps_per_output, initial_condition_file,

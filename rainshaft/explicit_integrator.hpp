@@ -22,11 +22,13 @@ public:
                      const int order = 4,
                      const double rel_tol = 1.e-4,
                      const bool postprocess = false,
+                     const bool regularize_lambdar = true,
                      const int steps_per_output = -1);
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const StateConst &initial_state) const;
+                              const StateConst &initial_state,
+                              int& error_flag) const;
 };
 
 #endif // EXPLICIT_INTEGRATOR_HPP

@@ -32,6 +32,7 @@ private:
     const PartitionArray processes;
     const VarDescList state_descs;
     const VarDescList tend_descs;
+    const bool regularize_lambdar;
   };
 
   template <int PARTITION>
@@ -41,7 +42,8 @@ private:
     const StateConst state = n_vector_to_state(y, cast_data.state_descs);
     const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data.constants,
                                                       cast_data.grid,
-                                                      state);
+                                                      state,
+                                                      cast_data.regularize_lambdar);
     // Zero out ydot so that we don't have to remember to zero every value in calc_tend.
     N_VConst(0., ydot);
     Tendency tend = n_vector_to_tendency(ydot, cast_data.tend_descs);
@@ -66,7 +68,8 @@ private:
     const StateConst state = n_vector_to_state(y, cast_data.state_descs);
     const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data.constants,
                                       cast_data.grid,
-                                      state);
+                                      state,
+                                      cast_data.regularize_lambdar);
 
     RainshaftProcess::Matrix mat = [Jac](const std::size_t i, const std::size_t j) -> sunrealtype & {
       return SM_ELEMENT_D(Jac, i, j);
@@ -92,7 +95,8 @@ private:
     const StateConst state = n_vector_to_state(y, cast_data.state_descs);
     const RainshaftDerivedVars dvars = RainshaftDerivedVars(cast_data.constants,
                                       cast_data.grid,
-                                      state);
+                                      state,
+                                      cast_data.regularize_lambdar);
     const auto &process = *static_cast<const P*>(cast_data.processes[PARTITION]);
     *hstab = process.calc_max_step(cast_data.constants, cast_data.grid, dvars);
     return 0;
@@ -105,8 +109,9 @@ public:
                      PartitionArray processes,
                      const VarDescList& state_descs,
                      const VarDescList& tend_descs,
-                     const int steps_per_output)
-      : user_data{constants, grid, size_limiters, std::move(processes), state_descs, tend_descs},
+                     const int steps_per_output,
+                     const bool regularize_lambdar)
+      : user_data{constants, grid, size_limiters, std::move(processes), state_descs, tend_descs, regularize_lambdar}, 
       steps_per_output(steps_per_output)
   {}
 
@@ -141,7 +146,8 @@ protected:
                            const double final_time,
                            const N_Vector y,
                            const Mode normal,
-                           const Mode one_step) const
+                           const Mode one_step,
+                           int& error_flag) const
   {
     std::vector<StateConst> states;
     sunrealtype tret = -std::numeric_limits<sunrealtype>::infinity();
@@ -153,12 +159,12 @@ protected:
           states.emplace_back(n_vector_to_state(y, user_data.state_descs).deep_copy());
           outputFun();
         }
-        evolveFun(mem, final_time, y, &tret, one_step);
+        error_flag = evolveFun(mem, final_time, y, &tret, one_step);
       }
     }
     else
     {
-      evolveFun(mem, final_time, y, &tret, normal);
+      error_flag = evolveFun(mem, final_time, y, &tret, normal);
     }
 
     states.emplace_back(n_vector_to_state(y, user_data.state_descs).deep_copy());

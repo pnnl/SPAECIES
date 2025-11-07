@@ -13,7 +13,8 @@ public:
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const StateConst& initial_state) const;
+                              const StateConst& initial_state,
+                              int& error_flag) const;
 
   const double dt;
 

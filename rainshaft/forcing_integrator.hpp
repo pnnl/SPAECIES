@@ -26,11 +26,13 @@ public:
                     const double dt_unforced = 0,
                     const bool cfl_substep = false,
                     const bool postprocess = false,
+                    const bool regularize_lambdar = true,
                     const int steps_per_output = -1);
 
   RainshaftSolution integrate(double initial_time,
                               double final_time,
-                              const StateConst &initial_state) const;
+                              const StateConst &initial_state,
+                              int& error_flag) const;
 };
 
 #endif // FORCING_INTEGRATOR_HPP

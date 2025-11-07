@@ -8,6 +8,8 @@
 class SelfCollision : public RainshaftProcess {
 
 private:
+  const bool regularize_lambdar;
+
   // For given rain variables, measure whether collisions typically end
   // up merging drops (breakup_fac \approx 1) or is there significant
   // breakup (breakup_fac < 1).
@@ -16,7 +18,12 @@ private:
   RealOptGrad<WithGrad, 2> breakup_fac(const RainshaftConstants& constants,
                      const double nr, const double qr) const
   {
-    const auto mean_mass_diam = std::cbrt((qr + constants.qsmall) / (constants.pi * constants.rhow * (nr + constants.qsmall * (1.e8))));
+    double mean_mass_diam;
+    if (regularize_lambdar) {
+      mean_mass_diam = std::cbrt((qr + constants.qsmall) / (constants.pi * constants.rhow * (nr + constants.qsmall * (1.e8))));
+    } else {
+      mean_mass_diam = std::cbrt(qr / (constants.pi * constants.rhow * nr));
+    }
     const auto breakup_exp_term = std::exp(2300. * (mean_mass_diam - 2.8e-4));
     const auto breakup = 2. - breakup_exp_term;
 
@@ -63,6 +70,8 @@ private:
 
 
 public:
+
+  SelfCollision(const bool regularize_lambdar);
 
   // Calculate tendency from current state.
   void calc_tend(const RainshaftConstants& constants,

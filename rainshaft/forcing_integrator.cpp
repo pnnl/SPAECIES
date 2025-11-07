@@ -18,8 +18,9 @@ ForcingIntegrator::ForcingIntegrator(const RainshaftConstants &constants,
                                      const double dt_unforced,
                                      const bool cfl_substep,
                                      const bool postprocess,
+                                     const bool regularize_lambdar,
                                      const int steps_per_output)
-    : SundialsIntegrator(constants, grid, size_limiters, {process_forced, process_unforced}, state_descs, tend_descs, steps_per_output),
+    : SundialsIntegrator(constants, grid, size_limiters, {process_forced, process_unforced}, state_descs, tend_descs, steps_per_output, regularize_lambdar),
       dt(dt), dt_forced(dt_forced), dt_unforced(dt_unforced), cfl_substep(cfl_substep), postprocess(postprocess)
 {
   if (dt == 0.0 || (dt_forced == 0.0 && !cfl_substep) || dt_unforced == 0)
@@ -30,7 +31,8 @@ ForcingIntegrator::ForcingIntegrator(const RainshaftConstants &constants,
 
 RainshaftSolution ForcingIntegrator::integrate(double initial_time,
                                                double final_time,
-                                               const StateConst &initial_state) const
+                                               const StateConst &initial_state,
+                                               int& error_flag) const
 {
   const N_Vector y = view_to_n_vector(sun_ctxt, initial_state);
 
@@ -97,7 +99,8 @@ RainshaftSolution ForcingIntegrator::integrate(double initial_time,
       final_time,
       y,
       ARK_NORMAL,
-      ARK_ONE_STEP);
+      ARK_ONE_STEP,
+      error_flag);
 
   N_VDestroy(y);
   SUNStepper_Destroy(&steppers[0]);
