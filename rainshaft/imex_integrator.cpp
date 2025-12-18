@@ -45,11 +45,13 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
   SUNLinearSolver ls = SUNLinSol_LapackDense(y, jac, sun_ctxt);
   ARKodeSetLinearSolver(arkode_mem, ls, jac);
   ARKodeSetJacFn(arkode_mem, create_jac<1>());
-  ARKodeSetDeduceImplicitRhs(arkode_mem, true);
+  
 
   if (dt > 0) {
     ARKodeSetMaxNonlinIters(arkode_mem, 1000);
+    ARKodeSetDeduceImplicitRhs(arkode_mem, false);
   } else {
+    ARKodeSetDeduceImplicitRhs(arkode_mem, true);
     ARKodeSetPredictorMethod(arkode_mem, 1);
   }
 

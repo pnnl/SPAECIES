@@ -1,9 +1,9 @@
 #!/bin/bash
 
 IC_FILE="/home/dong9/SPAECIES-input-data/random_rainshaft_samples_12mo.nc"
-RAINSHAFT_EXE="/home/dong9/SPAECIES-regularization/build/rainshaft/rainshaft"
-RAINSHAFT_DIR="/home/dong9/SPAECIES-regularization/build/rainshaft"
-SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-sept23/reference_solutions"
+RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft_abstol0"
+RAINSHAFT_DIR="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft"
+SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/reference_solutions"
 
 # simulation length
 FINAL_TIME=300
@@ -16,7 +16,7 @@ RELTOLS=(1e-13)
 ORDERS=(3)
 
 # qsmalls 
-QSMALLS=(1e-5 1e-6 1e-7 1e-8 1e-9 1e-10 1e-11 1e-12 1e-13 1e-14)
+QSMALLS=(1e-14 1e-13 1e-12 1e-11 1e-10 1e-9 1e-8 1e-7 1e-6 1e-5)
 
 # toggle nudging
 NUDGING_FLAG="false"
@@ -42,7 +42,7 @@ LOOKUP_FLAG="false"
 # toggle q_sat_dry regularization
 REGULARIZE_QSAT="true"
 
-EPSILON_QSATS=(1e-5 1e-4 1e-3 1e-2 1e-1 1e0)
+EPSILON_QSAT_FACS=(1e-5 1e-4 1e-3 1e-2 1e-1 1e0)
 
 # toggle lambdar regularization
 REGULARIZE_LAMBDAR="true"
@@ -51,7 +51,9 @@ REGULARIZE_LAMBDAR="true"
 INTEGRATION_TYPE="explicit"
 
 # name for this collection of simulations. to be used in plot_workprecision.py to gather the data
-SIMULATION_NAME="reference"
+SIMULATION_NAME="reference_regularized"
+
+cd ${RAINSHAFT_DIR}
 
 # loop over requested orders
 for k in $(seq 0 $((${#ORDERS[@]} - 1)))
@@ -60,9 +62,9 @@ do
     do
         for j in $(seq 0 $((${#QSMALLS[@]} - 1)))
         do
-            for m in $(seq 0 $((${#EPSILON_QSATS[@]} - 1)))
+            for m in $(seq 0 $((${#EPSILON_QSAT_FACS[@]} - 1)))
             do
-                OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_tf${FINAL_TIME}_qsmall${QSMALLS[j]}_order${ORDERS[k]}_reltol${RELTOLS[i]}.nc"
+                OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_tf${FINAL_TIME}_qsmall${QSMALLS[j]}_epsilonqsat${EPSILON_QSAT_FACS[m]}_order${ORDERS[k]}_reltol${RELTOLS[i]}.nc"
 
                 printf "# [Integrator settings]\n" > "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                 printf "order       = ${ORDERS[k]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
@@ -87,7 +89,7 @@ do
                 printf "regularize_qsat = ${REGULARIZE_QSAT}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                 printf "regularize_lambdar = ${REGULARIZE_LAMBDAR}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                 printf "qsmall = ${QSMALLS[j]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
-                printf "epsilon_qsat_fac = ${EPSILON_QSATS[m]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+                printf "epsilon_qsat_fac = ${EPSILON_QSAT_FACS[m]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
                 ${RAINSHAFT_EXE} --i "settings_${SETTINGS_NAME}.ini"
             done

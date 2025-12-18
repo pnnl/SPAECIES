@@ -1,9 +1,9 @@
 #!/bin/bash
 
 IC_FILE="/home/dong9/SPAECIES-input-data/random_rainshaft_samples_12mo.nc"
-RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft"
+RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft_abstol0_deducerhsfalse"
 RAINSHAFT_DIR="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft"
-SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-sept23/fixed_step"
+SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/fixed_step"
 
 # simulation length
 FINAL_TIME=300
@@ -11,7 +11,7 @@ FINAL_TIME=300
 # fixed steps to try
 TIMESTEPS=(0.0128 0.0256 0.0512 0.1024 0.2048 0.4096 0.8192 1.6384 3.2768 6.5536 13.1072 26.2144 52.4288 104.8576 209.7152 300.0)
 
-RELTOL=1.e-8
+RELTOL=1.e-15
 
 # order of method
 ORDERS=(2 3)
@@ -37,11 +37,11 @@ LOOKUP_FLAG="true"
 # toggle q_sat_dry regularization
 REGULARIZE_QSAT="true"
 REGULARIZE_LAMBDAR="true"
-EPSILON_QSAT_FACS=(1e-5 1e-2)
-QSMALLS=(1e-14 1e-10)
+EPSILON_QSAT_FACS=(1e-7 1e-10)
+QSMALLS=(1e-14 1e-18)
 
 # type of integration (options: explicit, imex, mri)
-INTEGRATION_TYPES=("original" "explicit" "implicit" "imex")
+INTEGRATION_TYPES=("implicit" "imex")
 
 cd ${RAINSHAFT_DIR}
 
@@ -58,10 +58,10 @@ do
                     if [[ $REGULARIZE_LAMBDAR == "true" && $REGULARIZE_QSAT == "true" ]]
                     then
                         # name for this collection of simulations. to be used in plot_workprecision.py to gather the data
-                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_fixedstep_regularized"
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_fixedstep_regularized_nolimiter"
                         OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_qsmall${QSMALLS[ii]}_epsilonqsat${EPSILON_QSAT_FACS[j]}_dt${TIMESTEPS[i]}.nc"
                     else 
-                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_fixedstep_unregularized"
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_fixedstep_unregularized_nolimiter"
                         OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_dt${TIMESTEPS[i]}.nc"
                     fi
 
@@ -105,8 +105,10 @@ do
                     do 
                         if [[ $REGULARIZE_LAMBDAR == "true" && $REGULARIZE_QSAT == "true" ]]
                         then
+                            SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_fixedstep_regularized_abstol0_deduceimplicitrhsfalse_reltol1e-15"
                             OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_qsmall${QSMALLS[ii]}_epsilonqsat${EPSILON_QSAT_FACS[j]}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
                         else 
+                            SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_fixedstep_unregularized_abstol0_reltol1e-15"
                             OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
                         fi
 

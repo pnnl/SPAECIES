@@ -29,7 +29,7 @@ NUM_CASES=-1
 CASE_IDX=
 
 # toggle limiting
-POSTPROCESS="true"
+POSTPROCESS="false"
 
 # toggle lookup tables
 LOOKUP_FLAG="true"
@@ -62,10 +62,10 @@ do
                     if [[ $REGULARIZE_LAMBDAR == "true" && $REGULARIZE_QSAT == "true" ]]
                     then
                         # name for this collection of simulations. to be used in plot_workprecision.py to gather the data
-                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_regularized"
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_regularized_nolimiter"
                         OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_qsmall${QSMALLS[ii]}_epsilonqsat${EPSILON_QSAT_FACS[j]}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
                     else 
-                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_unregularized"
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_unregularized_nolimiter"
                         OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
                     fi
 

@@ -1,16 +1,16 @@
 #!/bin/bash
 
 IC_FILE="/home/dong9/SPAECIES-input-data/random_rainshaft_samples_12mo.nc"
-RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft"
+RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft_abstol-7smaller"
 RAINSHAFT_DIR="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft"
-SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-sept23/adaptive_step"
+SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/adaptive_step"
 
 # simulation length
 FINAL_TIME=300
 
 # rel tols to try
-TIMESTEPS=0.0
-RELTOLS=(1e-2 1e-3 1e-4 1e-5 1e-6 1e-7 1e-8 1e-9 1e-10 1e-11)
+TIMESTEP=0.0
+RELTOLS=(1e-3 1e-4 1e-5 1e-6 1e-7 1e-8 1e-9 1e-10 1e-11)
 
 # order of method
 ORDERS=(2 3)
@@ -39,8 +39,8 @@ LOOKUP_FLAG="true"
 # toggle q_sat_dry regularization
 REGULARIZE_QSAT="true"
 REGULARIZE_LAMBDAR="true"
-EPSILON_QSAT_FACS=(1e-5 1e-2)
-QSMALLS=(1e-14 1e-10)
+EPSILON_QSAT_FACS=(1e-10)
+QSMALLS=(1e-14 1e-18)
 
 # type of integration (options: explicit, imex, mri)
 INTEGRATION_TYPES=("explicit" "implicit" "imex" "mri")
@@ -61,11 +61,11 @@ do
                     if [[ $REGULARIZE_LAMBDAR == "true" && $REGULARIZE_QSAT == "true" ]]
                     then
                         # name for this collection of simulations. to be used in plot_workprecision.py to gather the data
-                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_adaptivestep_regularized"
-                        OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_qsmall${QSMALLS[ii]}_epsilonqsat${EPSILON_QSAT_FACS[j]}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_adaptivestep_regularized_abstol-7smaller"
+                        OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_qsmall${QSMALLS[ii]}_epsilonqsat${EPSILON_QSAT_FACS[j]}_order${ORDERS[k]}_reltol${RELTOLS[i]}.nc"
                     else 
-                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_adaptivestep_unregularized"
-                        OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_adaptivestep_unregularized_abstol-7smaller"
+                        OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_order${ORDERS[k]}_reltol${RELTOLS[i]}.nc"
                     fi
 
                     printf "# [Integrator settings]\n" > "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
