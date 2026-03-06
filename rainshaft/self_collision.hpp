@@ -43,6 +43,15 @@ private:
         return 1.0;
       }
     }
+
+    // C3 regularization; do not use right now since it results in significant changes to
+    // solution profiles
+    // const double delta = constants.epsilon_self_coll;
+    // const auto breakup = (breakup_exp_term >= 1.0 + delta) ? (2.0 - breakup_exp_term) :
+    //   (breakup_exp_term < 1.0 - delta) ? 1.0 :
+    //     1.0 - (0.5*std::pow(breakup_exp_term-1.0+delta,2)
+    //           - (1.0 + std::cos(M_PI*(breakup_exp_term-1.0)/delta))*std::pow(delta/M_PI,2)
+    //           )/(2.0*delta);
   }
 
   template<bool WithGrad = false>

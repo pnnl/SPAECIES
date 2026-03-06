@@ -1,7 +1,7 @@
 #!/bin/bash
 
 IC_FILE="/home/dong9/SPAECIES-input-data/random_rainshaft_samples_12mo.nc"
-RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft_abstol-7smaller"
+RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft"
 RAINSHAFT_DIR="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft"
 SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/operator_splitting"
 
@@ -62,7 +62,7 @@ do
                     if [[ $REGULARIZE_LAMBDAR == "true" && $REGULARIZE_QSAT == "true" ]]
                     then
                         # name for this collection of simulations. to be used in plot_workprecision.py to gather the data
-                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_regularized_nolimiter"
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_C3regularizedevapandlambdar_nolimiter"
                         OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_qsmall${QSMALLS[ii]}_epsilonqsat${EPSILON_QSAT_FACS[j]}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
                     else 
                         SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_unregularized_nolimiter"

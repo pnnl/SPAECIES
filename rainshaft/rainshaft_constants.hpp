@@ -33,6 +33,8 @@ struct RainshaftConstants {
   // constant factor for determining q_sat_dry regularization in the 
   // interval (q_sat_dry, q_sat_dry + epsilon_qsat_dry*q_sat_dry)
   double epsilon_qsat_fac;
+  // constant factor determining width of self-collection regularization
+  double epsilon_self_coll;
 };
 
 #endif // RAINSHAFT_CONSTANTS_HPP
