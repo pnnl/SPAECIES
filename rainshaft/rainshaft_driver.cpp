@@ -262,7 +262,6 @@ int main(int argc, char* argv[])
     } else {
       partition_2_process_vec = {&evap, &self_coll};
       all_process_vec = {&sed, &self_coll, &evap};
-      // all_process_vec = {&sed};
     }
     SumProcess partition_2_processes(partition_2_process_vec);
     // Sum of local processes.

@@ -18,40 +18,59 @@ private:
   RealOptGrad<WithGrad, 2> breakup_fac(const RainshaftConstants& constants,
                      const double nr, const double qr) const
   {
-    double mean_mass_diam;
+    double mean_mass_diam, mean_mass_diam_dnr, mean_mass_diam_dqr;
     if (regularize_lambdar) {
       mean_mass_diam = std::cbrt((qr + constants.qsmall) / (constants.pi * constants.rhow * (nr + constants.qsmall * (1.e8))));
+      mean_mass_diam_dnr = -mean_mass_diam / (3.0 * (nr + constants.qsmall * (1.e8)));
+      mean_mass_diam_dqr = mean_mass_diam / (3.0 * (qr + constants.qsmall));
     } else {
       mean_mass_diam = std::cbrt(qr / (constants.pi * constants.rhow * nr));
+      mean_mass_diam_dnr = -mean_mass_diam / (3.0 * nr);
+      mean_mass_diam_dqr = mean_mass_diam / (3.0 * qr);
     }
     const auto breakup_exp_term = std::exp(2300. * (mean_mass_diam - 2.8e-4));
-    const auto breakup = 2. - breakup_exp_term;
 
-    if (breakup <= 1.0) {
+    if (constants.epsilon_self_coll > 0.0) {
+      // C3 regularization
+      const double delta = constants.epsilon_self_coll;
+      const auto breakup = (breakup_exp_term >= 1.0 + delta) ? (2.0 - breakup_exp_term) :
+                           (breakup_exp_term < 1.0 - delta) ? 1.0 :
+                            1.0 - (0.5*std::pow(breakup_exp_term-1.0+delta,2)
+                                  - (1.0 + std::cos(M_PI*(breakup_exp_term-1.0)/delta))*std::pow(delta/M_PI,2)
+                                  )/(2.0*delta);
+
       if constexpr (WithGrad) {
-        return {breakup, {
-          2300. * breakup_exp_term * mean_mass_diam / (3. * (nr + constants.qsmall * (1.e8))),
-          -2300. * breakup_exp_term * mean_mass_diam / (3. * (qr + constants.qsmall))
-        }};
+        const auto breakup_exp_dnr = 2300. * breakup_exp_term * mean_mass_diam_dnr;
+        const auto breakup_exp_dqr = 2300. * breakup_exp_term * mean_mass_diam_dqr;
+        const auto dbreakup = -((breakup_exp_term - 1.0 + delta) + std::sin(M_PI*(breakup_exp_term-1.0)/delta) * delta/M_PI) / (2.0*delta);
+        const auto breakup_dnr = (breakup_exp_term >= 1.0 + delta) ? (-breakup_exp_dnr) :
+                                 (breakup_exp_term < 1.0 - delta) ? 0.0 : dbreakup * breakup_exp_dnr;
+        const auto breakup_dqr = (breakup_exp_term >= 1.0 + delta) ? (-breakup_exp_dqr) :
+                                 (breakup_exp_term < 1.0 - delta) ? 0.0 : dbreakup * breakup_exp_dqr;
+        return {breakup, {breakup_dnr, breakup_dqr}};
       } else {
         return breakup;
       }
     } else {
-      if constexpr (WithGrad) {
-        return {1.0, {0.0, 0.0}};
+      // unregularized tendency
+      const auto breakup = 2. - breakup_exp_term;
+      if (breakup <= 1.0) {
+        if constexpr (WithGrad) {
+          return {breakup, {
+            2300. * breakup_exp_term * mean_mass_diam / (3. * (nr + constants.qsmall * (1.e8))),
+            -2300. * breakup_exp_term * mean_mass_diam / (3. * (qr + constants.qsmall))
+          }};
+        } else {
+          return breakup;
+        }
       } else {
-        return 1.0;
+        if constexpr (WithGrad) {
+          return {1.0, {0.0, 0.0}};
+        } else {
+          return 1.0;
+        }
       }
     }
-
-    // C3 regularization; do not use right now since it results in significant changes to
-    // solution profiles
-    // const double delta = constants.epsilon_self_coll;
-    // const auto breakup = (breakup_exp_term >= 1.0 + delta) ? (2.0 - breakup_exp_term) :
-    //   (breakup_exp_term < 1.0 - delta) ? 1.0 :
-    //     1.0 - (0.5*std::pow(breakup_exp_term-1.0+delta,2)
-    //           - (1.0 + std::cos(M_PI*(breakup_exp_term-1.0)/delta))*std::pow(delta/M_PI,2)
-    //           )/(2.0*delta);
   }
 
   template<bool WithGrad = false>
