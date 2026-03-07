@@ -72,8 +72,8 @@ int main(int argc, char* argv[])
     ("regularize_lambdar", po::value(&regularize_lambdar)->default_value(true), "boolean flag for lambdar regularization")
     ("qsmall", po::value(&qsmall)->default_value(1.e-10), "smallest permissible non-zero value of qr")
     ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")
-    ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(1.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
-    ("epsilon_self_coll", po::value(&epsilon_self_coll)->default_value(1.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
+    ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(1.e-10), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
+    ("epsilon_self_coll", po::value(&epsilon_self_coll)->default_value(0.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
   ;
 
   // Load from command line to check for input file

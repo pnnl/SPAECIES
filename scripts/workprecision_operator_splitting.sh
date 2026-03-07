@@ -39,7 +39,7 @@ REGULARIZE_QSAT="true"
 REGULARIZE_LAMBDAR="true"
 EPSILON_QSAT_FACS=(1e-7 1e-10)
 QSMALLS=(1e-14 1e-18)
-EPSILON_SELF_COLLS=(1e-2)
+EPSILON_SELF_COLLS=(0.0)
 
 # use CFL substepping for sedimentation
 CFL_SUBSTEP="true"

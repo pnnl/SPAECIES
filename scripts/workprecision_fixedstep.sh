@@ -39,7 +39,7 @@ REGULARIZE_QSAT="true"
 REGULARIZE_LAMBDAR="true"
 EPSILON_QSAT_FACS=(1e-10)
 QSMALLS=(1e-18)
-EPSILON_SELF_COLLS=(1e-2)
+EPSILON_SELF_COLLS=(0.0)
 
 # type of integration (options: explicit, imex, mri)
 INTEGRATION_TYPES=("original") # "explicit" "implicit" "imex")
