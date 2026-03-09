@@ -3,23 +3,21 @@
 IC_FILE="/home/dong9/SPAECIES-input-data/random_rainshaft_samples_12mo.nc"
 RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft"
 RAINSHAFT_DIR="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft"
-SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/adaptive_step"
+SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/operator_splitting"
 
 # simulation length
 FINAL_TIME=300
 
-# rel tols to try
-TIMESTEP=0.0
-RELTOLS=(1e-3 1e-4 1e-5 1e-6 1e-7 1e-8 1e-9 1e-10 1e-11)
+# fixed steps to try
+TIMESTEPS=(0.0128 0.0256 0.0512 0.1024 0.2048 0.4096 0.8192 1.6384 3.2768 6.5536 13.1072 26.2144 52.4288 104.8576 209.7152 300.0)
+
+RELTOL=1.e99
 
 # order of method
-ORDERS=(2 3)
+ORDERS=(1 2 3)
 
 # toggle nudging
 NUDGING_FLAG="false"
-
-# number of runs to do for averaging. processing more than 1 run is currently not supported.
-NUMRUNS=1
 
 # how many time steps to save data for
 STEPS_PER_OUTPUT=-1
@@ -39,11 +37,14 @@ LOOKUP_FLAG="true"
 # toggle q_sat_dry regularization
 REGULARIZE_QSAT="true"
 REGULARIZE_LAMBDAR="true"
-EPSILON_QSAT_FACS=(1e-10)
-QSMALLS=(1e-18)
+EPSILON_QSAT_FACS=(1e-7 1e-10)
+QSMALLS=(1e-14 1e-18)
+
+# use CFL substepping for sedimentation
+CFL_SUBSTEP="true"
 
 # type of integration (options: explicit, imex, mri)
-INTEGRATION_TYPES=("imex" "mri")
+INTEGRATION_TYPES=("splitting")
 
 cd ${RAINSHAFT_DIR}
 
@@ -52,7 +53,7 @@ do
     # loop over requested orders
     for k in $(seq 0 $((${#ORDERS[@]} - 1)))
     do
-        for i in $(seq 0 $((${#RELTOLS[@]} - 1)))
+        for i in $(seq 0 $((${#TIMESTEPS[@]} - 1)))
         do
             for ii in $(seq 0 $((${#QSMALLS[@]} - 1)))
             do
@@ -61,23 +62,24 @@ do
                     if [[ $REGULARIZE_LAMBDAR == "true" && $REGULARIZE_QSAT == "true" ]]
                     then
                         # name for this collection of simulations. to be used in plot_workprecision.py to gather the data
-                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_adaptivestep_C3regularizedevapandlambdar_abstol1e-6_1e-8_1e-9_1e-17"
-                        OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_qsmall${QSMALLS[ii]}_epsilonqsat${EPSILON_QSAT_FACS[j]}_order${ORDERS[k]}_reltol${RELTOLS[i]}.nc"
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_C3regularizedevapandlambdar_nolimiter"
+                        OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_qsmall${QSMALLS[ii]}_epsilonqsat${EPSILON_QSAT_FACS[j]}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
                     else 
-                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_adaptivestep_unregularized_abstol-7smaller"
-                        OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_order${ORDERS[k]}_reltol${RELTOLS[i]}.nc"
+                        SIMULATION_NAME="${INTEGRATION_TYPES[kk]}_unregularized_nolimiter"
+                        OUTPUT_FILE="${SAVE_DIR}/rainshaft_${SIMULATION_NAME}_finaltime${FINAL_TIME}_order${ORDERS[k]}_dt${TIMESTEPS[i]}.nc"
                     fi
 
                     printf "# [Integrator settings]\n" > "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "order       = ${ORDERS[k]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
-                    printf "dt          = ${TIMESTEP}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+                    printf "dt          = ${TIMESTEPS[i]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "dt_partition_1 = 0.0\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
-                    printf "dt_partition_2 = 0.0\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+                    printf "dt_partition_2 = 1.e99\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "type        = ${INTEGRATION_TYPES[kk]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "final_time  = ${FINAL_TIME}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
-                    printf "rel_tol     = ${RELTOLS[i]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+                    printf "rel_tol     = ${RELTOL}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "postprocess = ${POSTPROCESS}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "use_lookup  = ${LOOKUP_FLAG}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+                    printf "cfl_substep = ${CFL_SUBSTEP}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
                     printf "\n# [Save settings]\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "steps    = ${STEPS_PER_OUTPUT}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"

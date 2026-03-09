@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file;
   std::size_t order, icase_in;
   bool do_nudging, cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar;
-  double qsmall, epsilon_qsat_fac;
+  double qsmall, epsilon_qsat_fac, epsilon_self_coll;
 
 	po::options_description desc("Allowed options");
 	desc.add_options()
@@ -72,7 +72,8 @@ int main(int argc, char* argv[])
     ("regularize_lambdar", po::value(&regularize_lambdar)->default_value(true), "boolean flag for lambdar regularization")
     ("qsmall", po::value(&qsmall)->default_value(1.e-10), "smallest permissible non-zero value of qr")
     ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")
-    ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(1.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
+    ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(1.e-10), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
+    ("epsilon_self_coll", po::value(&epsilon_self_coll)->default_value(0.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
   ;
 
   // Load from command line to check for input file
@@ -129,7 +130,7 @@ int main(int argc, char* argv[])
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
                                0.62197, qsmall, 9.80616, 1.e-5, 5.e-3,
-                               0.988919555598356, 1.e3, 1.e-4, epsilon_qsat_fac};
+                               0.988919555598356, 1.e3, 1.e-4, epsilon_qsat_fac, epsilon_self_coll};
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
   double model_top = 2.e3;

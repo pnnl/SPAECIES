@@ -352,62 +352,45 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
 
         return {q_evap, n_evap, t_evap};
       } else if (q <= get_val(q_sat_dry)) { // regularization to ensure smoothness (standard cubic spline)
-        const RealOptGrad<true, 1> q_sat_dry = sat_form.q_sat_dry<true>(t, p_mid);
-        // MUST RECALCULATE RHO_DRY AT Q=Q_SAT_DRY - eps
-        const double rho = p_mid / (constants.rdry * t * (1 + (get_val(q_sat_dry))/constants.epsilon_h2o));
-        const RealOptGrad<true, 2> rho_dry = {rho, {-rho / t, -rho / (constants.epsilon_h2o + get_val(q_sat_dry))}};
+        // try C3 regularization
+        const RealOptGrad<WithGrad, 1> diffusivity = calc_diffusivity<WithGrad>(t, p_mid);
+        const RealOptGrad<WithGrad, 2> visc_over_rho = calc_visc_over_rho<WithGrad>(t, rho_dry);
+        const RealOptGrad<WithGrad, 2> schmidt_num = calc_schmidt_num<WithGrad>(diffusivity, visc_over_rho);
+        const RealOptGrad<WithGrad, 1> abl = calc_abl<WithGrad>(constants, t, q_sat_dry);
+        const RealOptGrad<WithGrad, 1> v_evap = calc_v_evap<WithGrad>(constants, get_val(lambdar));
+        const RealOptGrad<WithGrad, 4> tau_inv = calc_tau_inv<WithGrad>(constants, nr, diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
+        const RealOptGrad<WithGrad, 4> weight = calc_dt_weight<WithGrad>(tau_inv);
+        const RealOptGrad<WithGrad, 4> q_evap = calc_q_evap<WithGrad>(q, q_sat_dry, abl, tau_inv, weight);
+        const RealOptGrad<WithGrad, 4> n_evap = calc_n_evap<WithGrad>(nr + constants.qsmall * 1.e8, qr + constants.qsmall, q_evap);
+        const RealOptGrad<WithGrad, 4> t_evap = calc_T_evap<WithGrad>(constants, q_evap);
 
-        double lambda_il = std::cbrt(constants.pi * constants.rhow * (nr + constants.qsmall * 1.e8)
-          / (qr + constants.qsmall));
-        const RealOptGrad<true, 2> lambdar = {lambda_il, {lambda_il / (3 * (nr + constants.qsmall * 1.e8)), -lambda_il / (3 * (qr + constants.qsmall))}};
-
-        const RealOptGrad<true, 1> diffusivity = calc_diffusivity<true>(t, p_mid);
-        const RealOptGrad<true, 2> visc_over_rho = calc_visc_over_rho<true>(t, rho_dry);
-        const RealOptGrad<true, 2> schmidt_num = calc_schmidt_num<true>(diffusivity, visc_over_rho);
-        const RealOptGrad<true, 1> abl = calc_abl<true>(constants, t, q_sat_dry);
-        const RealOptGrad<true, 1> v_evap = calc_v_evap<true>(constants, get_val(lambdar));
-        const RealOptGrad<true, 4> tau_inv = calc_tau_inv<true>(constants, nr, diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
-        const RealOptGrad<true, 4> weight = calc_dt_weight<true>(tau_inv);
-        const RealOptGrad<true, 4> q_evap = calc_q_evap<true>(get_val(q_sat_dry) - epsilon_qsat, q_sat_dry, abl, tau_inv, weight);
-        const RealOptGrad<true, 4> n_evap = calc_n_evap<true>(nr + constants.qsmall * 1.e8, qr + constants.qsmall, q_evap);
-        const RealOptGrad<true, 4> t_evap = calc_T_evap<true>(constants, q_evap);
-
-        const double y = get_val(q_evap);
-        const auto [yT, yq, ynr, yqr] = get_grad(q_evap);
-        const double S = -y / epsilon_qsat;
-        const double c1 = y;
-        const double c2 = yq;
-        const double c3 = (3.0 * S - 2.0 * yq) / epsilon_qsat;
-        const double c4 = -(2.0 * S - yq) / pow(epsilon_qsat, 2);
-        const double delta = q - (1.0 - constants.epsilon_qsat_fac) * get_val(q_sat_dry);
-        // cubic spline in (q_sat_dry - epsilon, q_sat_dry) takes the form 
-        //    c1 + c2*delta + c3*delta^2 + c4*delta^3
-        // note: derivative of delta wrt T is -(1.0 - constants.epsilon_qsat_fac) * get_grad(q_sat_dry)[0]
+        const double delta = (q - get_val(q_sat_dry)) / epsilon_qsat;
+        const double poly_reg = 35.0 * pow(delta, 4) + 84.0 * pow(delta, 5) + 70.0 * pow(delta, 6) + 20.0 * pow(delta, 7);
         if constexpr(WithGrad) {
-          // construct C1 polynomial and its derivatives. since n_evap and t_evap are just scaled versions of
+          // construct C3 polynomial and its derivatives. since n_evap and t_evap are just scaled versions of
           // q_evap, the regularization for n_evap and t_evap is just the regularization for q_evap scaled by
           // the same factor
-          const RealOptGrad<WithGrad, 4> q_evap_reg = {(c4 * pow(delta, 3) + c3 * pow(delta, 2) + c2 * delta + c1),
-                                                      {(3 * c4 * pow(delta, 2) + 2 * c3 * delta + c2) * -(1.0 - constants.epsilon_qsat_fac) * get_grad(q_sat_dry)[0], 
-                                                       (3 * c4 * pow(delta, 2) + 2 * c3 * delta + c2), 
-                                                       0., 
-                                                       0.}};
+          const double dpoly_reg = 140.0 * pow(delta, 3) + 420.0 * pow(delta, 4) + 420.0 * pow(delta, 5) + 140.0 * pow(delta, 6);
+          const RealOptGrad<WithGrad, 4> q_evap_reg = {get_val(q_evap) * poly_reg,
+                                                       {get_grad(q_evap)[0] * poly_reg + get_val(q_evap) * dpoly_reg * -get_grad(q_sat_dry)[0], 
+                                                        get_grad(q_evap)[1] * poly_reg + get_val(q_evap) * dpoly_reg, 
+                                                        get_grad(q_evap)[2] * poly_reg, 
+                                                        get_grad(q_evap)[3] * poly_reg}};
           const double nr_over_qr = (nr + constants.qsmall * (1.e8)) / (qr + constants.qsmall);
-          const double reg = (c4 * pow(delta, 3) + c3 * pow(delta, 2) + c2 * delta + c1);
-          const RealOptGrad<WithGrad, 4> n_evap_reg = {reg * nr_over_qr,
-                                                      {(3 * c4 * pow(delta, 2) + 2 * c3 * delta + c2) * -(1.0 - constants.epsilon_qsat_fac) * get_grad(q_sat_dry)[0] * nr_over_qr, 
-                                                      (3 * c4 * pow(delta, 2) + 2 * c3 * delta + c2) * nr_over_qr, 
-                                                      reg / (qr + constants.qsmall), 
-                                                      -reg * (nr + constants.qsmall * (1.e8)) / pow(qr + constants.qsmall, 2)}};
+          const RealOptGrad<WithGrad, 4> n_evap_reg = {get_val(q_evap_reg) * nr_over_qr,
+                                                       {get_grad(q_evap_reg)[0] * nr_over_qr, 
+                                                        get_grad(q_evap_reg)[1] * nr_over_qr,
+                                                        get_grad(q_evap_reg)[2] * nr_over_qr + get_val(q_evap_reg) / (qr + constants.qsmall),
+                                                        get_grad(q_evap_reg)[3] * nr_over_qr - get_val(q_evap_reg) * (nr + constants.qsmall * (1.e8)) / pow(qr + constants.qsmall, 2)}};
           const double Lv_over_cp = -constants.latvap / constants.cp;
-          const RealOptGrad<WithGrad, 4> t_evap_reg = {reg * Lv_over_cp,
-                                                      {(3 * c4 * pow(delta, 2) + 2 * c3 * delta + c2) * -(1.0 - constants.epsilon_qsat_fac) * get_grad(q_sat_dry)[0] * Lv_over_cp, 
-                                                      (3 * c4 * pow(delta, 2) + 2 * c3 * delta + c2) * Lv_over_cp, 
-                                                       0., 
-                                                       0.}};
+          const RealOptGrad<WithGrad, 4> t_evap_reg = {get_val(q_evap_reg) * Lv_over_cp,
+                                                       {get_grad(q_evap_reg)[0] * Lv_over_cp, 
+                                                        get_grad(q_evap_reg)[1] * Lv_over_cp, 
+                                                        get_grad(q_evap_reg)[2] * Lv_over_cp, 
+                                                        get_grad(q_evap_reg)[3] * Lv_over_cp}};
           return {q_evap_reg, n_evap_reg, t_evap_reg};
         } else {
-          const double q_evap_reg = (c4 * pow(delta, 3) + c3 * pow(delta, 2) + c2 * delta + c1);
+          const double q_evap_reg = get_val(q_evap) * poly_reg;
           const double nr_over_qr = (nr + constants.qsmall * 1.e8) / (qr + constants.qsmall);
           const double n_evap_reg = q_evap_reg * nr_over_qr;
           const double Lv_over_cp = -constants.latvap / constants.cp;
