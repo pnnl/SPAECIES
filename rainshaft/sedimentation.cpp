@@ -101,6 +101,11 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");
 
+  const std::size_t offset_t = state.get_offset("T");
+  const std::size_t offset_q = state.get_offset("q");
+  const std::size_t offset_nr = state.get_offset("nr");
+  const std::size_t offset_qr = state.get_offset("qr");
+
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
     const RealGrad<2> rho = dvars.get_rho_dry<true>(constants, t[il], q[il], il);
@@ -115,10 +120,10 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
     const auto [nr_tend_dT_prev, nr_tend_dT, nr_tend_dq_prev, nr_tend_dq, nr_tend_dnr_prev, nr_tend_dnr, nr_tend_dqr_prev, nr_tend_dqr] = get_grad(nr_tend);
     const auto [qr_tend_dT_prev, qr_tend_dT, qr_tend_dq_prev, qr_tend_dq, qr_tend_dnr_prev, qr_tend_dnr, qr_tend_dqr_prev, qr_tend_dqr] = get_grad(qr_tend);
 
-    const std::size_t i_t = il;
-    const std::size_t i_q = i_t + grid.nlev;
-    const std::size_t i_nr = i_q + grid.nlev;
-    const std::size_t i_qr = i_nr + grid.nlev;
+    const std::size_t i_t = offset_t + il;
+    const std::size_t i_q = offset_q + il;
+    const std::size_t i_nr = offset_nr + il;
+    const std::size_t i_qr = offset_qr + il;
 
     jac(i_nr, i_t) += nr_tend_dT;
     jac(i_nr, i_q) += nr_tend_dq;

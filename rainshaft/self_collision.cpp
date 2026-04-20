@@ -32,12 +32,17 @@ void SelfCollision::calc_tend_jac(const RainshaftConstants &constants,
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");
 
+  const std::size_t offset_t = state.get_offset("T");
+  const std::size_t offset_q = state.get_offset("q");
+  const std::size_t offset_nr = state.get_offset("nr");
+  const std::size_t offset_qr = state.get_offset("qr");
+
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
-    const auto i_t = il;
-    const auto i_q = i_t + grid.nlev;
-    const auto i_nr = i_q + grid.nlev;
-    const auto i_qr = i_nr + grid.nlev;
+    const std::size_t i_t = offset_t + il;
+    const std::size_t i_q = offset_q + il;
+    const std::size_t i_nr = offset_nr + il;
+    const std::size_t i_qr = offset_qr + il;
 
     const auto breakup = breakup_fac<true>(constants, nr[il], qr[il]);
     const auto rho_dry = dvars.get_rho_dry<true>(constants, T[il], q[il], il);

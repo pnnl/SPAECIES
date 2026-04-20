@@ -66,16 +66,21 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");
 
+  const std::size_t offset_t = state.get_offset("T");
+  const std::size_t offset_q = state.get_offset("q");
+  const std::size_t offset_nr = state.get_offset("nr");
+  const std::size_t offset_qr = state.get_offset("qr");
+
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
     const RealGrad<2> rho_dry = dvars.get_rho_dry<true>(constants, t[il], q[il], il);
     const RealGrad<2> lambdar = dvars.get_lambdar<true>(constants, nr[il], qr[il], il);
     const auto [q_evap, n_evap, t_evap] = calc_evap<true>(constants, t[il], q[il], nr[il], qr[il], grid.p_mid[il], rho_dry, lambdar);
 
-    const std::size_t i_t = il;
-    const std::size_t i_q = i_t + grid.nlev;
-    const std::size_t i_nr = i_q + grid.nlev;
-    const std::size_t i_qr = i_nr + grid.nlev;
+    const std::size_t i_t = offset_t + il;
+    const std::size_t i_q = offset_q + il;
+    const std::size_t i_nr = offset_nr + il;
+    const std::size_t i_qr = offset_qr + il;
 
     const auto [t_evap_dT, t_evap_dq, t_evap_dnr, t_evap_dqr] = get_grad(t_evap);
     jac(i_t, i_t) += t_evap_dT;
