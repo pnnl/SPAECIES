@@ -25,7 +25,7 @@ Evaporation::Evaporation(const RainshaftConstants &constants,
                          const bool use_numerical_integration,
                          const bool regularize_qsat,
                          std::optional<double> dt)
-    : use_numerical_integration(use_numerical_integration), sat_form(sat_form_in),
+    : sat_form(sat_form_in), use_numerical_integration(use_numerical_integration),
       v_table(create_lookup(constants, use_v_table, use_numerical_integration)), dt(dt),
       regularize_qsat(regularize_qsat)
 {
@@ -66,10 +66,10 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");
 
-  const std::size_t offset_t = state.get_offset("T");
-  const std::size_t offset_q = state.get_offset("q");
-  const std::size_t offset_nr = state.get_offset("nr");
-  const std::size_t offset_qr = state.get_offset("qr");
+  const std::size_t offset_t = state.get_idx("T");
+  const std::size_t offset_q = state.get_idx("q");
+  const std::size_t offset_nr = state.get_idx("nr");
+  const std::size_t offset_qr = state.get_idx("qr");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {

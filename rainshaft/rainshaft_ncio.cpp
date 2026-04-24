@@ -22,7 +22,7 @@ std::tuple<std::size_t, std::size_t> NetcdfReader::read_num_cases_and_max_levs()
   nc_inq_dimid(ncid, "nlev", &levid);
   std::size_t num_cases, max_levs;
   nc_inq_dimlen(ncid, caseid, &num_cases);
-  int status = nc_inq_dimlen(ncid, levid, &max_levs);
+  nc_inq_dimlen(ncid, levid, &max_levs);
   return {num_cases, max_levs};
 }
 
@@ -94,7 +94,7 @@ void NetcdfReader::read_initial_conditions(std::size_t case_idx, State &initial_
   nc_get_vara_double(ncid, nrid, starts, counts, &nr[0]);
   nc_get_vara_double(ncid, qrid, starts, counts, &qr[0]);
   // Convert to in-cloud values.
-  for (std::size_t i = 0; i != nlev - 1; ++i) {
+  for (int i = 0; i != nlev - 1; ++i) {
     nr[i] /= rainfrac[i];
     qr[i] /= rainfrac[i];
   }
@@ -133,7 +133,6 @@ void NetcdfWriter::write_grid(const RainshaftGrid& grid, std::size_t case_idx) {
     int p_int_dimids[2] = {caseid, ilevid};
     nc_def_var(ncid, "p_int", NC_DOUBLE, 2, p_int_dimids, &p_intid);
   }
-  int p_int_dimids[2] = {caseid, ilevid};
   status = nc_inq_varid(ncid, "p_mid", &p_midid);
   if (status == NC_ENOTVAR) {
     int p_mid_dimids[2] = {caseid, levid};

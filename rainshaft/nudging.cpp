@@ -34,13 +34,13 @@ void Nudging::calc_tend_jac(const RainshaftConstants &,
                             const RainshaftDerivedVars &,
                             Matrix jac) const
 {
-  const std::size_t offset_t = state.get_offset("T");
+  const std::size_t offset_t = state.get_idx("T");
   for (std::size_t il = offset_t; il != offset_t + grid.nlev; ++il)
   {
     jac(il, il) -= 1.0 / time_scale;
   }
 
-  const std::size_t offset_q = state.get_offset("q");
+  const std::size_t offset_q = state.get_idx("q");
   for (std::size_t il = offset_q; il != offset_q + grid.nlev; ++il)
   {
     jac(il, il) -= 1.0 / time_scale;

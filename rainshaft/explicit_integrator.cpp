@@ -40,7 +40,6 @@ RainshaftSolution ExplicitIntegrator::integrate(double initial_time,
   }
 
   const N_Vector abs_tol = create_abs_tol_n_vector();
-  N_VPrint(abs_tol);
   ARKodeSVtolerances(arkode_mem, rel_tol, abs_tol);
   N_VDestroy(abs_tol);
 
