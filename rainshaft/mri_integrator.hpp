@@ -21,6 +21,7 @@ public:
                 const RainshaftProcess *const process_slow_imp,
                 const VarDescList& state_descs,
                 const VarDescList& tend_descs,
+                const State& abs_tol,
                 const double dt_fast,
                 const double dt_slow,
                 const int order = 3,

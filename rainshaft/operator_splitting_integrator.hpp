@@ -23,6 +23,7 @@ public:
                               const RainshaftProcess *const process_partition_2,
                               const VarDescList &state_descs,
                               const VarDescList &tend_descs,
+                              const State& abs_tol,
                               const double dt,
                               const double dt_partition_1 = 0,
                               const double dt_partition_2 = 0,
