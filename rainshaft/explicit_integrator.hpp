@@ -18,6 +18,7 @@ public:
                      const RainshaftProcess *const process,
                      const VarDescList& state_descs,
                      const VarDescList& tend_descs,
+                     const State& abs_tol,
                      const double dt = 0,
                      const int order = 4,
                      const double rel_tol = 1.e-4,

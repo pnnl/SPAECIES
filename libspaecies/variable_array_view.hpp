@@ -44,6 +44,9 @@ public:
     auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs());
     return {var_desc, data_ptr + idx};
   };
+  std::size_t get_idx(const std::string& name) const {
+    return name_to_idx(name, var_descs());
+  }
   inline T* data() {
     return data_ptr;
   };
@@ -69,14 +72,22 @@ protected:
   inline void copy_data_to_location(NonConstT* dest) const {
     std::memcpy(dest, data_ptr, data_size * sizeof(T));
   }
+  static std::size_t name_to_idx(const std::string& name, const std::vector<VarDescPtr> var_descs) {
+    std::size_t idx = 0;
+    for (VarDescPtr var_desc : var_descs) {
+      if (var_desc->name == name) {
+        return idx;
+      }
+      idx += var_desc->size();
+    }
+    throw(VariableNotFoundException(name, "variable not found in variable array"));
+  }
   static std::tuple<VarDescPtr, std::size_t> name_to_desc_and_idx(const std::string& name,
                                                                   const std::vector<VarDescPtr> var_descs) {
     std::size_t idx = 0;
-    VarDescPtr var_desc_out;
     for (VarDescPtr var_desc : var_descs) {
       if (var_desc->name == name) {
-        var_desc_out = var_desc;
-        return {var_desc_out, idx};
+        return {var_desc, idx};
       }
       idx += var_desc->size();
     }

@@ -15,6 +15,7 @@ OperatorSplittingIntegrator::OperatorSplittingIntegrator(const RainshaftConstant
                                                          const RainshaftProcess *const process_partition_2,
                                                          const VarDescList &state_descs,
                                                          const VarDescList &tend_descs,
+                                                         const State& abs_tol,
                                                          const double dt,
                                                          const double dt_partition_1,
                                                          const double dt_partition_2,
@@ -24,7 +25,7 @@ OperatorSplittingIntegrator::OperatorSplittingIntegrator(const RainshaftConstant
                                                          const bool postprocess,
                                                          const bool regularize_lambdar,
                                                          const int steps_per_output)
-    : SundialsIntegrator(constants, grid, size_limiters, {process_partition_1, process_partition_2}, state_descs, tend_descs, steps_per_output, regularize_lambdar),
+    : SundialsIntegrator(constants, grid, size_limiters, {process_partition_1, process_partition_2}, state_descs, tend_descs, abs_tol, steps_per_output, regularize_lambdar),
       dt(dt), dt_partition_1(dt_partition_1), dt_partition_2(dt_partition_2), cfl_substep(cfl_substep), order(order), rel_tol(rel_tol), postprocess(postprocess)
 {
 }
@@ -88,7 +89,7 @@ RainshaftSolution OperatorSplittingIntegrator::integrate(double initial_time,
     ARKodeSetPostprocessStepFn(partition_2_mem, postprocess_positive);
   }
 
-  const N_Vector abs_tol = fill_abs_tol_vector(N_VClone(y));
+  const N_Vector abs_tol = create_abs_tol_n_vector();
   ARKodeSVtolerances(partition_1_mem, rel_tol, abs_tol);
   ARKodeSVtolerances(partition_2_mem, rel_tol, abs_tol);
   N_VDestroy(abs_tol);

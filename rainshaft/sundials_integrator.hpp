@@ -109,14 +109,17 @@ public:
                      PartitionArray processes,
                      const VarDescList& state_descs,
                      const VarDescList& tend_descs,
+                     const State& abs_tol,
                      const int steps_per_output,
                      const bool regularize_lambdar)
-      : user_data{constants, grid, size_limiters, std::move(processes), state_descs, tend_descs, regularize_lambdar}, 
+      : user_data{constants, grid, size_limiters, std::move(processes), state_descs, tend_descs, regularize_lambdar},
+      abs_tol(abs_tol),
       steps_per_output(steps_per_output)
   {}
 
 protected:
   const RainshaftUserData user_data;
+  const State abs_tol;
   const int steps_per_output;
   const sundials::Context sun_ctxt;
 
@@ -218,14 +221,11 @@ protected:
     return y;
   }
 
-  N_Vector fill_abs_tol_vector(N_Vector abs_tol) const {
-    double * const tol_data = N_VGetArrayPointer(abs_tol);
-    const std::size_t nz = user_data.grid.nlev;
-    std::fill_n(tol_data, nz, 1.e-6);
-    std::fill_n(&tol_data[nz], nz, 1.e-8);
-    std::fill_n(&tol_data[2 * nz], nz, 1.e-9);
-    std::fill_n(&tol_data[3 * nz], nz, 1.e-17);
-    return abs_tol;
+  N_Vector create_abs_tol_n_vector() const
+  {
+    N_Vector vec = N_VNew_Serial(abs_tol.size(), sun_ctxt);
+    std::copy_n(abs_tol.data(), abs_tol.size(), N_VGetArrayPointer(vec));
+    return vec;
   }
 
 private:

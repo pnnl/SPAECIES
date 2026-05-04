@@ -361,8 +361,6 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
         const RealOptGrad<WithGrad, 4> tau_inv = calc_tau_inv<WithGrad>(constants, nr, diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
         const RealOptGrad<WithGrad, 4> weight = calc_dt_weight<WithGrad>(tau_inv);
         const RealOptGrad<WithGrad, 4> q_evap = calc_q_evap<WithGrad>(q, q_sat_dry, abl, tau_inv, weight);
-        const RealOptGrad<WithGrad, 4> n_evap = calc_n_evap<WithGrad>(nr + constants.qsmall * 1.e8, qr + constants.qsmall, q_evap);
-        const RealOptGrad<WithGrad, 4> t_evap = calc_T_evap<WithGrad>(constants, q_evap);
 
         const double delta = (q - get_val(q_sat_dry)) / epsilon_qsat;
         const double poly_reg = 35.0 * pow(delta, 4) + 84.0 * pow(delta, 5) + 70.0 * pow(delta, 6) + 20.0 * pow(delta, 7);
@@ -403,21 +401,21 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
     }
   }
 
-  const bool use_numerical_integration;
-
 private:
   // Water vapor saturation formulae.
   const SaturationFormulae &sat_form;
 
-  const std::optional<double> dt;
-
-  const bool regularize_qsat;
+  const bool use_numerical_integration;
 
   // Particle velocity lookup table.
   // This is currently hard-coded to P3 settings, i.e. it contains 20 entries
   // for values every 10 microns between 5 and 195 micron, and 280 entries for
   // values every 30 microns between 195 and 8595 micron.
   const std::optional<LookupLinear> v_table;
+
+  const std::optional<double> dt;
+
+  const bool regularize_qsat;
 
   static std::optional<LookupLinear> create_lookup(const RainshaftConstants &constants,
                                       const bool use_v_table,

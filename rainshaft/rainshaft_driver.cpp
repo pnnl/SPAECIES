@@ -23,6 +23,7 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <algorithm>
 #include <numeric>
 #include <cmath>
 #include <chrono>
@@ -227,6 +228,11 @@ int main(int argc, char* argv[])
     spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
     VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc};
     VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
+    State abs_tol(state_descs);
+    std::fill_n(&abs_tol.get_variable("T")[0], nlev, 1.e-6);
+    std::fill_n(&abs_tol.get_variable("q")[0], nlev, 1.e-8);
+    std::fill_n(&abs_tol.get_variable("nr")[0], nlev, 1.e-9);
+    std::fill_n(&abs_tol.get_variable("qr")[0], nlev, 1.e-17);
     State initial_state(state_descs);
 
     // Set up initial condition.
@@ -276,21 +282,21 @@ int main(int argc, char* argv[])
 
     const auto intg = [&]() -> std::unique_ptr<RainshaftIntegrator> {
       if (method_type == "explicit") {
-        return std::make_unique<ExplicitIntegrator>(constants, grid, size_limiters, &all_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
+        return std::make_unique<ExplicitIntegrator>(constants, grid, size_limiters, &all_processes, state_descs, tend_descs, abs_tol, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "implicit") {
-        return std::make_unique<IMEXIntegrator>(constants, grid, size_limiters, &all_processes, nullptr, state_descs, tend_descs, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);  
+        return std::make_unique<IMEXIntegrator>(constants, grid, size_limiters, &all_processes, nullptr, state_descs, tend_descs, abs_tol, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "imex") {
-        return std::make_unique<IMEXIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
+        return std::make_unique<IMEXIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "mri") {
-        return std::make_unique<MRIIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, nullptr, state_descs, tend_descs, dt_partition_1, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
+        return std::make_unique<MRIIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, nullptr, state_descs, tend_descs, abs_tol, dt_partition_1, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "splitting") {
-        return std::make_unique<OperatorSplittingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, cfl_substep, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
+        return std::make_unique<OperatorSplittingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, dt_partition_1, dt_partition_2, cfl_substep, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "forcing") {
-        return std::make_unique<ForcingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, dt, dt_partition_1, dt_partition_2, cfl_substep, postprocess, regularize_lambdar, steps_per_output);
+        return std::make_unique<ForcingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, dt_partition_1, dt_partition_2, cfl_substep, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "original") {
         // Borrowed from original P3 settings, minimum diameter is 10 micron and maximum is 5 millimeter, mu = 0.
         SizeLimiters size_limiters(constants, 10.e-6, 5.e-3, 0.);
-        std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, size_limiters, &partition_2_processes, state_descs, tend_descs, dt, 1, rel_tol, false, regularize_lambdar);
+        std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, size_limiters, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, 1, rel_tol, false, regularize_lambdar);
         backing_integrators.emplace_back(local_intg);
         std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(constants, size_limiters, *local_intg);
         backing_integrators.emplace_back(local_lim_intg);

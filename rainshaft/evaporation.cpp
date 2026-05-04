@@ -25,7 +25,7 @@ Evaporation::Evaporation(const RainshaftConstants &constants,
                          const bool use_numerical_integration,
                          const bool regularize_qsat,
                          std::optional<double> dt)
-    : use_numerical_integration(use_numerical_integration), sat_form(sat_form_in),
+    : sat_form(sat_form_in), use_numerical_integration(use_numerical_integration),
       v_table(create_lookup(constants, use_v_table, use_numerical_integration)), dt(dt),
       regularize_qsat(regularize_qsat)
 {
@@ -66,16 +66,21 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
   VarConst nr = state.get_variable("nr");
   VarConst qr = state.get_variable("qr");
 
+  const std::size_t offset_t = state.get_idx("T");
+  const std::size_t offset_q = state.get_idx("q");
+  const std::size_t offset_nr = state.get_idx("nr");
+  const std::size_t offset_qr = state.get_idx("qr");
+
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
     const RealGrad<2> rho_dry = dvars.get_rho_dry<true>(constants, t[il], q[il], il);
     const RealGrad<2> lambdar = dvars.get_lambdar<true>(constants, nr[il], qr[il], il);
     const auto [q_evap, n_evap, t_evap] = calc_evap<true>(constants, t[il], q[il], nr[il], qr[il], grid.p_mid[il], rho_dry, lambdar);
 
-    const std::size_t i_t = il;
-    const std::size_t i_q = i_t + grid.nlev;
-    const std::size_t i_nr = i_q + grid.nlev;
-    const std::size_t i_qr = i_nr + grid.nlev;
+    const std::size_t i_t = offset_t + il;
+    const std::size_t i_q = offset_q + il;
+    const std::size_t i_nr = offset_nr + il;
+    const std::size_t i_qr = offset_qr + il;
 
     const auto [t_evap_dT, t_evap_dq, t_evap_dnr, t_evap_dqr] = get_grad(t_evap);
     jac(i_t, i_t) += t_evap_dT;

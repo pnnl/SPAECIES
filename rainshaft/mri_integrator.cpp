@@ -21,6 +21,7 @@ MRIIntegrator::MRIIntegrator(const RainshaftConstants &constants,
                              const RainshaftProcess *const process_slow_imp,
                              const VarDescList& state_descs,
                              const VarDescList& tend_descs,
+                             const State& abs_tol,
                              const double dt_fast,
                              const double dt_slow,
                              const int order,
@@ -28,7 +29,7 @@ MRIIntegrator::MRIIntegrator(const RainshaftConstants &constants,
                              const bool postprocess,
                              const bool regularize_lambdar,
                              const int steps_per_output)
-    : SundialsIntegrator(constants, grid, size_limiters, {process_fast, process_slow_exp, process_slow_imp}, state_descs, tend_descs, steps_per_output, regularize_lambdar),
+    : SundialsIntegrator(constants, grid, size_limiters, {process_fast, process_slow_exp, process_slow_imp}, state_descs, tend_descs, abs_tol, steps_per_output, regularize_lambdar),
       dt_fast(dt_fast), dt_slow(dt_slow), order(order), rel_tol(rel_tol), postprocess(postprocess)
 {
 }
@@ -55,7 +56,7 @@ RainshaftSolution MRIIntegrator::integrate(double initial_time,
   // fixed step for fast solver
   ARKodeSetFixedStep(inner_arkode_mem, dt_fast);
 
-  const N_Vector abs_tol = fill_abs_tol_vector(N_VClone(y));
+  const N_Vector abs_tol = create_abs_tol_n_vector();
   ARKodeSVtolerances(inner_arkode_mem, rel_tol, abs_tol);
 
   /* create MRIStepInnerStepper wrapper for the ERKStep memory block */

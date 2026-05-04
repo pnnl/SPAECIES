@@ -9,7 +9,7 @@ SedCflIntegrator::SedCflIntegrator(const RainshaftConstants& constants,
                                    const VarDescList& tend_descs,
                                    const Sedimentation& sedimentation,
                                    const bool regularize_lambdar)
-  : constants(constants), grid(grid), size_limiters(size_limiters), sed(sedimentation), tend_descs(tend_descs),
+  : constants(constants), grid(grid), size_limiters(size_limiters), tend_descs(tend_descs), sed(sedimentation),
     regularize_lambdar(regularize_lambdar) {
 }
 
