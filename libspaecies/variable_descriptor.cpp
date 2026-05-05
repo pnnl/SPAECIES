@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <numeric>
+#include <utility>
 
 #include "exceptions.hpp"
 
@@ -26,20 +27,20 @@ std::string spaecies_type_name(VariableType type) {
   throw UnreachableException("invalid VariableType in spaecies_type_name");
 }
 
-VariableDescriptor::VariableDescriptor(const std::string& name,
+VariableDescriptor::VariableDescriptor(std::string name,
                                        VariableType type,
-                                       const std::vector<DimensionPtr>& dimensions,
-                                       const std::string& units,
-                                       VariableConstantStatus constant_status,
-                                       const std::optional<const std::string>& description,
-                                       const std::optional<const std::string>& standard_name)
-: name(name), type(type), dimensions(dimensions), units(units),
-  constant_status(constant_status), description(description), standard_name(standard_name) {
+                                       std::vector<DimensionPtr> dimensions,
+                                       std::string units,
+                                       VariableUsage usage,
+                                       std::optional<std::string> description,
+                                       std::optional<std::string> standard_name)
+: name(std::move(name)), type(type), dimensions(std::move(dimensions)), units(std::move(units)),
+  usage(usage), description(std::move(description)), standard_name(std::move(standard_name)) {
 }
 
 std::size_t VariableDescriptor::size() {
   return std::accumulate(dimensions.begin(), dimensions.end(), 1,
-                         [](std::size_t acc, std::shared_ptr<Dimension> dim) { return acc * dim->size; });
+                         [](std::size_t acc, const DimensionPtr& dim) { return acc * dim->size; });
 }
 
 }

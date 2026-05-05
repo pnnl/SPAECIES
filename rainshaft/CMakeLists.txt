@@ -9,6 +9,7 @@ add_executable(rainshaft
   operator_splitting_integrator.cpp
   lookup_linear.cpp
   nudging.cpp
+  nvector_serial_diagnostic.cpp
   parsing_utilities.cpp
   rainshaft_driver.cpp
   rainshaft_derived_vars.cpp

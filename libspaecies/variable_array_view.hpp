@@ -1,6 +1,7 @@
 #ifndef SPAECIES_VARIABLE_ARRAY_VIEW_HPP
 #define SPAECIES_VARIABLE_ARRAY_VIEW_HPP
 
+#include <algorithm>
 #include <cstring>
 #include <initializer_list>
 #include <memory>
@@ -19,20 +20,22 @@ public:
   VariableArrayView(std::initializer_list<VarDescPtr> var_descs)
     : VariableArrayView(std::vector<VarDescPtr>(var_descs)) {
   }
-  VariableArrayView(const std::vector<VarDescPtr>& var_descs)
-    : var_desc_vec(var_descs),
-      data_size(calc_size(var_descs)),
+  VariableArrayView(std::vector<VarDescPtr> var_descs, T* data_ptr)
+    : var_desc_vec(std::move(var_descs)),
+      data_size(calc_size(var_desc_vec)),
+      prognostic_data_size(calc_prognostic_size(var_desc_vec)),
+      data_ptr(data_ptr) {
+  };
+  VariableArrayView(std::vector<VarDescPtr> var_descs)
+    : var_desc_vec(std::move(var_descs)),
+      data_size(calc_size(var_desc_vec)),
+      prognostic_data_size(calc_prognostic_size(var_desc_vec)),
       owning_ptr(new T[data_size]), // After C++20, can use make_shared here.
       data_ptr(owning_ptr.get()) {
   };
-  VariableArrayView(const std::vector<VarDescPtr>& var_descs, T* data_ptr)
-    : var_desc_vec(var_descs),
-      data_size(calc_size(var_descs)),
-      data_ptr(data_ptr) {
-  };
   // Cast to const view.
   operator VariableArrayView<const T>() const {
-    return VariableArrayView<const T>(var_desc_vec, data_size, owning_ptr, data_ptr);
+    return VariableArrayView<const T>(var_desc_vec, data_size, prognostic_data_size, owning_ptr, data_ptr);
   }
   // Required for access to private constructor used above.
   friend class VariableArrayView<NonConstT>;
@@ -59,6 +62,9 @@ public:
   inline std::size_t size() const {
     return data_size;
   }
+  inline std::size_t prognostic_size() const {
+    return prognostic_data_size;
+  }
   VariableArrayView<NonConstT> deep_copy() const {
     VariableArrayView<NonConstT> copy(var_descs());
     copy_data_to_location(copy.data());
@@ -67,14 +73,15 @@ public:
 protected:
   std::vector<VarDescPtr> var_desc_vec;
   std::size_t data_size;
+  std::size_t prognostic_data_size;
   std::shared_ptr<T[]> owning_ptr;
   T* data_ptr;
   inline void copy_data_to_location(NonConstT* dest) const {
-    std::memcpy(dest, data_ptr, data_size * sizeof(T));
+    std::copy_n(data_ptr, data_size, dest);
   }
-  static std::size_t name_to_idx(const std::string& name, const std::vector<VarDescPtr> var_descs) {
+  static std::size_t name_to_idx(const std::string& name, const std::vector<VarDescPtr>& var_descs) {
     std::size_t idx = 0;
-    for (VarDescPtr var_desc : var_descs) {
+    for (const VarDescPtr& var_desc : var_descs) {
       if (var_desc->name == name) {
         return idx;
       }
@@ -83,9 +90,9 @@ protected:
     throw(VariableNotFoundException(name, "variable not found in variable array"));
   }
   static std::tuple<VarDescPtr, std::size_t> name_to_desc_and_idx(const std::string& name,
-                                                                  const std::vector<VarDescPtr> var_descs) {
+                                                                  const std::vector<VarDescPtr>& var_descs) {
     std::size_t idx = 0;
-    for (VarDescPtr var_desc : var_descs) {
+    for (const VarDescPtr& var_desc : var_descs) {
       if (var_desc->name == name) {
         return {var_desc, idx};
       }
@@ -93,18 +100,36 @@ protected:
     }
     throw(VariableNotFoundException(name, "variable not found in variable array"));
   }
-  static std::size_t calc_size(const std::vector<VarDescPtr> var_descs) {
+  static std::size_t calc_size(const std::vector<VarDescPtr> &var_descs) {
     std::size_t my_size = 0;
-    for (VarDescPtr var_desc : var_descs) {
+    for (const VarDescPtr& var_desc : var_descs) {
       my_size += var_desc->size();
     }
     return my_size;
   }
+  static std::size_t calc_prognostic_size(const std::vector<VarDescPtr> &var_descs) {
+    std::size_t my_size = 0;
+    std::size_t i = 0;
+    for (; i < var_descs.size() && var_descs[i]->usage == VariableUsage::Prognostic; i++) {
+      my_size += var_descs[i]->size();
+    }
+    for (; i < var_descs.size(); i++) {
+      if (var_descs[i]->usage == VariableUsage::Prognostic) {
+        throw(InvalidArrayFormatException(var_descs[i]->name, "prognostic variables should be first"));
+      }
+    }
+
+    return my_size;
+  }
 private:
   // Raw constructor for casting purposes.
-  VariableArrayView(const std::vector<VarDescPtr>& var_descs, std::size_t data_size,
-                    std::shared_ptr<T[]> owning_ptr, T* data_ptr)
-    : var_desc_vec(var_descs), data_size(data_size), owning_ptr(owning_ptr), data_ptr(data_ptr) {
+  VariableArrayView(std::vector<VarDescPtr> var_descs, std::size_t data_size,
+                    std::size_t prognostic_data_size, std::shared_ptr<T[]> owning_ptr, T* data_ptr)
+    : var_desc_vec(std::move(var_descs)),
+    data_size(data_size),
+    prognostic_data_size(prognostic_data_size),
+    owning_ptr(std::move(owning_ptr)),
+    data_ptr(data_ptr) {
   }
 };
 

@@ -44,6 +44,7 @@ void Evaporation::calc_tend(const RainshaftConstants& constants,
   VarMut q_tend = tend.get_variable("q_tend");
   VarMut nr_tend = tend.get_variable("nr_tend");
   VarMut qr_tend = tend.get_variable("qr_tend");
+  VarMut test_tend = tend.get_variable("test_tend");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
@@ -52,6 +53,7 @@ void Evaporation::calc_tend(const RainshaftConstants& constants,
     q_tend[il] += q_evap;
     nr_tend[il] -= n_evap;
     qr_tend[il] -= q_evap;
+    test_tend[il] += 100000 * q_evap;
   }
 }
 

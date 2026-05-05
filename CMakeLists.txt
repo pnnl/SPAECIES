@@ -33,7 +33,7 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWith
 endif()
 
 find_package(NetCDF REQUIRED)
-find_package(SUNDIALS 7.3.0 QUIET COMPONENTS arkode sunlinsollapackdense)
+find_package(SUNDIALS 7.7.0 QUIET COMPONENTS arkode sunlinsollapackdense)
 if (NOT SUNDIALS_FOUND)
   include(FetchContent)
   set(FETCHCONTENT_QUIET OFF)
