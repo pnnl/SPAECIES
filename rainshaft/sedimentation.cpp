@@ -152,3 +152,13 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
     qr_flux_prev = qr_flux;
   }
 }
+
+std::set<std::string> Sedimentation::get_required_vars() const
+{
+  return {"T", "q", "nr", "qr"};
+}
+
+std::set<std::string> Sedimentation::get_optional_vars() const
+{
+  return {};
+}

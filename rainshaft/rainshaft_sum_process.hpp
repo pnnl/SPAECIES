@@ -26,6 +26,9 @@ public:
                              const RainshaftDerivedVars &dvars,
                              Matrix jac) const;
 
+  std::set<std::string> get_required_vars() const;
+  std::set<std::string> get_optional_vars() const;
+
 private:
 
   // Sub-processes that this process is a sum of.

@@ -46,3 +46,13 @@ void Nudging::calc_tend_jac(const RainshaftConstants &,
     jac(il, il) -= 1.0 / time_scale;
   }
 }
+
+std::set<std::string> Nudging::get_required_vars() const
+{
+  return {"T", "q"};
+}
+
+std::set<std::string> Nudging::get_optional_vars() const
+{
+  return {};
+}

@@ -155,6 +155,9 @@ public:
                              const RainshaftDerivedVars &dvars,
                              Matrix jac) const;
 
+  std::set<std::string> get_required_vars() const;
+  std::set<std::string> get_optional_vars() const;
+
   // For a given value of lambdar, what are the rain number and mass fall speeds
   // and their derivatives wrt (T, q, nr, qr)?
   template <bool WithGrad = false>

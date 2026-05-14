@@ -283,6 +283,9 @@ public:
                              const RainshaftDerivedVars &dvars,
                              Matrix jac) const;
 
+  std::set<std::string> get_required_vars() const;
+  std::set<std::string> get_optional_vars() const;
+
   // Calculate characteristic velocity used for velocity calculation.
   template <bool WithGrad = false>
   RealOptGrad<WithGrad, 1> calc_v_evap(const RainshaftConstants &constants, double lambdar) const

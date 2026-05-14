@@ -55,3 +55,13 @@ void SelfCollision::calc_tend_jac(const RainshaftConstants &constants,
     jac(i_nr, i_qr) += nr_tend_qr;
   }
 }
+
+std::set<std::string> SelfCollision::get_required_vars() const
+{
+  return {"T", "q", "nr", "qr"};
+}
+
+std::set<std::string> SelfCollision::get_optional_vars() const
+{
+  return {};
+}

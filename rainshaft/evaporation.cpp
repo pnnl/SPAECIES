@@ -106,3 +106,13 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
     jac(i_qr, i_qr) -= q_evap_dqr;
   }
 }
+
+std::set<std::string> Evaporation::get_required_vars() const
+{
+  return {"T", "q", "nr", "qr"};
+}
+
+std::set<std::string> Evaporation::get_optional_vars() const
+{
+  return {};
+}
