@@ -101,10 +101,10 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
   VarConst nr = *state.get_variable("nr");
   VarConst qr = *state.get_variable("qr");
 
-  const std::size_t offset_t = state.get_idx("T");
-  const std::size_t offset_q = state.get_idx("q");
-  const std::size_t offset_nr = state.get_idx("nr");
-  const std::size_t offset_qr = state.get_idx("qr");
+  const std::size_t offset_t = *state.get_idx("T");
+  const std::size_t offset_q = *state.get_idx("q");
+  const std::size_t offset_nr = *state.get_idx("nr");
+  const std::size_t offset_qr = *state.get_idx("qr");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {

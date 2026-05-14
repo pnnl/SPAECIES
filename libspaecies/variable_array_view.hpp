@@ -46,8 +46,15 @@ public:
   std::optional<ContiguousVariableView<T>> get_variable(const std::string& name) {
     return make_variable_view(name, var_descs(), data_ptr);
   };
-  std::size_t get_idx(const std::string& name) const {
-    return name_to_idx(name, var_descs());
+  std::optional<std::size_t> get_idx(const std::string& name) const {
+    std::size_t idx = 0;
+    for (const VarDescPtr& var_desc : var_descs()) {
+      if (var_desc->name == name) {
+        return idx;
+      }
+      idx += var_desc->size();
+    }
+    return std::nullopt;
   }
   inline T* data() {
     return data_ptr;
@@ -91,16 +98,6 @@ protected:
       idx += var_desc->size();
     }
     return std::nullopt;
-  }
-  static std::size_t name_to_idx(const std::string& name, const std::vector<VarDescPtr>& var_descs) {
-    std::size_t idx = 0;
-    for (const VarDescPtr& var_desc : var_descs) {
-      if (var_desc->name == name) {
-        return idx;
-      }
-      idx += var_desc->size();
-    }
-    throw(VariableNotFoundException(name, "variable not found in variable array"));
   }
   static std::size_t calc_size(const std::vector<VarDescPtr> &var_descs) {
     std::size_t my_size = 0;
