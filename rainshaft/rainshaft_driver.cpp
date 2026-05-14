@@ -226,17 +226,14 @@ int main(int argc, char* argv[])
     spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
     spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
     spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    spaecies::VarDescPtr test_desc = dom.add_var_desc("test", spaecies::Float64Type, {lev_dim}, "?", spaecies::VariableUsage::Diagnostic);
-    VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc, test_desc};
+    VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc};
     VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
     State abs_tol(state_descs);
     std::fill_n(&abs_tol.get_variable("T")[0], nlev, 1.e-6);
     std::fill_n(&abs_tol.get_variable("q")[0], nlev, 1.e-8);
     std::fill_n(&abs_tol.get_variable("nr")[0], nlev, 1.e-9);
     std::fill_n(&abs_tol.get_variable("qr")[0], nlev, 1.e-17);
-    std::fill_n(&abs_tol.get_variable("test")[0], nlev, 1.e-17);
     State initial_state(state_descs);
-    std::fill_n(&initial_state.get_variable("test")[0], nlev, 0.0);
 
     // Set up initial condition.
     if (initial_condition == "adiabatic") {
