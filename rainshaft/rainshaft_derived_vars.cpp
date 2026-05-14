@@ -10,8 +10,8 @@ std::vector<double> calc_dz(const RainshaftConstants& constants,
                             const StateConst& state) {
   // Virtual temperature.
   std::vector<double> t_v(grid.nlev);
-  VarConst t = state.get_variable("T");
-  VarConst q = state.get_variable("q");
+  VarConst t = state.get_variable("T").value();
+  VarConst q = state.get_variable("q").value();
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     // Virtual temperature factor.
     double t_v_fac = 1. + ((1/constants.epsilon_h2o - 1.) * q[il]);
@@ -36,8 +36,8 @@ std::vector<double> calc_rho_dry(const RainshaftConstants& constants,
                                  const RainshaftGrid& grid,
                                  const StateConst& state) {
   std::vector<double> rho_dry(grid.nlev);
-  VarConst t = state.get_variable("T");
-  VarConst q = state.get_variable("q");
+  VarConst t = state.get_variable("T").value();
+  VarConst q = state.get_variable("q").value();
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     rho_dry[il] = rho_dry_from_ideal_gas_law(constants.rdry, constants.epsilon_h2o,
                                              grid.p_mid[il], t[il], q[il]);
@@ -51,8 +51,8 @@ std::vector<double> calc_lambdar(const RainshaftConstants& constants,
                                  const bool regularize) {
   // SPS: If not doing nr limiter here, do it somewhere?
   std::vector<double> lambdar(grid.nlev);
-  VarConst nr = state.get_variable("nr");
-  VarConst qr = state.get_variable("qr");
+  VarConst nr = state.get_variable("nr").value();
+  VarConst qr = state.get_variable("qr").value();
   for (std::size_t il = 0; il != grid.nlev; ++il) {
     double lambda_cubed;
     if (regularize) {
@@ -77,7 +77,7 @@ RainshaftDerivedVars::RainshaftDerivedVars(const RainshaftConstants& constants,
     regularize(regularize_lambdar) {
   // Check vector sizes.
   // SPS: Should actually print out mismatched dimensions on failure.
-  if (grid.nlev != state.get_variable("T").size()) {
+  if (grid.nlev != state.get_variable("T").value().size()) {
     throw std::invalid_argument("grid and state dimensions are mismatched");
   }
 }

@@ -85,10 +85,10 @@ void NetcdfReader::read_initial_conditions(std::size_t case_idx, State &initial_
   std::size_t starts[2] = {case_idx, 1};
   std::size_t counts[2] = {1, (std::size_t) nlev-1};
   nc_get_vara_double(ncid, rainfracid, starts, counts, rainfrac.data());
-  VarMut t = initial_state.get_variable("T");
-  VarMut q = initial_state.get_variable("q");
-  VarMut nr = initial_state.get_variable("nr");
-  VarMut qr = initial_state.get_variable("qr");
+  VarMut t = initial_state.get_variable("T").value();
+  VarMut q = initial_state.get_variable("q").value();
+  VarMut nr = initial_state.get_variable("nr").value();
+  VarMut qr = initial_state.get_variable("qr").value();
   nc_get_vara_double(ncid, tid, starts, counts, &t[0]);
   nc_get_vara_double(ncid, qid, starts, counts, &q[0]);
   nc_get_vara_double(ncid, nrid, starts, counts, &nr[0]);
@@ -150,7 +150,7 @@ void NetcdfWriter::write_grid(const RainshaftGrid& grid, std::size_t case_idx) {
 
 void NetcdfWriter::write_states(const std::vector<StateConst>& arrays, std::size_t case_idx) {
   int caseid, levid, timeid;
-  std::size_t nlev = arrays[0].get_variable("T").size();
+  std::size_t nlev = arrays[0].get_variable("T").value().size();
   std::size_t ntimes = arrays.size();
   // SPS: Need to check errors from all these as well.
   // SPS: Add variable metadata to all these too.
@@ -191,7 +191,7 @@ void NetcdfWriter::write_states(const std::vector<StateConst>& arrays, std::size
       // integer id from the VariableArrayView, rather than using string lookups.
       // SPS: Note also the implicit assumption that the variable data is
       // contiguous.
-      auto var = arrays[i].get_variable(varnames[j]);
+      auto var = arrays[i].get_variable(varnames[j]).value();
       nc_put_vara_double(ncid, varids[j], starts, counts,
                          &var[0]);
     }

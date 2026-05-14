@@ -267,9 +267,9 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
     double data[total_size];
     VariableArrayView<double> view({t_desc, q_desc, p_surf_desc}, &data[0]);
     REQUIRE( view.size() == total_size );
-    auto t = view.get_variable("T");
-    auto q = view.get_variable("q");
-    auto p_surf = view.get_variable("p_surf");
+    auto t = view.get_variable("T").value();
+    auto q = view.get_variable("q").value();
+    auto p_surf = view.get_variable("p_surf").value();
     auto t_array = &data[t_idx];
     auto q_array = &data[q_idx];
     auto p_surf_array = &data[p_idx];
@@ -313,9 +313,9 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
     const double* construct_ptr = &data[0];
     const VariableArrayView<const double> view({t_desc, q_desc, p_surf_desc}, construct_ptr);
     REQUIRE( view.size() == total_size );
-    auto t = view.get_variable("T");
-    auto q = view.get_variable("q");
-    auto p_surf = view.get_variable("p_surf");
+    auto t = view.get_variable("T").value();
+    auto q = view.get_variable("q").value();
+    auto p_surf = view.get_variable("p_surf").value();
     auto t_array = &data[t_idx];
     auto q_array = &data[q_idx];
     auto p_surf_array = &data[p_idx];
@@ -371,9 +371,9 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
   SECTION( "VariableArrayView can allocate and own its data" ) {
     VariableArrayView<double> view{t_desc, q_desc, p_surf_desc};
     REQUIRE( view.size() == t_desc->size() + q_desc->size() + p_surf_desc->size() );
-    auto t = view.get_variable("T");
-    auto q = view.get_variable("q");
-    auto p_surf = view.get_variable("p_surf");
+    auto t = view.get_variable("T").value();
+    auto q = view.get_variable("q").value();
+    auto p_surf = view.get_variable("p_surf").value();
     for (int i = 0; i != t.size(); ++i) {
       t[i] = 2.*i;
     }
@@ -399,7 +399,7 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
     std::vector<VarDescPtr> var_descs = {t_desc, q_desc, p_surf_desc};
     VariableArrayView<double> view(var_descs);
     REQUIRE( view.size() == t_desc->size() + q_desc->size() + p_surf_desc->size() );
-    auto t = view.get_variable("T");
+    auto t = view.get_variable("T").value();
     for (int i = 0; i != t.size(); ++i) {
       t[i] = 2.*i;
     }
@@ -412,9 +412,9 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
     // Create "original" data.
     VariableArrayView<double> view{t_desc, q_desc, p_surf_desc};
     REQUIRE( view.size() == t_desc->size() + q_desc->size() + p_surf_desc->size() );
-    auto t = view.get_variable("T");
-    auto q = view.get_variable("q");
-    auto p_surf = view.get_variable("p_surf");
+    auto t = view.get_variable("T").value();
+    auto q = view.get_variable("q").value();
+    auto p_surf = view.get_variable("p_surf").value();
     for (int i = 0; i != t.size(); ++i) {
       t[i] = 2.*i;
     }
@@ -426,9 +426,9 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
     }
     // Make new array.
     VariableArrayView <double> new_view = view.deep_copy();
-    auto t_new = new_view.get_variable("T");
-    auto q_new = new_view.get_variable("q");
-    auto p_surf_new = new_view.get_variable("p_surf");
+    auto t_new = new_view.get_variable("T").value();
+    auto q_new = new_view.get_variable("q").value();
+    auto p_surf_new = new_view.get_variable("p_surf").value();
     // Clear original array.
     for (int i = 0; i != t.size(); ++i) {
       t[i] = 0.;
@@ -454,7 +454,7 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
   SECTION( "copying from a const view to a new non-const view" ) {
     // Create "original" data.
     VariableArrayView<double> view{t_desc};
-    auto t = view.get_variable("T");
+    auto t = view.get_variable("T").value();
     for (int i = 0; i != t.size(); ++i) {
       t[i] = 2.*i;
     }
@@ -462,7 +462,7 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
     VariableArrayView<const double> view_const(view);
     // Make new array.
     VariableArrayView <double> new_view = view_const.deep_copy();
-    auto t_new = new_view.get_variable("T");
+    auto t_new = new_view.get_variable("T").value();
     // Clear original array.
     for (int i = 0; i != t.size(); ++i) {
       t[i] = 0.;
@@ -473,10 +473,9 @@ TEST_CASE( "interacting with data through an array view", "[VariableArrayView]" 
     }
   }
 
-  SECTION( "getting an error message when a variable is not in the array" ) {
+  SECTION( "getting an empty optional when a variable is not in the array" ) {
     VariableArrayView<double> view{t_desc, q_desc, p_surf_desc};
-    REQUIRE_THROWS_MATCHES( view.get_variable("invalid"), VariableNotFoundException,
-                            MessageMatches(ContainsSubstring("variable array") && ContainsSubstring("invalid")) );
+    REQUIRE_FALSE( view.get_variable("invalid").has_value() );
   }
 
 }
@@ -492,7 +491,7 @@ TEST_CASE( "interacting with the model state", "[State]" ) {
     double data[total_size];
     State<double> state({p_surf_desc}, &data[0]);
     REQUIRE( state.size() == total_size );
-    auto p_surf = state.get_variable("p_surf");
+    auto p_surf = state.get_variable("p_surf").value();
     auto p_surf_array = &data[p_idx];
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = -2. * i;
@@ -507,7 +506,7 @@ TEST_CASE( "interacting with the model state", "[State]" ) {
     double data[total_size];
     const State<const double> state({p_surf_desc}, &data[0]);
     REQUIRE( state.size() == total_size );
-    auto p_surf = state.get_variable("p_surf");
+    auto p_surf = state.get_variable("p_surf").value();
     double* p_surf_array = &data[p_idx];
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf_array[i] = -2. * i;
@@ -521,7 +520,7 @@ TEST_CASE( "interacting with the model state", "[State]" ) {
   SECTION( "construct owned State" ) {
     State<double> state{p_surf_desc};
     REQUIRE( state.size() == total_size );
-    auto p_surf = state.get_variable("p_surf");
+    auto p_surf = state.get_variable("p_surf").value();
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = -2. * i;
     }
@@ -534,8 +533,8 @@ TEST_CASE( "interacting with the model state", "[State]" ) {
     State<double> state{p_surf_desc};
     State<const double> state_const(state);
     REQUIRE( state_const.size() == total_size );
-    auto p_surf = state.get_variable("p_surf");
-    auto p_surf_const = state_const.get_variable("p_surf");
+    auto p_surf = state.get_variable("p_surf").value();
+    auto p_surf_const = state_const.get_variable("p_surf").value();
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = -2. * i;
     }
@@ -548,7 +547,7 @@ TEST_CASE( "interacting with the model state", "[State]" ) {
     std::vector<VarDescPtr> var_descs = {p_surf_desc};
     State<double> state(var_descs);
     REQUIRE( state.size() == total_size );
-    auto p_surf = state.get_variable("p_surf");
+    auto p_surf = state.get_variable("p_surf").value();
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = -2. * i;
     }
@@ -559,12 +558,12 @@ TEST_CASE( "interacting with the model state", "[State]" ) {
 
   SECTION( "copy State into a new owning object" ) {
     State<double> state{p_surf_desc};
-    auto p_surf = state.get_variable("p_surf");
+    auto p_surf = state.get_variable("p_surf").value();
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = -2. * i;
     }
     State<double> new_state = state.deep_copy();
-    auto new_p_surf = new_state.get_variable("p_surf");
+    auto new_p_surf = new_state.get_variable("p_surf").value();
     // Clear original array to guarantee we aren't just pointing to it.
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = 0.;
@@ -587,7 +586,7 @@ TEST_CASE( "interacting a tendency on the model state", "[Tendency]" ) {
     double data[total_size];
     Tendency<double> tend({p_surf_desc}, &data[0]);
     REQUIRE( tend.size() == total_size );
-    auto p_surf = tend.get_variable("p_surf_tend");
+    auto p_surf = tend.get_variable("p_surf_tend").value();
     auto p_surf_array = &data[p_idx];
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = -2. * i;
@@ -602,7 +601,7 @@ TEST_CASE( "interacting a tendency on the model state", "[Tendency]" ) {
     double data[total_size];
     const Tendency<const double> tend({p_surf_desc}, &data[0]);
     REQUIRE( tend.size() == total_size );
-    auto p_surf = tend.get_variable("p_surf_tend");
+    auto p_surf = tend.get_variable("p_surf_tend").value();
     double* p_surf_array = &data[p_idx];
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf_array[i] = -2. * i;
@@ -616,7 +615,7 @@ TEST_CASE( "interacting a tendency on the model state", "[Tendency]" ) {
   SECTION( "construct owned Tendency" ) {
     Tendency<double> tend{p_surf_desc};
     REQUIRE( tend.size() == total_size );
-    auto p_surf = tend.get_variable("p_surf_tend");
+    auto p_surf = tend.get_variable("p_surf_tend").value();
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = -2. * i;
     }
@@ -629,8 +628,8 @@ TEST_CASE( "interacting a tendency on the model state", "[Tendency]" ) {
     Tendency<double> tend{p_surf_desc};
     Tendency<const double> tend_const(tend);
     REQUIRE( tend_const.size() == total_size );
-    auto p_surf = tend.get_variable("p_surf_tend");
-    auto p_surf_const = tend_const.get_variable("p_surf_tend");
+    auto p_surf = tend.get_variable("p_surf_tend").value();
+    auto p_surf_const = tend_const.get_variable("p_surf_tend").value();
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = -2. * i;
     }
@@ -643,7 +642,7 @@ TEST_CASE( "interacting a tendency on the model state", "[Tendency]" ) {
     std::vector<VarDescPtr> var_descs = {p_surf_desc};
     Tendency<double> tend(var_descs);
     REQUIRE( tend.size() == total_size );
-    auto p_surf = tend.get_variable("p_surf_tend");
+    auto p_surf = tend.get_variable("p_surf_tend").value();
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = -2. * i;
     }
@@ -654,12 +653,12 @@ TEST_CASE( "interacting a tendency on the model state", "[Tendency]" ) {
 
   SECTION( "copy Tendency into a new owning object" ) {
     Tendency<double> tend{p_surf_desc};
-    auto p_surf = tend.get_variable("p_surf_tend");
+    auto p_surf = tend.get_variable("p_surf_tend").value();
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = -2. * i;
     }
     Tendency<double> new_tend = tend.deep_copy();
-    auto new_p_surf = new_tend.get_variable("p_surf_tend");
+    auto new_p_surf = new_tend.get_variable("p_surf_tend").value();
     // Clear original array to guarantee we aren't just pointing to it.
     for (int i = 0; i != p_surf.size(); ++i) {
       p_surf[i] = 0.;

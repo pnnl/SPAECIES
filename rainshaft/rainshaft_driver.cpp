@@ -229,10 +229,10 @@ int main(int argc, char* argv[])
     VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc};
     VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
     State abs_tol(state_descs);
-    std::fill_n(&abs_tol.get_variable("T")[0], nlev, 1.e-6);
-    std::fill_n(&abs_tol.get_variable("q")[0], nlev, 1.e-8);
-    std::fill_n(&abs_tol.get_variable("nr")[0], nlev, 1.e-9);
-    std::fill_n(&abs_tol.get_variable("qr")[0], nlev, 1.e-17);
+    std::fill_n(&abs_tol.get_variable("T").value()[0], nlev, 1.e-6);
+    std::fill_n(&abs_tol.get_variable("q").value()[0], nlev, 1.e-8);
+    std::fill_n(&abs_tol.get_variable("nr").value()[0], nlev, 1.e-9);
+    std::fill_n(&abs_tol.get_variable("qr").value()[0], nlev, 1.e-17);
     State initial_state(state_descs);
 
     // Set up initial condition.
@@ -255,8 +255,8 @@ int main(int argc, char* argv[])
     if (do_nudging) {
       // SPS: Need some kind of span-like interface to avoid having to
       // do this copy.
-      VarMut t = initial_state.get_variable("T");
-      VarMut q = initial_state.get_variable("q");
+      VarMut t = initial_state.get_variable("T").value();
+      VarMut q = initial_state.get_variable("q").value();
       std::vector<double> t_vec, q_vec;
       for (std::size_t i = 0; i != nlev; ++i) {
         t_vec.push_back(t[i]);

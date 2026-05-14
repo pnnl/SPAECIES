@@ -25,8 +25,8 @@ RainshaftSolution SedCflIntegrator::integrate(double initial_time,
   double *state_data = temp_state.data();
   Tendency tend(tend_descs);
   double *tend_data = tend.data();
-  VarMut nr = temp_state.get_variable("nr");
-  VarConst qr = temp_state.get_variable("qr");
+  VarMut nr = *temp_state.get_variable("nr");
+  VarConst qr = *temp_state.get_variable("qr");
   while (time_remaining > 0) {
     std::fill_n(tend_data, tend.size(), 0.0);
     RainshaftDerivedVars dvars = RainshaftDerivedVars(constants, grid, temp_state, regularize_lambdar);
