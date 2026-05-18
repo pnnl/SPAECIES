@@ -1,4 +1,6 @@
 #include "spaecies.hpp"
+#include "accretion.hpp"
+#include "autoconversion.hpp"
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
 #include "fixed_substep_integrator.hpp"
@@ -16,7 +18,7 @@
 #include "rainshaft_sum_process.hpp"
 #include "saturation.hpp"
 #include "sed_cfl_integrator.hpp"
-#include "sedimentation.hpp"
+#include "rain_sedimentation.hpp"
 #include "self_collision.hpp"
 #include "sequential_split_integrator.hpp"
 #include "size_limiters.hpp"
@@ -131,7 +133,7 @@ int main(int argc, char* argv[])
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
                                0.62197, qsmall, 9.80616, 1.e-5, 5.e-3,
-                               0.988919555598356, 1.e3, 1.e-4, epsilon_qsat_fac, epsilon_self_coll};
+                               0.988919555598356, 1.23e8, 1.e-3, 1.e3, 1.e-4, epsilon_qsat_fac, epsilon_self_coll};
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
   double model_top = 2.e3;
@@ -198,8 +200,12 @@ int main(int argc, char* argv[])
 
   // Physics types that won't vary between cases (declare here to avoid calculating the
   // lookup tables in the case loop).
-  // Sedimentation process.
-  Sedimentation sed(constants, use_lookup, false);
+  // Accretion
+  Accretion accr(150., 1.15, 1.15);
+  // Autoconversion
+  Autoconversion autocon(constants, 2700., -1.79, 2.47, 25.e-6);
+  // Rain sedimentation process.
+  RainSedimentation rain_sed(constants, use_lookup, false);
   // Self-collision processes.
   SelfCollision self_coll(regularize_lambdar);
   // Evaporation process.
@@ -224,19 +230,20 @@ int main(int argc, char* argv[])
     spaecies::DimensionPtr lev_dim = dom.add_dimension("level", nlev);
     spaecies::VarDescPtr t_desc = dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K");
     spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
+    spaecies::VarDescPtr nc_desc = dom.add_var_desc("nc", spaecies::Float64Type, {lev_dim}, "1/kg");
+    spaecies::VarDescPtr qc_desc = dom.add_var_desc("qc", spaecies::Float64Type, {lev_dim}, "kg/kg");
     spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
     spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    spaecies::VarDescPtr test_desc = dom.add_var_desc("test", spaecies::Float64Type, {lev_dim}, "?", spaecies::VariableUsage::Diagnostic);
-    VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc, test_desc};
+    VarDescList state_descs = {t_desc, q_desc, nc_desc, qc_desc, nr_desc, qr_desc};
     VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
     State abs_tol(state_descs);
     std::fill_n(&abs_tol.get_variable("T")[0], nlev, 1.e-6);
     std::fill_n(&abs_tol.get_variable("q")[0], nlev, 1.e-8);
+    std::fill_n(&abs_tol.get_variable("nc")[0], nlev, 1.e-9);
+    std::fill_n(&abs_tol.get_variable("qc")[0], nlev, 1.e-17);
     std::fill_n(&abs_tol.get_variable("nr")[0], nlev, 1.e-9);
     std::fill_n(&abs_tol.get_variable("qr")[0], nlev, 1.e-17);
-    std::fill_n(&abs_tol.get_variable("test")[0], nlev, 1.e-17);
     State initial_state(state_descs);
-    std::fill_n(&initial_state.get_variable("test")[0], nlev, 0.0);
 
     // Set up initial condition.
     if (initial_condition == "adiabatic") {
@@ -266,15 +273,15 @@ int main(int argc, char* argv[])
         q_vec.push_back(q[i]);
       }
       nudge = std::make_shared<Nudging>(nudge_time_scale, t_vec, q_vec);
-      partition_2_process_vec = {&evap, &*nudge, &self_coll};
-      all_process_vec = {&sed, &*nudge, &self_coll, &evap};
+      partition_2_process_vec = {&evap, &*nudge, &self_coll, &accr, &autocon};
+      all_process_vec = {&rain_sed, &*nudge, &self_coll, &accr, &autocon, &evap};
     } else {
-      partition_2_process_vec = {&evap, &self_coll};
-      all_process_vec = {&sed, &self_coll, &evap};
+      partition_2_process_vec = {&evap, &self_coll, &accr, &autocon};
+      all_process_vec = {&rain_sed, &self_coll, &evap, &accr, &autocon};
     }
     SumProcess partition_2_processes(partition_2_process_vec);
     // Sum of local processes.
-    const auto& partition_1_processes = sed;
+    const auto& partition_1_processes = rain_sed;
 
     SumProcess all_processes{all_process_vec};
 
@@ -303,7 +310,7 @@ int main(int argc, char* argv[])
         backing_integrators.emplace_back(local_intg);
         std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(constants, size_limiters, *local_intg);
         backing_integrators.emplace_back(local_lim_intg);
-        std::shared_ptr<SedCflIntegrator> sed_intg = std::make_shared<SedCflIntegrator>(constants, grid, size_limiters, tend_descs, sed, regularize_lambdar);
+        std::shared_ptr<SedCflIntegrator> sed_intg = std::make_shared<SedCflIntegrator>(constants, grid, size_limiters, tend_descs, rain_sed, regularize_lambdar);
         backing_integrators.emplace_back(sed_intg);
         std::shared_ptr<SequentialSplitIntegrator> step_intg = std::make_shared<SequentialSplitIntegrator>(std::vector<const RainshaftIntegrator*>({&*local_lim_intg, &*sed_intg}));
         backing_integrators.emplace_back(step_intg);

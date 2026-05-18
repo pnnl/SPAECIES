@@ -26,6 +26,10 @@ struct RainshaftConstants {
   double dr_max;
   // rho at top of column (kg/m^3)
   double rho_top;
+  // nc at top of column (#/kg)
+  double nc_top;
+  // qc at top of column (kg/kg)
+  double qc_top;
   // nr at top of column (#/kg)
   double nr_top;
   // qr at top of column (kg/kg)

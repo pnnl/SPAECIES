@@ -11,7 +11,7 @@
 OperatorSplittingIntegrator::OperatorSplittingIntegrator(const RainshaftConstants &constants,
                                                          const RainshaftGrid &grid,
                                                          const SizeLimiters &size_limiters,
-                                                         const Sedimentation *const process_partition_1,
+                                                         const RainSedimentation *const process_partition_1,
                                                          const RainshaftProcess *const process_partition_2,
                                                          const VarDescList &state_descs,
                                                          const VarDescList &tend_descs,
@@ -70,7 +70,7 @@ RainshaftSolution OperatorSplittingIntegrator::integrate(double initial_time,
      * point number less than 1. This should be resolved in the next SUNDIALS
      * release */
     ARKodeSetCFLFraction(partition_1_mem, std::nextafter(1.0, 0.0));
-    ARKodeSetStabilityFn(partition_1_mem, create_stability<0, Sedimentation>(), (void*)&user_data);
+    ARKodeSetStabilityFn(partition_1_mem, create_stability<0, RainSedimentation>(), (void*)&user_data);
   }
   if (postprocess)
   {

@@ -1,5 +1,5 @@
-#ifndef SEDIMENTATION_HPP
-#define SEDIMENTATION_HPP
+#ifndef RAIN_SEDIMENTATION_HPP
+#define RAIN_SEDIMENTATION_HPP
 #include <vector>
 #include <optional>
 #include <tuple>
@@ -9,7 +9,7 @@ using boost::math::tgamma, boost::math::tgamma_lower;
 #include "lookup_linear.hpp"
 #include "rainshaft_process.hpp"
 
-class Sedimentation : public RainshaftProcess 
+class RainSedimentation : public RainshaftProcess 
 {
 private:
   static std::optional<LookupLinear> create_lookup(const RainshaftConstants &constants,
@@ -134,8 +134,8 @@ public:
   using Speeds = std::tuple<RealOptGrad<WithGrad, I>, RealOptGrad<WithGrad, I>>;
 
   // Constructor allowing use of lookup table.
-  Sedimentation(const RainshaftConstants& constants, bool use_v_table,
-                bool use_numerical_integration);
+  RainSedimentation(const RainshaftConstants& constants, bool use_v_table,
+                    bool use_numerical_integration);
 
   double calc_max_step(const RainshaftConstants &constants,
                        const RainshaftGrid &grid,
@@ -387,4 +387,4 @@ private:
 
 };
 
-#endif // SEDIMENTATION_HPP
+#endif // RAIN_SEDIMENTATION_HPP

@@ -7,18 +7,25 @@ bool warm_adiabatic_initial_condition(const RainshaftConstants &constants,
                                       double lapse_rate,
                                       double rel_hum_init,
                                       State& initial_state) {
-    // Coming up with an initial condition for t and q is slightly tricky, because
+  // Coming up with an initial condition for t and q is slightly tricky, because
   // we only have an implicit relationship between t, q, and dz. But since the
   // effect of q on layer height is not large, start by ignoring it, in which
   // case we do have an explicit relationship between t and dz.
   std::size_t nlev = grid.nlev;
   VarMut t = initial_state.get_variable("T");
   VarMut q = initial_state.get_variable("q");
+  VarMut nc = initial_state.get_variable("nc");
+  VarMut qc = initial_state.get_variable("qc");
   VarMut nr = initial_state.get_variable("nr");
   VarMut qr = initial_state.get_variable("qr");
   for (std::size_t i = 0; i != nlev; ++i) {
     nr[i] = 0.;
     qr[i] = 0.;
+  }
+  // Hack together a basic initial condition just to have some cloud amount here.
+  for (std::size_t i = 0; i != nlev; ++i) {
+    nc[i] = 1.23e8; // roughly 160 / cm^3 assuming density near sea level
+    qc[i] = 1.e-3; // In combination with the above, approximately 25 micron diameter starting cloud.
   }
   double rog = constants.rdry / constants.g;
   std::vector<double> z_int(nlev+1, 0.);

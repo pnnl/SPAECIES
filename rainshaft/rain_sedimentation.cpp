@@ -1,10 +1,10 @@
-#include "sedimentation.hpp"
+#include "rain_sedimentation.hpp"
 #include <cstddef>
 #include <cmath>
 #include <boost/math/special_functions/gamma.hpp>
 using boost::math::tgamma, boost::math::tgamma_lower;
 using std::pow, std::sqrt, std::cbrt, std::exp;
-std::optional<LookupLinear> Sedimentation::create_lookup(const RainshaftConstants &constants,
+std::optional<LookupLinear> RainSedimentation::create_lookup(const RainshaftConstants &constants,
                                       const bool use_v_table,
                                       const bool create_v0,
                                       const bool use_numerical_integration)
@@ -22,14 +22,14 @@ std::optional<LookupLinear> Sedimentation::create_lookup(const RainshaftConstant
   }
 }
 
-Sedimentation::Sedimentation(const RainshaftConstants &constants, bool use_v_table,
+RainSedimentation::RainSedimentation(const RainshaftConstants &constants, bool use_v_table,
                              bool use_numerical_integration)
     : use_numerical_integration(use_numerical_integration), 
       v0_table(create_lookup(constants, use_v_table, true, use_numerical_integration)),
       v3_table(create_lookup(constants, use_v_table, false, use_numerical_integration))
 {}
 
-double Sedimentation::calc_max_step(const RainshaftConstants &constants,
+double RainSedimentation::calc_max_step(const RainshaftConstants &constants,
                                     const RainshaftGrid &grid,
                                     const RainshaftDerivedVars& dvars,
                                     double cfl) const
@@ -48,7 +48,7 @@ double Sedimentation::calc_max_step(const RainshaftConstants &constants,
   return cfl / spatial_frequency;
 }
 
-void Sedimentation::calc_tend(const RainshaftConstants &constants,
+void RainSedimentation::calc_tend(const RainshaftConstants &constants,
                               const RainshaftGrid &grid,
                               const StateConst &state,
                               const RainshaftDerivedVars &dvars,
@@ -82,7 +82,7 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
   }
 }
 
-void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
+void RainSedimentation::calc_tend_jac(const RainshaftConstants &constants,
                                   const RainshaftGrid &grid,
                                   const StateConst& state,
                                   const RainshaftDerivedVars &dvars,

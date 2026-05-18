@@ -26,15 +26,15 @@ public:
   // Other constructors as per the rule of 5.
   NetcdfReader(const NetcdfReader&) = delete;
   NetcdfReader& operator=(const NetcdfReader &) = delete;
-  NetcdfReader(NetcdfReader &&other) noexcept : is_open(true), ncid(other.ncid) {
+  NetcdfReader(NetcdfReader &&other) noexcept : is_open(true), fid(other.fid) {
     other.is_open = false;
-    other.ncid = -100;
+    other.fid = -100;
   }
   NetcdfReader& operator=(NetcdfReader &&other) {
     is_open = true;
-    ncid = other.ncid;
+    fid = other.fid;
     other.is_open = false;
-    other.ncid = -100;
+    other.fid = -100;
     return *this;
   }
 
@@ -52,7 +52,7 @@ protected:
   bool is_open;
 
   // NetCDF file id
-  int ncid;
+  int fid;
 
 };
 
@@ -88,7 +88,7 @@ public:
 protected:
 
   // NetCDF file id
-  int ncid;
+  int fid;
 
 };
 

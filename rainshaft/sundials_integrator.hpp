@@ -182,22 +182,32 @@ protected:
     State state = n_vector_to_state(y, cast_data.state_descs);
     VarMut t = state.get_variable("T");
     VarMut q = state.get_variable("q");
+    VarMut nc = state.get_variable("nc");
+    VarMut qc = state.get_variable("qc");
     VarMut nr = state.get_variable("nr");
     VarMut qr = state.get_variable("qr");
 
     for (std::size_t i = 0; i != t.size(); ++i) {
       if (qr[i] < cast_data.constants.qsmall) {
-        // Note that for the "original" P3 method applied to the rainshaft model,
-        // which this class was designed for, the only way to get significant
-        // negative qr is from excessive evaporation (a source of q), so this
-        // should never drive q negative. Notably, this is only true so long as
-        // the CFL condition is not violated in the sedimentation of qr (which
-        // should not be a problem so long as sed_cfl_integrator is used).
         q[i] += qr[i];
         t[i] -= qr[i] * cast_data.constants.latvap / cast_data.constants.cp;
         qr[i] = 0.;
       }
-      // nr is not conserved by local processes, but we do apply size limiters.
+      // Note that the following *could* produce negative q if humidity is low
+      // in-cloud when autoconversion/accretion/WBF is depleting qc. This shouldn't
+      // be a concern in any realistic circumstances because if qc was nonzero
+      // at the beginning of the time step, q should be well above zero. However,
+      // it may be possible to have a problem here if an unphysical state is
+      // input (e.g. due to sequential splitting) or if there is a poorly-resolved
+      // sink of q (e.g. deposition onto ice). This will particularly be a concern
+      // when the WBF process is active, if it is not adequately resolved.
+      if (qc[i] < cast_data.constants.qsmall) {
+        q[i] += qc[i];
+        t[i] -= qc[i] * cast_data.constants.latvap / cast_data.constants.cp;
+        qc[i] = 0.;
+      }
+      // number is not conserved by local processes, but we do apply size limiters.
+      nc[i] = std::max(nc[i], 0.); //cast_data.size_limiters.limited_nc(nc[i], qc[i]);  (not yet implemented)
       nr[i] = cast_data.size_limiters.limited_nr(nr[i], qr[i]);
       // Note: This t limiter is not in the original P3 code, which may silently
       // accept negative t or crash on negative t, depending on treatment of
