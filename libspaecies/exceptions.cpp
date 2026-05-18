@@ -55,4 +55,17 @@ VariableNotFoundException::VariableNotFoundException(const VariableNotFoundExcep
   : runtime_error(other) {
 }
 
+std::string invalid_array_format_string(const std::string& name, const std::string& details) {
+  return "array format for '" + name + "' is invalid: " + details;
+}
+
+InvalidArrayFormatException::InvalidArrayFormatException(const std::string& name,
+                                                         const std::string& details)
+  : runtime_error(invalid_array_format_string(name, details)) {
+}
+
+InvalidArrayFormatException::InvalidArrayFormatException(const InvalidArrayFormatException& other) noexcept
+  : runtime_error(other) {
+}
+
 }

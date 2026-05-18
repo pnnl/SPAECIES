@@ -19,13 +19,13 @@ public:
   std::vector<DimensionPtr> get_dimensions(const std::vector<std::string>& names);
   // Add a variable to this domain, returning a pointer to the constructed
   // variable descriptor.
-  VarDescPtr add_var_desc(const std::string& name,
+  VarDescPtr add_var_desc(std::string name,
                           VariableType type,
-                          const std::vector<DimensionPtr> dimensions,
-                          const std::string units,
-                          VariableConstantStatus constant_status=IsNotConstant,
-                          const std::optional<const std::string>& description=std::optional<const std::string>(),
-                          const std::optional<const std::string>& standard_name=std::optional<const std::string>());
+                          std::vector<DimensionPtr> dimensions,
+                          std::string units,
+                          VariableUsage usage=Prognostic,
+                          std::optional<std::string> description=std::nullopt,
+                          std::optional<std::string> standard_name=std::nullopt);
   // Retrieve the variable descriptor with a given name.
   VarDescPtr get_var_desc(const std::string& name);
   // Retrieve multiple variable descriptors with given names.

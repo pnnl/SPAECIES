@@ -6,6 +6,7 @@
 #include "rainshaft_integrator.hpp"
 #include "sundials/sundials_context.hpp"
 #include "nvector/nvector_serial.h"
+#include "nvector_serial_diagnostic.hpp"
 #include "sunmatrix/sunmatrix_dense.h"
 #include "rainshaft_integrator.hpp"
 #include "rainshaft_constants.hpp"
@@ -216,14 +217,14 @@ protected:
   // makes a copy of the data.
   static N_Vector view_to_n_vector(const sundials::Context &sun_ctxt, const spaecies::VariableArrayView<const double> &view)
   {
-    N_Vector y = N_VNew_Serial(view.size(), sun_ctxt);
+    N_Vector y = N_VNew_SerialDiagnostic(view.prognostic_size(), view.size(), sun_ctxt);
     std::copy_n(view.data(), view.size(), N_VGetArrayPointer(y));
     return y;
   }
 
   N_Vector create_abs_tol_n_vector() const
   {
-    N_Vector vec = N_VNew_Serial(abs_tol.size(), sun_ctxt);
+    N_Vector vec = N_VNew_SerialDiagnostic(abs_tol.prognostic_size(), abs_tol.size(), sun_ctxt);
     std::copy_n(abs_tol.data(), abs_tol.size(), N_VGetArrayPointer(vec));
     return vec;
   }

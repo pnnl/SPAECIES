@@ -42,6 +42,12 @@ public:
 
 };
 
+class InvalidArrayFormatException : public std::runtime_error {
+public:
+  InvalidArrayFormatException(const std::string& name, const std::string& details);
+  InvalidArrayFormatException(const InvalidArrayFormatException& other) noexcept;
+};
+
 }
 
 #endif // SPAECIES_EXCEPTIONS_HPP

@@ -48,21 +48,22 @@ const std::string INVALIDNAME = "[invalid type]";
 std::string spaecies_type_name(VariableType type);
 
 // Is the variable a constant in time?
-enum VariableConstantStatus {
-  IsConstant,
-  IsNotConstant
+enum VariableUsage {
+  Prognostic,
+  Diagnostic,
+  Constant
 };
 
 class VariableDescriptor {
 public:
 
-  VariableDescriptor(const std::string& name,
+  VariableDescriptor(std::string name,
                      VariableType type,
-                     const std::vector<DimensionPtr>& dimensions,
-                     const std::string& units,
-                     VariableConstantStatus constant_status=IsNotConstant,
-                     const std::optional<const std::string>& description=std::nullopt,
-                     const std::optional<const std::string>& standard_name=std::nullopt);
+                     std::vector<DimensionPtr> dimensions,
+                     std::string units,
+                     VariableUsage usage=Prognostic,
+                     std::optional<std::string> description=std::nullopt,
+                     std::optional<std::string> standard_name=std::nullopt);
   // Short (but unique) name identifying this variable.
   const std::string name;
   // Type of the variable.
@@ -72,11 +73,11 @@ public:
   // Units associated with the variable as a string.
   const std::string units;
   // Whether the variable is constant over time.
-  const VariableConstantStatus constant_status;
+  const VariableUsage usage;
   // Metadata describing the meaning of this variable.
-  const std::optional<const std::string> description;
+  const std::optional<std::string> description;
   // "Standard" name that may be used by external tools.
-  const std::optional<const std::string> standard_name;
+  const std::optional<std::string> standard_name;
   // Total number of values associated with the variable, i.e. the product of
   // all dimension sizes.
   std::size_t size();

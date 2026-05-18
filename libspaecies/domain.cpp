@@ -1,6 +1,7 @@
 #include "domain.hpp"
 
 #include <algorithm>
+#include <utility>
 
 #include "exceptions.hpp"
 
@@ -30,22 +31,23 @@ std::vector<DimensionPtr> Domain::get_dimensions(const std::vector<std::string>&
   std::vector<DimensionPtr> dim_ptrs(names.size());
   std::transform(names.cbegin(), names.cend(),
                  dim_ptrs.begin(),
-                 [&](const std::string name) { return get_dimension(name); });
+                 [&](const std::string& name) { return get_dimension(name); });
   return dim_ptrs;
 }
 
-VarDescPtr Domain::add_var_desc(const std::string& name,
+VarDescPtr Domain::add_var_desc(std::string name,
                                 VariableType type,
-                                const std::vector<DimensionPtr> dimensions,
-                                const std::string units,
-                                VariableConstantStatus constant_status,
-                                const std::optional<const std::string>& description,
-                                const std::optional<const std::string>& standard_name) {
-  VarDescPtr var_desc = std::make_shared<VariableDescriptor>(name, type, dimensions,
-                                                             units, constant_status,
-                                                             description, standard_name);
-  var_descs.push_back(var_desc);
-  return var_desc;
+                                std::vector<DimensionPtr> dimensions,
+                                std::string units,
+                                VariableUsage usage,
+                                std::optional<std::string> description,
+                                std::optional<std::string> standard_name) {
+  var_descs.push_back(std::make_shared<VariableDescriptor>(std::move(name), type,
+                                                           std::move(dimensions),
+                                                           std::move(units), usage,
+                                                           std::move(description),
+                                                           std::move(standard_name)));
+  return var_descs.back();
 }
 
 // Retrieve the variable with a given name
@@ -66,7 +68,7 @@ std::vector<VarDescPtr> Domain::get_var_descs(const std::vector<std::string>& na
   std::vector<VarDescPtr> var_desc_ptrs(names.size());
   std::transform(names.cbegin(), names.cend(),
                  var_desc_ptrs.begin(),
-                 [&](const std::string name) { return get_var_desc(name); });
+                 [&](const std::string& name) { return get_var_desc(name); });
   return var_desc_ptrs;
 }
 

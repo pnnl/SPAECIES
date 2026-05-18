@@ -33,23 +33,23 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWith
 endif()
 
 find_package(NetCDF REQUIRED)
-find_package(SUNDIALS 7.3.0 QUIET COMPONENTS arkode sunlinsollapackdense)
+find_package(SUNDIALS 7.7.0 QUIET COMPONENTS arkode sunlinsollapackdense)
 if (NOT SUNDIALS_FOUND)
   include(FetchContent)
   set(FETCHCONTENT_QUIET OFF)
   FetchContent_Declare(sundials
     GIT_REPOSITORY https://github.com/LLNL/sundials.git
-    GIT_TAG v7.3.0
+    GIT_TAG v7.7.0
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE
   )
-  set(BUILD_CVODE OFF)
-  set(BUILD_CVODES OFF)
-  set(BUILD_IDA OFF)
-  set(BUILD_IDAS OFF)
-  set(BUILD_KINSOL OFF)
-  set(ENABLE_LAPACK ON)
-  set(EXAMPLES_ENABLE_C OFF)
+  set(SUNDIALS_ENABLE_CVODE OFF)
+  set(SUNDIALS_ENABLE_CVODES OFF)
+  set(SUNDIALS_ENABLE_IDA OFF)
+  set(SUNDIALS_ENABLE_IDAS OFF)
+  set(SUNDIALS_ENABLE_KINSOL OFF)
+  set(SUNDIALS_ENABLE_LAPACK ON)
+  set(SUNDIALS_EXAMPLES_ENABLE_C OFF)
   set(BUILD_SHARED_LIBS OFF)
   FetchContent_MakeAvailable(sundials)
 endif()
