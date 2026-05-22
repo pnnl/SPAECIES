@@ -276,10 +276,10 @@ void NetcdfWriter::write_walltime_ms(double walltime_ms, std::size_t case_idx) {
 void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, double dt_partition_2, double rel_tol,
                                   bool postprocess, bool use_lookup, std::string method_type, int steps_per_output,
                                   std::string initial_condition_file, int num_cases, int icase_in, double final_time,
-                                  bool do_nudging) {
+                                  std::string processes) {
   int orderid, dtid, dt_partition_1id, dt_partition_2id, rel_tolid;
   int postprocessid, use_lookupid, method_typeid, steps_per_outputid;
-  int initial_condition_fileid, num_casesid, icase_inid, final_timeid, do_nudgingid;
+  int initial_condition_fileid, num_casesid, icase_inid, final_timeid, processesid;
 
   // method order
   nc_def_var(ncid, "method_order", NC_INT, 0, NULL, &orderid);
@@ -340,6 +340,6 @@ void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, d
   nc_put_var_double(ncid, final_timeid, &final_time);
 
   // nudging flag
-  nc_def_var(ncid, "do_nudging", NC_UBYTE, 0, NULL, &do_nudgingid);
-  nc_put_var(ncid, do_nudgingid, &do_nudging);
+  nc_def_var(ncid, "processes", NC_STRING, 0, NULL, &processesid);
+  nc_put_var(ncid, processesid, &processes);
 }

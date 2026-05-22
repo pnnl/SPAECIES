@@ -84,7 +84,7 @@ public:
   void write_metadata(int order, double dt, double dt_partition_1, double dt_partition_2, double rel_tol,
                       bool postprocess, bool use_lookup, std::string method_type, int steps_per_output,
                       std::string initial_condition_file, int num_cases, int icase_in, double final_time,
-                      bool do_nudging);
+                      std::string processes);
 protected:
 
   // NetCDF file id
