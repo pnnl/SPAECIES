@@ -276,7 +276,12 @@ int main(int argc, char* argv[])
     SumProcess partition_2_processes{partition_2_process_vec};
 
     // Check that all variable need by processes are present
-    // TODO
+    const std::set<std::string> require_vars = all_processes.get_required_vars();
+    for (const spaecies::VarDescPtr &v : state_descs) {
+      if (require_vars.count(v->name) < 1) {
+        throw std::logic_error("Missing the required variable " + v->name);
+      }
+    }
 
     SizeLimiters size_limiters(constants, 10.e-6, 5.e-3, 0.);
 
