@@ -1,6 +1,7 @@
 add_executable(rainshaft
   accretion.cpp
   autoconversion.cpp
+  cloud_sedimentation.cpp
   evaporation.cpp
   explicit_integrator.cpp
   imex_integrator.cpp

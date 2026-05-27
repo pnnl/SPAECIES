@@ -1,6 +1,7 @@
 #include "spaecies.hpp"
 #include "accretion.hpp"
 #include "autoconversion.hpp"
+#include "cloud_sedimentation.hpp"
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
 #include "fixed_substep_integrator.hpp"
@@ -204,6 +205,8 @@ int main(int argc, char* argv[])
   Accretion accr(150., 1.15, 1.15);
   // Autoconversion
   Autoconversion autocon(constants, 2700., -1.79, 2.47, 25.e-6);
+  // Cloud sedimentation process
+  CloudSedimentation cloud_sed;
   // Rain sedimentation process.
   RainSedimentation rain_sed(constants, use_lookup, false);
   // Self-collision processes.
@@ -273,11 +276,11 @@ int main(int argc, char* argv[])
         q_vec.push_back(q[i]);
       }
       nudge = std::make_shared<Nudging>(nudge_time_scale, t_vec, q_vec);
-      partition_2_process_vec = {&evap, &*nudge, &self_coll, &accr, &autocon};
-      all_process_vec = {&rain_sed, &*nudge, &self_coll, &accr, &autocon, &evap};
+      partition_2_process_vec = {&evap, &*nudge, &self_coll, &accr, &autocon, &cloud_sed};
+      all_process_vec = {&rain_sed, &*nudge, &self_coll, &accr, &autocon, &cloud_sed, &evap};
     } else {
-      partition_2_process_vec = {&evap, &self_coll, &accr, &autocon};
-      all_process_vec = {&rain_sed, &self_coll, &evap, &accr, &autocon};
+      partition_2_process_vec = {&evap, &self_coll, &accr, &autocon, &cloud_sed};
+      all_process_vec = {&rain_sed, &self_coll, &evap, &accr, &autocon, &cloud_sed};
     }
     SumProcess partition_2_processes(partition_2_process_vec);
     // Sum of local processes.
