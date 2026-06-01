@@ -24,7 +24,7 @@ std::optional<LookupLinear> Sedimentation::create_lookup(const RainshaftConstant
 
 Sedimentation::Sedimentation(const RainshaftConstants &constants, bool use_v_table,
                              bool use_numerical_integration)
-    : use_numerical_integration(use_numerical_integration), 
+    : use_numerical_integration(use_numerical_integration),
       v0_table(create_lookup(constants, use_v_table, true, use_numerical_integration)),
       v3_table(create_lookup(constants, use_v_table, false, use_numerical_integration))
 {}
@@ -34,8 +34,8 @@ double Sedimentation::calc_max_step(const RainshaftConstants &constants,
                                     const RainshaftDerivedVars& dvars,
                                     double cfl) const
 {
-  double lambdar_top = std::cbrt(constants.pi * constants.rhow
-                                  * constants.nr_top / constants.qr_top);
+  double lambdar_top = calc_lambdar(constants.pi, constants.rhow, constants.mur,
+                                    constants.nr_top, constants.qr_top);
   const auto [v0, v3] = rain_fall_speeds(constants, dvars.rho_dry[0],
                                       lambdar_top);
   double spatial_frequency = v3 / dvars.dz[0];
@@ -54,7 +54,7 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
                               const RainshaftDerivedVars &dvars,
                               Tendency& tend) const
 {
-  const double lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
+  const double lambdar_top = calc_lambdar(constants.pi, constants.rhow, constants.mur, constants.nr_top, constants.qr_top);
   auto [v0_prev, v3_prev] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
   double nr_prev = constants.nr_top;
   double qr_prev = constants.qr_top;
@@ -72,7 +72,7 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
     const auto [v0, v3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
     const double nr_flux = calc_nr_flux(nr[il], dvars.rho_dry[il], v0);
     const double qr_flux = calc_qr_flux(qr[il], dvars.rho_dry[il], v3);
-    
+
     nr_tend[il] += calc_nr_tend(dvars.dz[il], dvars.rho_dry[il], nr_flux, nr_flux_prev);
     qr_tend[il] += calc_qr_tend(dvars.dz[il], dvars.rho_dry[il], qr_flux, qr_flux_prev);
 
@@ -88,7 +88,7 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
                                   const RainshaftDerivedVars &dvars,
                                   Matrix jac) const
 {
-  const double lambdar_top = cbrt(constants.pi * constants.rhow * constants.nr_top / constants.qr_top);
+  const double lambdar_top = calc_lambdar(constants.pi, constants.rhow, constants.mur, constants.nr_top, constants.qr_top);
   auto [v0_prev, v3_prev] = rain_fall_speeds<true>(constants, {constants.rho_top, {0., 0.}}, {lambdar_top, {0., 0.}});
   double nr_prev = constants.nr_top;
   double qr_prev = constants.qr_top;

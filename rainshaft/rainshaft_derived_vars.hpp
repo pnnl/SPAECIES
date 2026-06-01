@@ -2,6 +2,7 @@
 #define RAINSHAFT_DERIVED_VARS_HPP
 #include <vector>
 #include <array>
+#include <cmath>
 
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
@@ -82,8 +83,26 @@ public:
     } else {
       return dz_i;
     }
-  } 
+  }
 };
+
+// standard definition of lambdar:
+//   lambdar^3 := pi rho_w / 6 (mur+1)(mur+2)(mur+3) nr/qr
+constexpr double calc_lambdar(const double pi, const double rhow, const double mur,
+  const double nr, const double qr)
+{
+  const double gamma_ratio = (mur+1)*(mur+2)*(mur+3);
+  return std::cbrt(pi * rhow / 6.0 * gamma_ratio * nr/qr);
+}
+
+// regularized definition of lambdar with regularization parameter qsmall:
+//   lambdar^3 := pi rho_w / 6  (mur+1)(mur+2)(mur+3) (nr+1e8*qsmall)/(qr+qsmall)
+constexpr double calc_lambdar(const double pi, const double rhow, const double mur,
+  const double nr, const double qr, const double qsmall)
+{
+  const double gamma_ratio = (mur+1)*(mur+2)*(mur+3);
+  return std::cbrt(pi * rhow / 6.0 * gamma_ratio * (nr + qsmall*1.e8)/(qr + qsmall));
+}
 
 // Convert cell widths to interface heights.
 std::vector<double> dz_to_z_int(const std::vector<double> dz);

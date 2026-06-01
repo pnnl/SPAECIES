@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
   // Load from command line to check for input file
   po::variables_map vm{};
   po::store(parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);  
+  po::notify(vm);
 
   // Load from settings file if available
   if (vm.count("i")) {
@@ -111,13 +111,13 @@ int main(int argc, char* argv[])
     std::ifstream settings_file("settings_filtered.ini");
     vm = po::variables_map();
     po::store(po::parse_config_file(settings_file, desc), vm);
-    po::notify(vm); 
+    po::notify(vm);
     std::filesystem::remove("settings_filtered.ini");
   } else {
     std::cout << "Setting parameters from command line arguments..." << std::endl;
   }
   std::cout << "---------------------------------------------------" << std::endl;
-  
+
   // Setup dependencies
   option_dependency<std::string>(vm, "case_idx", "ic_file");    // specifying a particular case_idx requires input E3SM data file
 
@@ -146,12 +146,12 @@ int main(int argc, char* argv[])
   if (dt_partition_2 < 0.0) {
     dt_partition_2 = abs(dt_partition_2) * dt;
   }
- 
+
   // Set up model constants.
   // SPS: Choose rho_top in a more principled way?
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
-                               0.62197, qsmall, 9.80616, 1.e-5, 5.e-3,
+                               0.62197, qsmall, 9.80616, 1.e-5, 5.e-3, 0.0,
                                0.988919555598356, 1.e3, 1.e-4, epsilon_qsat_fac, epsilon_self_coll};
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
@@ -349,7 +349,7 @@ int main(int argc, char* argv[])
       int error_flag;
       RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state, error_flag);
       auto after_sol = high_resolution_clock::now();
-  
+
       // Time taken for solution.
       duration<double, std::milli> walltime_ms = after_sol - before_sol;
       std::cout << "Case " << icase << ", Time: " << walltime_ms.count() << std::endl;
