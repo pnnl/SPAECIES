@@ -112,7 +112,7 @@ private:
     const double t2_term = 0.32 * cbrt(get_val(schmidt_num)) / sqrt_visc_over_rho;
     const double scaled_evap = t2_term * get_val(v_evap);
     const double t2 = scale_inv_lambdar + scaled_evap;
-    
+
     const double tau_inv = t1 * t2;
 
     if constexpr (WithGrad) {
@@ -310,7 +310,7 @@ public:
 std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& constants, const double t, const double q,
   const double nr, const double qr, const double p_mid, const RealOptGrad<WithGrad, 2> rho_dry, const RealOptGrad<WithGrad, 2> lambdar) const
   {
-    if (!regularize_qsat) 
+    if (!regularize_qsat)
     {
       // Skip the rest of this if no rain.
       if (qr < constants.qsmall)
@@ -340,7 +340,7 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
       // regularization
       const RealOptGrad<WithGrad, 1> q_sat_dry = sat_form.q_sat_dry<WithGrad>(t, p_mid);
       const double epsilon_qsat = constants.epsilon_qsat_fac * get_val(q_sat_dry);
-      
+
       if (q <= get_val(q_sat_dry) - epsilon_qsat) { // this is the original value of q_evap
         const RealOptGrad<WithGrad, 1> diffusivity = calc_diffusivity<WithGrad>(t, p_mid);
         const RealOptGrad<WithGrad, 2> visc_over_rho = calc_visc_over_rho<WithGrad>(t, rho_dry);
@@ -373,21 +373,21 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
           // the same factor
           const double dpoly_reg = 140.0 * pow(delta, 3) + 420.0 * pow(delta, 4) + 420.0 * pow(delta, 5) + 140.0 * pow(delta, 6);
           const RealOptGrad<WithGrad, 4> q_evap_reg = {get_val(q_evap) * poly_reg,
-                                                       {get_grad(q_evap)[0] * poly_reg + get_val(q_evap) * dpoly_reg * -get_grad(q_sat_dry)[0], 
-                                                        get_grad(q_evap)[1] * poly_reg + get_val(q_evap) * dpoly_reg, 
-                                                        get_grad(q_evap)[2] * poly_reg, 
+                                                       {get_grad(q_evap)[0] * poly_reg + get_val(q_evap) * dpoly_reg * -get_grad(q_sat_dry)[0],
+                                                        get_grad(q_evap)[1] * poly_reg + get_val(q_evap) * dpoly_reg,
+                                                        get_grad(q_evap)[2] * poly_reg,
                                                         get_grad(q_evap)[3] * poly_reg}};
           const double nr_over_qr = (nr + constants.qsmall * (1.e8)) / (qr + constants.qsmall);
           const RealOptGrad<WithGrad, 4> n_evap_reg = {get_val(q_evap_reg) * nr_over_qr,
-                                                       {get_grad(q_evap_reg)[0] * nr_over_qr, 
+                                                       {get_grad(q_evap_reg)[0] * nr_over_qr,
                                                         get_grad(q_evap_reg)[1] * nr_over_qr,
                                                         get_grad(q_evap_reg)[2] * nr_over_qr + get_val(q_evap_reg) / (qr + constants.qsmall),
                                                         get_grad(q_evap_reg)[3] * nr_over_qr - get_val(q_evap_reg) * (nr + constants.qsmall * (1.e8)) / pow(qr + constants.qsmall, 2)}};
           const double Lv_over_cp = -constants.latvap / constants.cp;
           const RealOptGrad<WithGrad, 4> t_evap_reg = {get_val(q_evap_reg) * Lv_over_cp,
-                                                       {get_grad(q_evap_reg)[0] * Lv_over_cp, 
-                                                        get_grad(q_evap_reg)[1] * Lv_over_cp, 
-                                                        get_grad(q_evap_reg)[2] * Lv_over_cp, 
+                                                       {get_grad(q_evap_reg)[0] * Lv_over_cp,
+                                                        get_grad(q_evap_reg)[1] * Lv_over_cp,
+                                                        get_grad(q_evap_reg)[2] * Lv_over_cp,
                                                         get_grad(q_evap_reg)[3] * Lv_over_cp}};
           return {q_evap_reg, n_evap_reg, t_evap_reg};
         } else {
@@ -448,40 +448,44 @@ private:
     }
     // Factor converting D^3 to drop mass in grams.
     const double d3_to_gram = 1000. * constants.pi * constants.rhow / 6.;
-    
-    // Integral for D <= 134.43 micron.
+    // for Vevapi (integral for D < 134.43 micron)
     const double int1_fac = sqrt(4579.5) * cbrt(d3_to_gram);
     const double lambdar_neg_2_5 = pow(lambdar, -2.5);
     const double lambdar_size1 = lambdar * 1.3443e-4;
-    const double term1 = int1_fac * tgamma_lower(3.5, lambdar_size1) * lambdar_neg_2_5;
-
-    // Integral for 134.43 micron < D <= 1511.64 micron.
+    // for Vevapi (integral for 134.43 micron < D < 1511.64 micron)
     const double int2_fac = sqrt(49.62) * pow(d3_to_gram, 1.0 / 6.0);
     const double lambdar_neg_2 = pow(lambdar, -2);
     const double lambdar_size2 = lambdar * 1.51164e-3;
-    const double term2 = int2_fac * (tgamma(3., lambdar_size1) - tgamma(3., lambdar_size2)) * lambdar_neg_2;
-
-    // Integral for 1511.64 micron < D <= 3477.84 micron.
+    // for Vevapi (integral for 1511.64 micron < D < 3477.84 micron)
     const double int3_fac = sqrt(17.32) * pow(d3_to_gram, 1.0 / 12.0);
     const double lambdar_neg_1_75 = pow(lambdar, -1.75);
     const double lambdar_size3 = lambdar * 3.47784e-3;
-    const double term3 = int3_fac * (tgamma(2.75, lambdar_size2) - tgamma(2.75, lambdar_size3)) * lambdar_neg_1_75;
-    
-    // Integral for 3477.84 micron < D.
+    // for Vevapi (integral for 3477.84 micron < D)
     const double int4_fac = sqrt(9.17);
     const double lambdar_neg_1_5 = pow(lambdar, -1.5);
-    const double term4 = int4_fac * tgamma(2.5, lambdar_size3) * lambdar_neg_1_5;
 
-    const double v_evap = term1 + term2 + term3 + term4;
+    auto Vevapi = [&](const int i){
+      const double term1 = int1_fac * tgamma_lower(constants.mur+2.5+i, lambdar_size1)
+                                    * lambdar_neg_2_5;
+      const double term2 = int2_fac * (tgamma(constants.mur+2.0+i, lambdar_size1)
+                                     - tgamma(constants.mur+2.0+i, lambdar_size2))
+                                    * lambdar_neg_2;
+      const double term3 = int3_fac * (tgamma(constants.mur+1.75+i, lambdar_size2)
+                                     - tgamma(constants.mur+1.75+i, lambdar_size3))
+                                    * lambdar_neg_1_75;
+      const double term4 = int4_fac * tgamma(constants.mur+1.5+i, lambdar_size3)
+                                    * lambdar_neg_1_5;
+      return term1 + term2 + term3 + term4;
+    };
+
+    const double Vevap1 = Vevapi(1);
 
     if constexpr (WithGrad) {
-      const double term1_dl = (term1 - int1_fac * tgamma_lower(4.5, lambdar_size1) * lambdar_neg_2_5) / lambdar;
-      const double term2_dl = (term2 - int2_fac * (tgamma(4., lambdar_size1) - tgamma(4., lambdar_size2)) * lambdar_neg_2) / lambdar;
-      const double term3_dl = (term3 - int3_fac * (tgamma(3.75, lambdar_size2) - tgamma(3.75, lambdar_size3)) * lambdar_neg_1_75) / lambdar;
-      const double term4_dl = (term4 - int4_fac * tgamma(3.5, lambdar_size3) * lambdar_neg_1_5) / lambdar;
-      return {v_evap, {term1_dl + term2_dl + term3_dl + term4_dl}};
+      const double Vevap2 = Vevapi(2);
+
+      return {Vevap1, {((constants.mur+1)*Vevap1 - Vevap2)}};
     } else {
-      return v_evap;
+      return Vevap1;
     }
   }
 
@@ -489,6 +493,9 @@ private:
   template <bool WithGrad = false>
   static RealOptGrad<WithGrad, 1> calc_v_evap_numerical(const RainshaftConstants &constants, const double lambdar)
   {
+    if (constants.mur != 0.0)
+      throw std::logic_error("Numerical integration of evaporation speed is not supported for mur != 0");
+
     constexpr double dd = 2.; // micron
     constexpr std::size_t low_k = 1;
     constexpr std::size_t high_k = 10000;
