@@ -9,7 +9,7 @@ using boost::math::tgamma, boost::math::tgamma_lower;
 #include "lookup_linear.hpp"
 #include "rainshaft_process.hpp"
 
-class Sedimentation : public RainshaftProcess 
+class Sedimentation : public RainshaftProcess
 {
 private:
   static std::optional<LookupLinear> create_lookup(const RainshaftConstants &constants,
@@ -139,7 +139,7 @@ public:
 
   double calc_max_step(const RainshaftConstants &constants,
                        const RainshaftGrid &grid,
-                       const RainshaftDerivedVars& dvars, 
+                       const RainshaftDerivedVars& dvars,
                        double cfl=1) const;
 
   // Calculate tendency from current state.
@@ -161,8 +161,8 @@ public:
   // For a given value of lambdar, what are the rain number and mass fall speeds
   // and their derivatives wrt (T, q, nr, qr)?
   template <bool WithGrad = false>
-  Speeds<WithGrad, 4> rain_fall_speeds(const RainshaftConstants &constants, 
-                                           RealOptGrad<WithGrad, 2> rho, 
+  Speeds<WithGrad, 4> rain_fall_speeds(const RainshaftConstants &constants,
+                                           RealOptGrad<WithGrad, 2> rho,
                                            RealOptGrad<WithGrad, 2> lambdar) const
   {
     // Calculate correction for air density, with reference state at 1000 hPa and 273.15 K.
@@ -178,18 +178,18 @@ public:
       }
 
       // Extract values from lookup table. Note: derivatives wrt lambdar are computed
-      // from finite differences in lookup_value, NOT 
+      // from finite differences in lookup_value, NOT
       const double d_micron = 1.e6 / get_val(lambdar);
-      const RealGrad<1> v0 = v0_table->lookup_value(d_micron); 
+      const RealGrad<1> v0 = v0_table->lookup_value(d_micron);
       const RealGrad<1> v3 = v3_table->lookup_value(d_micron);
 
       if constexpr (WithGrad) {
         return {{get_val(rf) * get_val(v0), {get_grad(rf)[0] * get_val(v0),
-                                             get_grad(rf)[1] * get_val(v0), 
+                                             get_grad(rf)[1] * get_val(v0),
                                              get_val(rf) * -get_grad(v0)[0] * d_micron / get_val(lambdar) * get_grad(lambdar)[0],
                                              get_val(rf) * -get_grad(v0)[0] * d_micron / get_val(lambdar) * get_grad(lambdar)[1]}},
-                {get_val(rf) * get_val(v3), {get_grad(rf)[0] * get_val(v3), 
-                                             get_grad(rf)[1] * get_val(v3), 
+                {get_val(rf) * get_val(v3), {get_grad(rf)[0] * get_val(v3),
+                                             get_grad(rf)[1] * get_val(v3),
                                              get_val(rf) * -get_grad(v3)[0] * d_micron / get_val(lambdar) * get_grad(lambdar)[0],
                                              get_val(rf) * -get_grad(v3)[0] * d_micron / get_val(lambdar) * get_grad(lambdar)[1]}}};
       } else {
@@ -202,11 +202,11 @@ public:
 
       if constexpr (WithGrad) {
         return {{get_val(rf) * get_val(v0), {get_grad(rf)[0] * get_val(v0),
-                                             get_grad(rf)[1] * get_val(v0), 
+                                             get_grad(rf)[1] * get_val(v0),
                                              get_val(rf) * get_grad(v0)[0] * get_grad(lambdar)[0],
                                              get_val(rf) * get_grad(v0)[0] * get_grad(lambdar)[1]}},
-                {get_val(rf) * get_val(v3), {get_grad(rf)[0] * get_val(v3), 
-                                             get_grad(rf)[1] * get_val(v3), 
+                {get_val(rf) * get_val(v3), {get_grad(rf)[0] * get_val(v3),
+                                             get_grad(rf)[1] * get_val(v3),
                                              get_val(rf) * get_grad(v3)[0] * get_grad(lambdar)[0],
                                              get_val(rf) * get_grad(v3)[0] * get_grad(lambdar)[1]}}};
       } else {
@@ -227,8 +227,8 @@ private:
   std::optional<LookupLinear> v3_table;
 
   template <bool WithGrad = false>
-  static Speeds<WithGrad, 1> rain_fall_speeds(const RainshaftConstants &constants, 
-                                           const double lambdar, 
+  static Speeds<WithGrad, 1> rain_fall_speeds(const RainshaftConstants &constants,
+                                           const double lambdar,
                                            const bool use_numerical_integration)
   {
     if (use_numerical_integration) {
@@ -255,52 +255,44 @@ private:
       return {};
     }
 
-    double d3_to_gram = 1000. * constants.pi * constants.rhow / 6.;
-
-    // v0
+    const double d3_to_gram = 1000. * constants.pi * constants.rhow / 6.;
+    // vi term 1
     const double int1_fac = 4579.5 * pow(d3_to_gram, 2. / 3.);
     const double lambdar_neg_2 = pow(lambdar, -2);
     const double lambdar_size1 = lambdar * 1.3443e-4;
-    const double term1v0 = int1_fac * tgamma_lower(3., lambdar_size1) * lambdar_neg_2;
-
+    // vi term 2
     const double int2_fac = 49.62 * pow(d3_to_gram, 1. / 3.);
     const double lambdar_neg_1 = 1.0 / lambdar;
     const double lambdar_size2 = lambdar * 1.51164e-3;
-    const double term2v0 = int2_fac * (tgamma(2., lambdar_size1) - tgamma(2., lambdar_size2)) * lambdar_neg_1;
-
+    // vi term 3
     const double int3_fac = 17.32 * pow(d3_to_gram, 1. / 6.);
     const double lambdar_neg_0_5 = pow(lambdar, -0.5);
     const double lambdar_size3 = lambdar * 3.47784e-3;
-    const double term3v0 = int3_fac * (tgamma(1.5, lambdar_size2) - tgamma(1.5, lambdar_size3)) * lambdar_neg_0_5;
-
+    // vi term 4
     const double int4_fac = 9.17;
-    const double term4v0 = int4_fac * tgamma(1., lambdar_size3);
 
-    const double v0 = term1v0 + term2v0 + term3v0 + term4v0;
+    auto vi = [&](const int i){
+      const double term1 = int1_fac * tgamma_lower(constants.mur+3.0+i, lambdar_size1)
+                                    * lambdar_neg_2;
+      const double term2 = int2_fac * (tgamma(constants.mur+2.0+i, lambdar_size1)
+                                       - tgamma(constants.mur+2.0+i, lambdar_size2))
+                                    * lambdar_neg_1;
+      const double term3 = int3_fac * (tgamma(constants.mur+1.5+i, lambdar_size2)
+                                       - tgamma(constants.mur+1.5+i, lambdar_size3))
+                                    * lambdar_neg_0_5;
+      const double term4 = int4_fac * tgamma(constants.mur+1.0+i, lambdar_size3);
+      return (term1 + term2 + term3 + term4) / tgamma(constants.mur+1.0+i);
+    };
 
-    // v3
-    const double gamma4 = tgamma(4.);
-    const double term1v3 = int1_fac * tgamma_lower(6., lambdar_size1) * lambdar_neg_2 / gamma4;
-    const double term2v3 = int2_fac * (tgamma(5., lambdar_size1) - tgamma(5., lambdar_size2)) * lambdar_neg_1 / gamma4;
-    const double term3v3 = int3_fac * (tgamma(4.5, lambdar_size2) - tgamma(4.5, lambdar_size3)) * lambdar_neg_0_5 / gamma4;
-    const double term4v3 = int4_fac * tgamma(4., lambdar_size3) / gamma4;
-
-    const double v3 = (term1v3 + term2v3 + term3v3 + term4v3);
+    const double v0 = vi(0);
+    const double v3 = vi(3);
 
     if constexpr (WithGrad) {
-      const double term1v0_dl = (term1v0 - int1_fac * tgamma_lower(4., lambdar_size1) * lambdar_neg_2) / lambdar;
-      const double term2v0_dl = (term2v0 - int2_fac * (tgamma(3., lambdar_size1) - tgamma(3., lambdar_size2)) * lambdar_neg_1) / lambdar;
-      const double term3v0_dl = (term3v0 - int3_fac * (tgamma(2.5, lambdar_size2) - tgamma(2.5, lambdar_size3)) * lambdar_neg_0_5) / lambdar;
-      const double term4v0_dl = (term4v0 - int4_fac * tgamma(2., lambdar_size3)) / lambdar;
+      const double v1 = vi(1);
+      const double v4 = vi(4);
 
-      const double gamma5 = tgamma(5.);
-      const double term1v3_dl = (term1v3 - int1_fac * tgamma_lower(7., lambdar_size1) * lambdar_neg_2 / gamma5) * 4.0 / lambdar;
-      const double term2v3_dl = (term2v3 - int2_fac * (tgamma(6., lambdar_size1) - tgamma(6., lambdar_size2)) * lambdar_neg_1 / gamma5) * 4.0 / lambdar;
-      const double term3v3_dl = (term3v3 - int3_fac * (tgamma(5.5, lambdar_size2) - tgamma(5.5, lambdar_size3)) * lambdar_neg_0_5 / gamma5) * 4.0 / lambdar;
-      const double term4v3_dl = (term4v3 - int4_fac * tgamma(5., lambdar_size3) / gamma5) * 4.0 / lambdar;
-
-      return {{v0, {(term1v0_dl + term2v0_dl + term3v0_dl + term4v0_dl)}},
-              {v3, {(term1v3_dl + term2v3_dl + term3v3_dl + term4v3_dl)}}};
+      return {{v0, {(constants.mur+1) * (v0-v1)/lambdar}},
+              {v3, {(constants.mur+4) * (v3-v4)/lambdar}}};
     } else {
       return {v0, v3};
     }
@@ -313,8 +305,11 @@ private:
   // of speeds wrt lambdar only
   template <bool WithGrad = false>
   static Speeds<WithGrad, 1> rain_fall_speeds_numerical(const RainshaftConstants& constants,
-                                                     double lambdar)
+                                                        double lambdar)
   {
+    if (constants.mur != 0.0)
+      throw std::logic_error("Numerical integration of rain fall speeds is not valid for mur != 0");
+
     // Skip function when no rain present.
     if (lambdar == 0.)
     {
@@ -352,7 +347,7 @@ private:
       if constexpr (WithGrad) {
         get_grad(accum0)[0] -= dia * integrand0;
         get_grad(accum3)[0] -= dia * integrand3;
-      } 
+      }
     }
 
     // Multiply by quadrature cell width and unit conversion and scaling factor
@@ -375,7 +370,7 @@ private:
 
 
   template <bool WithGrad = false>
-  static RealOptGrad<WithGrad, 2> rho_fac(const RainshaftConstants &constants, 
+  static RealOptGrad<WithGrad, 2> rho_fac(const RainshaftConstants &constants,
                                   RealOptGrad<WithGrad, 2> rho_dry)
   {
     const double rf = pow(1.e5 / (get_val(rho_dry) * constants.rdry * 273.15), 0.54);
