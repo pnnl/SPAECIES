@@ -37,6 +37,7 @@ find_package(SUNDIALS 7.7.0 QUIET COMPONENTS arkode sunlinsollapackdense)
 if (NOT SUNDIALS_FOUND)
   include(FetchContent)
   set(FETCHCONTENT_QUIET OFF)
+  set(FETCHCONTENT_UPDATES_DISCONNECTED OFF)
   FetchContent_Declare(sundials
     GIT_REPOSITORY https://github.com/LLNL/sundials.git
     GIT_TAG v7.7.0
