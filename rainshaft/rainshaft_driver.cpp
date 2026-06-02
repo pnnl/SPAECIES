@@ -308,7 +308,7 @@ int main(int argc, char* argv[])
       }
     }
 
-    SizeLimiters size_limiters(constants, 10.e-6, 5.e-3, 0.);
+    SizeLimiters size_limiters(constants, 10.e-6, 5.e-3);
 
     // List of integrators that need to remain allocated for use by original scheme.
     std::vector<std::shared_ptr<RainshaftIntegrator>> backing_integrators;
@@ -327,8 +327,8 @@ int main(int argc, char* argv[])
       } else if (method_type == "forcing") {
         return std::make_unique<ForcingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, dt_partition_1, dt_partition_2, cfl_substep, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "original") {
-        // Borrowed from original P3 settings, minimum diameter is 10 micron and maximum is 5 millimeter, mu = 0.
-        SizeLimiters size_limiters(constants, 10.e-6, 5.e-3, 0.);
+        // Borrowed from original P3 settings, minimum diameter is 10 micron and maximum is 5 millimeter.
+        SizeLimiters size_limiters(constants, 10.e-6, 5.e-3);
         std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, size_limiters, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, 1, rel_tol, false, regularize_lambdar);
         backing_integrators.emplace_back(local_intg);
         std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(constants, size_limiters, *local_intg);

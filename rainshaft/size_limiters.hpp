@@ -8,7 +8,7 @@ class SizeLimiters {
 public:
 
   SizeLimiters(const RainshaftConstants& constants,
-               double min_diameter, double max_diameter, double mu);
+               double min_diameter, double max_diameter);
 
   double limited_nr(double nr, double qr) const;
 
