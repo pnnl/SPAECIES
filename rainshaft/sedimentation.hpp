@@ -179,7 +179,7 @@ public:
 
       // Extract values from lookup table. Note: derivatives wrt lambdar are computed
       // from finite differences in lookup_value, NOT
-      const double d_micron = 1.e6 / get_val(lambdar);
+      const double d_micron = 1.e6 * (constants.mur+1.0)/get_val(lambdar);
       const RealGrad<1> v0 = v0_table->lookup_value(d_micron);
       const RealGrad<1> v3 = v3_table->lookup_value(d_micron);
 
@@ -256,19 +256,19 @@ private:
     }
 
     const double d3_to_gram = 1000. * constants.pi * constants.rhow / 6.;
-    // vi term 1
+    // for vi term 1 (integral for D < 134.43 micron)
     const double int1_fac = 4579.5 * pow(d3_to_gram, 2. / 3.);
     const double lambdar_neg_2 = pow(lambdar, -2);
     const double lambdar_size1 = lambdar * 1.3443e-4;
-    // vi term 2
+    // for vi term 2 (integral for 134.43 micron < D < 1511.64 micron)
     const double int2_fac = 49.62 * pow(d3_to_gram, 1. / 3.);
     const double lambdar_neg_1 = 1.0 / lambdar;
     const double lambdar_size2 = lambdar * 1.51164e-3;
-    // vi term 3
+    // for vi term 3 (integral for 1511.64 micron < D < 3477.84 micron)
     const double int3_fac = 17.32 * pow(d3_to_gram, 1. / 6.);
     const double lambdar_neg_0_5 = pow(lambdar, -0.5);
     const double lambdar_size3 = lambdar * 3.47784e-3;
-    // vi term 4
+    // for vi term 4 (integral for 3477.8 micron < D)
     const double int4_fac = 9.17;
 
     auto vi = [&](const int i){
@@ -308,7 +308,7 @@ private:
                                                         double lambdar)
   {
     if (constants.mur != 0.0)
-      throw std::logic_error("Numerical integration of rain fall speeds is not valid for mur != 0");
+      throw std::logic_error("Numerical integration of rain fall speeds is not supported for mur != 0");
 
     // Skip function when no rain present.
     if (lambdar == 0.)
