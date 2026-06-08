@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file, processes;
   std::size_t order, icase_in;
-  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics;
+  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics, use_zero_mur;
   double qsmall, epsilon_qsat_fac, epsilon_self_coll;
 
 	po::options_description desc("Allowed options");
@@ -96,6 +96,7 @@ int main(int argc, char* argv[])
     ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")
     ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(1.e-10), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
     ("epsilon_self_coll", po::value(&epsilon_self_coll)->default_value(0.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
+    ("use_zero_mur", po::value(&use_zero_mur)->default_value(0), "use zero for rain shape parameter mu (legacy value)")
   ;
 
   // Load from command line to check for input file
@@ -149,7 +150,7 @@ int main(int argc, char* argv[])
 
   // Set up model constants.
   // SPS: Choose rho_top in a more principled way?
-  const double mur = 0.0;
+  const double mur = use_zero_mur ? 0.0 : 1.0;
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
                                0.62197, qsmall, 9.80616, 1.e-5, 5.e-3, mur,
@@ -274,7 +275,7 @@ int main(int argc, char* argv[])
 
     // Nudging to initial condition.
     std::shared_ptr<Nudging> nudge;
-    
+
     std::vector<const RainshaftProcess *> partition_2_process_vec{}, all_process_vec{};
 
     if (processes == "rain_with_nudging") {
