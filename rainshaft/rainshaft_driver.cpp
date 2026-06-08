@@ -36,6 +36,26 @@
 
 namespace po = boost::program_options;
 
+namespace {
+  VarDescList get_prognostic_variables(spaecies::Domain dom, spaecies::DimensionPtr lev_dim) {
+    spaecies::VarDescPtr t_desc = dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K");
+    spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
+    spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
+    spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
+    return {t_desc, q_desc, nr_desc, qr_desc};
+  }
+
+  VarDescList get_diagnostic_variables(spaecies::Domain dom, spaecies::DimensionPtr lev_dim, const bool budget_diagnostics) {
+    if (!budget_diagnostics) {
+      return {};
+    }
+
+    spaecies::VarDescPtr evap_nr_desc = dom.add_var_desc("evap_nr", spaecies::Float64Type, {lev_dim}, "1/kg");
+    spaecies::VarDescPtr evap_qr_desc = dom.add_var_desc("evap_qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
+    return {evap_nr_desc, evap_qr_desc};
+  }
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -223,22 +243,18 @@ int main(int argc, char* argv[])
 
     spaecies::Domain dom;
     spaecies::DimensionPtr lev_dim = dom.add_dimension("level", nlev);
-    spaecies::VarDescPtr t_desc = dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K");
-    spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
-    spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc};
-    if (budget_diagnostics) {
-      state_descs.emplace_back(dom.add_var_desc("evap", spaecies::Float64Type, {lev_dim}, "1/kg"));
-    }
+    VarDescList diagnostic_descs = get_diagnostic_variables(dom, lev_dim, budget_diagnostics);
+    VarDescList state_descs = get_prognostic_variables(dom, lev_dim);
+    state_descs.insert(state_descs.end(), diagnostic_descs.begin(), diagnostic_descs.end());
+
     VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
     State abs_tol(state_descs);
     std::fill_n(&abs_tol.get_variable("T").value()[0], nlev, 1.e-6);
     std::fill_n(&abs_tol.get_variable("q").value()[0], nlev, 1.e-8);
     std::fill_n(&abs_tol.get_variable("nr").value()[0], nlev, 1.e-9);
     std::fill_n(&abs_tol.get_variable("qr").value()[0], nlev, 1.e-17);
-    if (budget_diagnostics) {
-      std::fill_n(&abs_tol.get_variable("evap").value()[0], nlev, 1);
+    for (spaecies::VarDescPtr p : diagnostic_descs) {
+      std::fill_n(&abs_tol.get_variable(p->name).value()[0], nlev, 1);
     }
     State initial_state(state_descs);
 

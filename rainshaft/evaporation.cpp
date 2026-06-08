@@ -45,7 +45,8 @@ void Evaporation::calc_tend(const RainshaftConstants& constants,
   VarMut nr_tend = *tend.get_variable("nr_tend");
   VarMut qr_tend = *tend.get_variable("qr_tend");
 
-  std::optional<VarMut> evap_diagnostic = tend.get_variable("evap");
+  std::optional<VarMut> evap_nr = tend.get_variable("evap_nr");
+  std::optional<VarMut> evap_qr = tend.get_variable("evap_qr");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
@@ -55,8 +56,11 @@ void Evaporation::calc_tend(const RainshaftConstants& constants,
     nr_tend[il] -= n_evap;
     qr_tend[il] -= q_evap;
 
-    if (evap_diagnostic) {
-      (*evap_diagnostic)[il] += n_evap;
+    if (evap_nr) {
+      (*evap_nr)[il] -= n_evap;
+    }
+    if (evap_qr) {
+      (*evap_qr)[il] -= q_evap;
     }
   }
 }
@@ -120,5 +124,5 @@ std::set<std::string> Evaporation::get_required_vars() const
 
 std::set<std::string> Evaporation::get_optional_vars() const
 {
-  return {"evap"};
+  return {"evap_nr", "evap_qr"};
 }
