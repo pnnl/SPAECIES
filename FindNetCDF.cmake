@@ -50,6 +50,8 @@ if (netCDF_FOUND)
   endif ()
 
   FindNetCDF_get_is_parallel_aware("${NetCDF_INCLUDE_DIRS}")
+
+  target_link_libraries(NetCDF::NetCDF INTERFACE HDF5::HDF5)
   # Skip the rest of the logic in this file.
   return ()
 endif ()
