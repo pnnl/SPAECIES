@@ -149,9 +149,10 @@ int main(int argc, char* argv[])
 
   // Set up model constants.
   // SPS: Choose rho_top in a more principled way?
+  const double mur = 0.0;
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
-                               0.62197, qsmall, 9.80616, 1.e-5, 5.e-3, 0.0,
+                               0.62197, qsmall, 9.80616, 1.e-5, 5.e-3, mur,
                                0.988919555598356, 1.e3, 1.e-4, epsilon_qsat_fac, epsilon_self_coll};
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
