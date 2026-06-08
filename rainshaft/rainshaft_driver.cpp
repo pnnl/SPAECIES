@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file, processes;
   std::size_t order, icase_in;
-  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar;
+  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics;
   double qsmall, epsilon_qsat_fac, epsilon_self_coll;
 
 	po::options_description desc("Allowed options");
@@ -55,6 +55,7 @@ int main(int argc, char* argv[])
 		("help", "produce help message")
     ("i", po::value(&input_file), "(optional) input file for command line arguments")
     ("processes", po::value(&processes)->default_value("all"), "which processes to enable (e.g. all, rain, rain_with_nudging)")
+    ("budget_diagnostics", po::value(&budget_diagnostics)->default_value(false), "include additional budget diagnostics in output")
 		("order", po::value(&order)->default_value(2), "order of method")
 		("dt", po::value(&dt)->default_value(0.1), "step size. if integration type is set to MRI/splitting/forcing, this argument is the outer time step size")
     ("dt_partition_1", po::value(&dt_partition_1)->default_value(0), "step size of partition 1 for MRI/splitting/forcing methods. negative values indicate ratios, e.g. dt_partition_1=-0.5 corresponds to dt_partition_1 = dt/2")
@@ -227,12 +228,18 @@ int main(int argc, char* argv[])
     spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
     spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
     VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc};
+    if (budget_diagnostics) {
+      state_descs.emplace_back(dom.add_var_desc("evap", spaecies::Float64Type, {lev_dim}, "1/kg"));
+    }
     VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
     State abs_tol(state_descs);
     std::fill_n(&abs_tol.get_variable("T").value()[0], nlev, 1.e-6);
     std::fill_n(&abs_tol.get_variable("q").value()[0], nlev, 1.e-8);
     std::fill_n(&abs_tol.get_variable("nr").value()[0], nlev, 1.e-9);
     std::fill_n(&abs_tol.get_variable("qr").value()[0], nlev, 1.e-17);
+    if (budget_diagnostics) {
+      std::fill_n(&abs_tol.get_variable("evap").value()[0], nlev, 1);
+    }
     State initial_state(state_descs);
 
     // Set up initial condition.
@@ -275,11 +282,13 @@ int main(int argc, char* argv[])
     const auto& partition_1_processes = sed;
     SumProcess partition_2_processes{partition_2_process_vec};
 
-    // Check that all variable need by processes are present
-    const std::set<std::string> require_vars = all_processes.get_required_vars();
-    for (const spaecies::VarDescPtr &v : state_descs) {
-      if (require_vars.count(v->name) < 1) {
-        throw std::logic_error("Missing the required variable " + v->name);
+    for (const std::string &v : all_processes.get_required_vars()) {
+      const bool found = std::any_of(state_descs.begin(), state_descs.end(),
+                                     [&v](const spaecies::VarDescPtr &desc) {
+                                       return desc->name == v;
+                                     });
+      if (!found) {
+        throw std::logic_error("Missing the required variable " + v);
       }
     }
 
