@@ -36,6 +36,26 @@
 
 namespace po = boost::program_options;
 
+namespace {
+  VarDescList get_prognostic_variables(spaecies::Domain dom, spaecies::DimensionPtr lev_dim) {
+    spaecies::VarDescPtr t_desc = dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K");
+    spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
+    spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
+    spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
+    return {t_desc, q_desc, nr_desc, qr_desc};
+  }
+
+  VarDescList get_diagnostic_variables(spaecies::Domain dom, spaecies::DimensionPtr lev_dim, const bool budget_diagnostics) {
+    if (!budget_diagnostics) {
+      return {};
+    }
+
+    spaecies::VarDescPtr evap_nr_desc = dom.add_var_desc("evap_nr", spaecies::Float64Type, {lev_dim}, "1/kg");
+    spaecies::VarDescPtr evap_qr_desc = dom.add_var_desc("evap_qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
+    return {evap_nr_desc, evap_qr_desc};
+  }
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -45,15 +65,17 @@ int main(int argc, char* argv[])
   // Arg parser
   double dt, dt_partition_1, dt_partition_2, final_time, rel_tol;
   int steps_per_output, num_cases;
-  std::string input_file, output_file, method_type, initial_condition, initial_condition_file;
+  std::string input_file, output_file, method_type, initial_condition, initial_condition_file, processes;
   std::size_t order, icase_in;
-  bool do_nudging, cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar;
+  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics;
   double qsmall, epsilon_qsat_fac, epsilon_self_coll;
 
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		("help", "produce help message")
     ("i", po::value(&input_file), "(optional) input file for command line arguments")
+    ("processes", po::value(&processes)->default_value("all"), "which processes to enable (e.g. all, rain, rain_with_nudging)")
+    ("budget_diagnostics", po::value(&budget_diagnostics)->default_value(false), "include additional budget diagnostics in output")
 		("order", po::value(&order)->default_value(2), "order of method")
 		("dt", po::value(&dt)->default_value(0.1), "step size. if integration type is set to MRI/splitting/forcing, this argument is the outer time step size")
     ("dt_partition_1", po::value(&dt_partition_1)->default_value(0), "step size of partition 1 for MRI/splitting/forcing methods. negative values indicate ratios, e.g. dt_partition_1=-0.5 corresponds to dt_partition_1 = dt/2")
@@ -68,7 +90,6 @@ int main(int argc, char* argv[])
     ("num_cases", po::value(&num_cases)->default_value(1), "number of E3SM cases to load if initial_condition is set to filename. -1 for all cases.")
     ("case_idx", po::value(&icase_in), "(optional) specific E3SM case to load if initial_condition is set to filename.")
     ("final_time", po::value(&final_time)->default_value(300.0), "stopping time for integration")
-    ("nudging", po::value(&do_nudging)->default_value(false), "boolean flag for nudging")
     ("regularize_qsat", po::value(&regularize_qsat)->default_value(true), "boolean flag for q_sat_dry regularization")
     ("regularize_lambdar", po::value(&regularize_lambdar)->default_value(true), "boolean flag for lambdar regularization")
     ("qsmall", po::value(&qsmall)->default_value(1.e-10), "smallest permissible non-zero value of qr")
@@ -165,7 +186,7 @@ int main(int argc, char* argv[])
 
     if (vm.count("num_cases")) {
       if (max_cases < num_cases) {
-        throw std::logic_error("Requested more cases than exist on file.");
+        throw std::invalid_argument("Requested more cases than exist on file.");
       }
 
       if (num_cases == -1) {
@@ -180,7 +201,7 @@ int main(int argc, char* argv[])
       }
 
       if (max_cases < icase_in) {
-        throw std::logic_error("Requested non-existent case_idx in file.");
+        throw std::invalid_argument("Requested non-existent case_idx in file.");
       }
     }
     // Remove cloud base from levels.
@@ -222,17 +243,19 @@ int main(int argc, char* argv[])
 
     spaecies::Domain dom;
     spaecies::DimensionPtr lev_dim = dom.add_dimension("level", nlev);
-    spaecies::VarDescPtr t_desc = dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K");
-    spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
-    spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    VarDescList state_descs = {t_desc, q_desc, nr_desc, qr_desc};
+    VarDescList diagnostic_descs = get_diagnostic_variables(dom, lev_dim, budget_diagnostics);
+    VarDescList state_descs = get_prognostic_variables(dom, lev_dim);
+    state_descs.insert(state_descs.end(), diagnostic_descs.begin(), diagnostic_descs.end());
+
     VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
     State abs_tol(state_descs);
-    std::fill_n(&abs_tol.get_variable("T")[0], nlev, 1.e-6);
-    std::fill_n(&abs_tol.get_variable("q")[0], nlev, 1.e-8);
-    std::fill_n(&abs_tol.get_variable("nr")[0], nlev, 1.e-9);
-    std::fill_n(&abs_tol.get_variable("qr")[0], nlev, 1.e-17);
+    std::fill_n(&abs_tol.get_variable("T").value()[0], nlev, 1.e-6);
+    std::fill_n(&abs_tol.get_variable("q").value()[0], nlev, 1.e-8);
+    std::fill_n(&abs_tol.get_variable("nr").value()[0], nlev, 1.e-9);
+    std::fill_n(&abs_tol.get_variable("qr").value()[0], nlev, 1.e-17);
+    for (spaecies::VarDescPtr p : diagnostic_descs) {
+      std::fill_n(&abs_tol.get_variable(p->name).value()[0], nlev, 1);
+    }
     State initial_state(state_descs);
 
     // Set up initial condition.
@@ -250,30 +273,40 @@ int main(int argc, char* argv[])
 
     // Nudging to initial condition.
     std::shared_ptr<Nudging> nudge;
-    // Sum of all processes.
+    
     std::vector<const RainshaftProcess *> partition_2_process_vec{}, all_process_vec{};
-    if (do_nudging) {
+
+    if (processes == "rain_with_nudging") {
       // SPS: Need some kind of span-like interface to avoid having to
       // do this copy.
-      VarMut t = initial_state.get_variable("T");
-      VarMut q = initial_state.get_variable("q");
-      std::vector<double> t_vec, q_vec;
-      for (std::size_t i = 0; i != nlev; ++i) {
-        t_vec.push_back(t[i]);
-        q_vec.push_back(q[i]);
-      }
+      VarMut t = initial_state.get_variable("T").value();
+      VarMut q = initial_state.get_variable("q").value();
+      std::vector<double> t_vec(nlev), q_vec(nlev);
+      std::copy_n(&t[0], nlev, t_vec.begin());
+      std::copy_n(&q[0], nlev, q_vec.begin());
       nudge = std::make_shared<Nudging>(nudge_time_scale, t_vec, q_vec);
       partition_2_process_vec = {&evap, &*nudge, &self_coll};
       all_process_vec = {&sed, &*nudge, &self_coll, &evap};
-    } else {
+    } else if (processes == "rain" || processes == "all") {
       partition_2_process_vec = {&evap, &self_coll};
       all_process_vec = {&sed, &self_coll, &evap};
+    } else { // TODO: Add cloud processes
+      throw std::invalid_argument("Unrecognized processes type");
     }
-    SumProcess partition_2_processes(partition_2_process_vec);
-    // Sum of local processes.
-    const auto& partition_1_processes = sed;
 
     SumProcess all_processes{all_process_vec};
+    const auto& partition_1_processes = sed;
+    SumProcess partition_2_processes{partition_2_process_vec};
+
+    for (const std::string &v : all_processes.get_required_vars()) {
+      const bool found = std::any_of(state_descs.begin(), state_descs.end(),
+                                     [&v](const spaecies::VarDescPtr &desc) {
+                                       return desc->name == v;
+                                     });
+      if (!found) {
+        throw std::logic_error("Missing the required variable " + v);
+      }
+    }
 
     SizeLimiters size_limiters(constants, 10.e-6, 5.e-3, 0.);
 
@@ -307,7 +340,7 @@ int main(int argc, char* argv[])
         return std::make_unique<FixedSubstepIntegrator>(&*step_intg, dt);
       } else {
         std::cout << method_type << std::endl;
-        throw std::logic_error("Invalid time integration method type");
+        throw std::invalid_argument("Invalid time integration method type");
       }
     }();
 
@@ -349,6 +382,6 @@ int main(int argc, char* argv[])
   // write settings as metadata
   writer.write_metadata(order, dt, dt_partition_1, dt_partition_2, rel_tol, postprocess,
     use_lookup, method_type, steps_per_output, initial_condition_file,
-    num_cases, icase_in, final_time, do_nudging);
+    num_cases, icase_in, final_time, processes);
   return 0;
 }

@@ -114,6 +114,9 @@ public:
                              const RainshaftDerivedVars &dvars,
                              Matrix jac) const;
 
+  std::set<std::string> get_required_vars() const;
+  std::set<std::string> get_optional_vars() const;
+
 };
 
 #endif // SELF_COLLISION_HPP

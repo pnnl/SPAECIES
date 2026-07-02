@@ -5,6 +5,7 @@
 #include <cstring>
 #include <initializer_list>
 #include <memory>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 
@@ -39,16 +40,21 @@ public:
   }
   // Required for access to private constructor used above.
   friend class VariableArrayView<NonConstT>;
-  ContiguousVariableView<const T> get_variable(const std::string& name) const {
-    auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs());
-    return {var_desc, data_ptr + idx};
+  std::optional<ContiguousVariableView<const T>> get_variable(const std::string& name) const {
+    return make_variable_view(name, var_descs(), data_ptr);
   };
-  ContiguousVariableView<T> get_variable(const std::string& name) {
-    auto [var_desc, idx] = name_to_desc_and_idx(name, var_descs());
-    return {var_desc, data_ptr + idx};
+  std::optional<ContiguousVariableView<T>> get_variable(const std::string& name) {
+    return make_variable_view(name, var_descs(), data_ptr);
   };
-  std::size_t get_idx(const std::string& name) const {
-    return name_to_idx(name, var_descs());
+  std::optional<std::size_t> get_idx(const std::string& name) const {
+    std::size_t idx = 0;
+    for (const VarDescPtr& var_desc : var_descs()) {
+      if (var_desc->name == name) {
+        return idx;
+      }
+      idx += var_desc->size();
+    }
+    return std::nullopt;
   }
   inline T* data() {
     return data_ptr;
@@ -79,26 +85,19 @@ protected:
   inline void copy_data_to_location(NonConstT* dest) const {
     std::copy_n(data_ptr, data_size, dest);
   }
-  static std::size_t name_to_idx(const std::string& name, const std::vector<VarDescPtr>& var_descs) {
+  template <class U>
+  static std::optional<ContiguousVariableView<U>> make_variable_view(
+      const std::string& name,
+      const std::vector<VarDescPtr>& var_descs,
+      U* data_ptr) {
     std::size_t idx = 0;
     for (const VarDescPtr& var_desc : var_descs) {
       if (var_desc->name == name) {
-        return idx;
+        return ContiguousVariableView<U>{var_desc, data_ptr + idx};
       }
       idx += var_desc->size();
     }
-    throw(VariableNotFoundException(name, "variable not found in variable array"));
-  }
-  static std::tuple<VarDescPtr, std::size_t> name_to_desc_and_idx(const std::string& name,
-                                                                  const std::vector<VarDescPtr>& var_descs) {
-    std::size_t idx = 0;
-    for (const VarDescPtr& var_desc : var_descs) {
-      if (var_desc->name == name) {
-        return {var_desc, idx};
-      }
-      idx += var_desc->size();
-    }
-    throw(VariableNotFoundException(name, "variable not found in variable array"));
+    return std::nullopt;
   }
   static std::size_t calc_size(const std::vector<VarDescPtr> &var_descs) {
     std::size_t my_size = 0;

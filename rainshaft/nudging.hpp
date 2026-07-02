@@ -24,6 +24,9 @@ public:
                              const RainshaftDerivedVars &dvars,
                              Matrix jac) const;
 
+  std::set<std::string> get_required_vars() const;
+  std::set<std::string> get_optional_vars() const;
+
   double time_scale;
   const std::vector<double> t0;
   const std::vector<double> q0;

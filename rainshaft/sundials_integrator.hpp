@@ -180,10 +180,10 @@ protected:
   static int postprocess_positive(sunrealtype, N_Vector y, void* user_data) {
     const RainshaftUserData& cast_data = *static_cast<RainshaftUserData *>(user_data);
     State state = n_vector_to_state(y, cast_data.state_descs);
-    VarMut t = state.get_variable("T");
-    VarMut q = state.get_variable("q");
-    VarMut nr = state.get_variable("nr");
-    VarMut qr = state.get_variable("qr");
+    VarMut t = state.get_variable("T").value();
+    VarMut q = state.get_variable("q").value();
+    VarMut nr = state.get_variable("nr").value();
+    VarMut qr = state.get_variable("qr").value();
 
     for (std::size_t i = 0; i != t.size(); ++i) {
       if (qr[i] < cast_data.constants.qsmall) {

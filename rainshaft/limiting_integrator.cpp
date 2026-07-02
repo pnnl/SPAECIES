@@ -13,10 +13,10 @@ RainshaftSolution LimitingIntegrator::integrate(double initial_time,
                                                 int& error_flag) const {
   RainshaftSolution solution = integrator.integrate(initial_time, final_time, initial_state, error_flag);
   State limited_state = solution.states.back().deep_copy();
-  VarMut t = limited_state.get_variable("T");
-  VarMut q = limited_state.get_variable("q");
-  VarMut nr = limited_state.get_variable("nr");
-  VarMut qr = limited_state.get_variable("qr");
+  VarMut t = *limited_state.get_variable("T");
+  VarMut q = *limited_state.get_variable("q");
+  VarMut nr = *limited_state.get_variable("nr");
+  VarMut qr = *limited_state.get_variable("qr");
   for (std::size_t i = 0; i != t.size(); ++i) {
     // If qr has to be corrected, reduce q and increase T to allow for better
     // water and energy conservation.

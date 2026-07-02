@@ -36,14 +36,17 @@ void Evaporation::calc_tend(const RainshaftConstants& constants,
                             const StateConst& state,
                             const RainshaftDerivedVars& dvars,
                             Tendency& tend) const {
-  VarConst t = state.get_variable("T");
-  VarConst q = state.get_variable("q");
-  VarConst nr = state.get_variable("nr");
-  VarConst qr = state.get_variable("qr");
-  VarMut t_tend = tend.get_variable("T_tend");
-  VarMut q_tend = tend.get_variable("q_tend");
-  VarMut nr_tend = tend.get_variable("nr_tend");
-  VarMut qr_tend = tend.get_variable("qr_tend");
+  VarConst t = *state.get_variable("T");
+  VarConst q = *state.get_variable("q");
+  VarConst nr = *state.get_variable("nr");
+  VarConst qr = *state.get_variable("qr");
+  VarMut t_tend = *tend.get_variable("T_tend");
+  VarMut q_tend = *tend.get_variable("q_tend");
+  VarMut nr_tend = *tend.get_variable("nr_tend");
+  VarMut qr_tend = *tend.get_variable("qr_tend");
+
+  std::optional<VarMut> evap_nr_tend = tend.get_variable("evap_nr_tend");
+  std::optional<VarMut> evap_qr_tend = tend.get_variable("evap_qr_tend");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
@@ -52,6 +55,13 @@ void Evaporation::calc_tend(const RainshaftConstants& constants,
     q_tend[il] += q_evap;
     nr_tend[il] -= n_evap;
     qr_tend[il] -= q_evap;
+
+    if (evap_nr_tend) {
+      (*evap_nr_tend)[il] -= n_evap;
+    }
+    if (evap_qr_tend) {
+      (*evap_qr_tend)[il] -= q_evap;
+    }
   }
 }
 
@@ -61,15 +71,15 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
                                 const RainshaftDerivedVars &dvars,
                                 Matrix jac) const
 {
-  VarConst t = state.get_variable("T");
-  VarConst q = state.get_variable("q");
-  VarConst nr = state.get_variable("nr");
-  VarConst qr = state.get_variable("qr");
+  VarConst t = *state.get_variable("T");
+  VarConst q = *state.get_variable("q");
+  VarConst nr = *state.get_variable("nr");
+  VarConst qr = *state.get_variable("qr");
 
-  const std::size_t offset_t = state.get_idx("T");
-  const std::size_t offset_q = state.get_idx("q");
-  const std::size_t offset_nr = state.get_idx("nr");
-  const std::size_t offset_qr = state.get_idx("qr");
+  const std::size_t offset_t = *state.get_idx("T");
+  const std::size_t offset_q = *state.get_idx("q");
+  const std::size_t offset_nr = *state.get_idx("nr");
+  const std::size_t offset_qr = *state.get_idx("qr");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
@@ -105,4 +115,14 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
     jac(i_qr, i_nr) -= q_evap_dnr;
     jac(i_qr, i_qr) -= q_evap_dqr;
   }
+}
+
+std::set<std::string> Evaporation::get_required_vars() const
+{
+  return {"T", "q", "nr", "qr"};
+}
+
+std::set<std::string> Evaporation::get_optional_vars() const
+{
+  return {"evap_nr", "evap_qr"};
 }

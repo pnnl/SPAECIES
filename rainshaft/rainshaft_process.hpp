@@ -2,6 +2,8 @@
 #define RAINSHAFT_PROCESS_HPP
 #include <vector>
 #include <functional>
+#include <set>
+#include <string>
 
 #include "rainshaft_constants.hpp"
 #include "rainshaft_grid.hpp"
@@ -28,6 +30,9 @@ public:
                              const StateConst& state,
                              const RainshaftDerivedVars &dvars,
                              Matrix jac) const = 0;
+
+  virtual std::set<std::string> get_required_vars() const = 0;
+  virtual std::set<std::string> get_optional_vars() const = 0;
 };
 
 #endif // RAINSHAFT_PROCESS_HPP

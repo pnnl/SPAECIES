@@ -85,10 +85,10 @@ void NetcdfReader::read_initial_conditions(std::size_t case_idx, State &initial_
   std::size_t starts[2] = {case_idx, 1};
   std::size_t counts[2] = {1, (std::size_t) nlev-1};
   nc_get_vara_double(ncid, rainfracid, starts, counts, rainfrac.data());
-  VarMut t = initial_state.get_variable("T");
-  VarMut q = initial_state.get_variable("q");
-  VarMut nr = initial_state.get_variable("nr");
-  VarMut qr = initial_state.get_variable("qr");
+  VarMut t = initial_state.get_variable("T").value();
+  VarMut q = initial_state.get_variable("q").value();
+  VarMut nr = initial_state.get_variable("nr").value();
+  VarMut qr = initial_state.get_variable("qr").value();
   nc_get_vara_double(ncid, tid, starts, counts, &t[0]);
   nc_get_vara_double(ncid, qid, starts, counts, &q[0]);
   nc_get_vara_double(ncid, nrid, starts, counts, &nr[0]);
@@ -150,7 +150,7 @@ void NetcdfWriter::write_grid(const RainshaftGrid& grid, std::size_t case_idx) {
 
 void NetcdfWriter::write_states(const std::vector<StateConst>& arrays, std::size_t case_idx) {
   int caseid, levid, timeid;
-  std::size_t nlev = arrays[0].get_variable("T").size();
+  std::size_t nlev = arrays[0].get_variable("T").value().size();
   std::size_t ntimes = arrays.size();
   // SPS: Need to check errors from all these as well.
   // SPS: Add variable metadata to all these too.
@@ -191,7 +191,7 @@ void NetcdfWriter::write_states(const std::vector<StateConst>& arrays, std::size
       // integer id from the VariableArrayView, rather than using string lookups.
       // SPS: Note also the implicit assumption that the variable data is
       // contiguous.
-      auto var = arrays[i].get_variable(varnames[j]);
+      auto var = arrays[i].get_variable(varnames[j]).value();
       nc_put_vara_double(ncid, varids[j], starts, counts,
                          &var[0]);
     }
@@ -276,10 +276,10 @@ void NetcdfWriter::write_walltime_ms(double walltime_ms, std::size_t case_idx) {
 void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, double dt_partition_2, double rel_tol,
                                   bool postprocess, bool use_lookup, std::string method_type, int steps_per_output,
                                   std::string initial_condition_file, int num_cases, int icase_in, double final_time,
-                                  bool do_nudging) {
+                                  std::string processes) {
   int orderid, dtid, dt_partition_1id, dt_partition_2id, rel_tolid;
   int postprocessid, use_lookupid, method_typeid, steps_per_outputid;
-  int initial_condition_fileid, num_casesid, icase_inid, final_timeid, do_nudgingid;
+  int initial_condition_fileid, num_casesid, icase_inid, final_timeid, processesid;
 
   // method order
   nc_def_var(ncid, "method_order", NC_INT, 0, NULL, &orderid);
@@ -340,6 +340,6 @@ void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, d
   nc_put_var_double(ncid, final_timeid, &final_time);
 
   // nudging flag
-  nc_def_var(ncid, "do_nudging", NC_UBYTE, 0, NULL, &do_nudgingid);
-  nc_put_var(ncid, do_nudgingid, &do_nudging);
+  nc_def_var(ncid, "processes", NC_STRING, 0, NULL, &processesid);
+  nc_put_var(ncid, processesid, &processes);
 }

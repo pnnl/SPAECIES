@@ -62,10 +62,10 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
   double nr_flux_prev = calc_nr_flux(nr_prev, rho_prev, v0_prev);
   double qr_flux_prev = calc_qr_flux(qr_prev, rho_prev, v3_prev);
 
-  VarConst nr = state.get_variable("nr");
-  VarConst qr = state.get_variable("qr");
-  VarMut nr_tend = tend.get_variable("nr_tend");
-  VarMut qr_tend = tend.get_variable("qr_tend");
+  VarConst nr = *state.get_variable("nr");
+  VarConst qr = *state.get_variable("qr");
+  VarMut nr_tend = *tend.get_variable("nr_tend");
+  VarMut qr_tend = *tend.get_variable("qr_tend");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
@@ -96,15 +96,15 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
   RealGrad<4> nr_flux_prev = calc_nr_flux<true>(nr_prev, rho_prev, v0_prev);
   RealGrad<4> qr_flux_prev = calc_qr_flux<true>(qr_prev, rho_prev, v3_prev);
 
-  VarConst t = state.get_variable("T");
-  VarConst q = state.get_variable("q");
-  VarConst nr = state.get_variable("nr");
-  VarConst qr = state.get_variable("qr");
+  VarConst t = *state.get_variable("T");
+  VarConst q = *state.get_variable("q");
+  VarConst nr = *state.get_variable("nr");
+  VarConst qr = *state.get_variable("qr");
 
-  const std::size_t offset_t = state.get_idx("T");
-  const std::size_t offset_q = state.get_idx("q");
-  const std::size_t offset_nr = state.get_idx("nr");
-  const std::size_t offset_qr = state.get_idx("qr");
+  const std::size_t offset_t = *state.get_idx("T");
+  const std::size_t offset_q = *state.get_idx("q");
+  const std::size_t offset_nr = *state.get_idx("nr");
+  const std::size_t offset_qr = *state.get_idx("qr");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
@@ -151,4 +151,14 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
     nr_flux_prev = nr_flux;
     qr_flux_prev = qr_flux;
   }
+}
+
+std::set<std::string> Sedimentation::get_required_vars() const
+{
+  return {"T", "q", "nr", "qr"};
+}
+
+std::set<std::string> Sedimentation::get_optional_vars() const
+{
+  return {};
 }
