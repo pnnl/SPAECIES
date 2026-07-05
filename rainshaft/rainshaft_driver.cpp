@@ -8,6 +8,7 @@
 #include "nudging.hpp"
 #include "parsing_utilities.hpp"
 #include "rainshaft_constants.hpp"
+#include "rainshaft_driver.hpp"
 #include "rainshaft_grid.hpp"
 #include "rainshaft_initial.hpp"
 #include "rainshaft_solution.hpp"
@@ -36,26 +37,6 @@
 
 namespace po = boost::program_options;
 
-namespace {
-  VarDescList get_prognostic_variables(spaecies::Domain dom, spaecies::DimensionPtr lev_dim) {
-    spaecies::VarDescPtr t_desc = dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K");
-    spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
-    spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    return {t_desc, q_desc, nr_desc, qr_desc};
-  }
-
-  VarDescList get_diagnostic_variables(spaecies::Domain dom, spaecies::DimensionPtr lev_dim, const bool budget_diagnostics) {
-    if (!budget_diagnostics) {
-      return {};
-    }
-
-    spaecies::VarDescPtr evap_nr_desc = dom.add_var_desc("evap_nr", spaecies::Float64Type, {lev_dim}, "1/kg");
-    spaecies::VarDescPtr evap_qr_desc = dom.add_var_desc("evap_qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    return {evap_nr_desc, evap_qr_desc};
-  }
-}
-
 int main(int argc, char* argv[])
 {
 
@@ -83,19 +64,19 @@ int main(int argc, char* argv[])
     ("cfl_substep", po::value(&cfl_substep)->default_value(false), "substep sedimentation using the CFL condition with operator splitting")
     ("rel_tol", po::value(&rel_tol)->default_value(1.e-4), "relative tolerance for adaptive stepping and nonlinear solvers")
     ("postprocess", po::value(&postprocess)->default_value(false), "postprocesses stages and steps to be positive")
-    ("use_lookup", po::value(&use_lookup)->default_value(false), "uses lookup tables to evaluate fall speeds")
+    ("use_lookup", po::value(&use_lookup)->default_value(defaults::use_lookup), "uses lookup tables to evaluate fall speeds")
 		("type", po::value(&method_type)->default_value("explicit"), "type of integrator (e.g. explicit, implicit, imex, mri, original)")
     ("steps", po::value(&steps_per_output)->default_value(-1), "frequency of saved output, e.g. write output to netCDF every steps_per_output timesteps. -1 to save only the first and last steps")
     ("ic_file", po::value(&initial_condition_file), "type of initial condiiton (e.g. 'adiabatic' or the filename of E3SM data)")
     ("num_cases", po::value(&num_cases)->default_value(1), "number of E3SM cases to load if initial_condition is set to filename. -1 for all cases.")
     ("case_idx", po::value(&icase_in), "(optional) specific E3SM case to load if initial_condition is set to filename.")
     ("final_time", po::value(&final_time)->default_value(300.0), "stopping time for integration")
-    ("regularize_qsat", po::value(&regularize_qsat)->default_value(true), "boolean flag for q_sat_dry regularization")
-    ("regularize_lambdar", po::value(&regularize_lambdar)->default_value(true), "boolean flag for lambdar regularization")
-    ("qsmall", po::value(&qsmall)->default_value(1.e-10), "smallest permissible non-zero value of qr")
+    ("regularize_qsat", po::value(&regularize_qsat)->default_value(defaults::regularize_qsat), "boolean flag for q_sat_dry regularization")
+    ("regularize_lambdar", po::value(&regularize_lambdar)->default_value(defaults::regularize_lambdar), "boolean flag for lambdar regularization")
+    ("qsmall", po::value(&qsmall)->default_value(defaults::qsmall), "smallest permissible non-zero value of qr")
     ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")
-    ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(1.e-10), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
-    ("epsilon_self_coll", po::value(&epsilon_self_coll)->default_value(0.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
+    ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(defaults::epislon_qsat_fac), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
+    ("epsilon_self_coll", po::value(&epsilon_self_coll)->default_value(defaults::epsilon_self_coll), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
     ("use_zero_mur", po::value(&use_zero_mur)->default_value(0), "use zero for rain shape parameter mu (legacy value)")
   ;
 
@@ -149,12 +130,8 @@ int main(int argc, char* argv[])
   }
 
   // Set up model constants.
-  // SPS: Choose rho_top in a more principled way?
   const double mur = use_zero_mur ? 0.0 : 1.0;
-  RainshaftConstants constants{3.14159265358979323846,
-                               287.04, 1.00464e3, 461.50, 997., 2.501e6,
-                               0.62197, qsmall, 9.80616, 1.e-5, 5.e-3, mur,
-                               0.988919555598356, 1.e3, 1.e-4, epsilon_qsat_fac, epsilon_self_coll};
+  RainshaftConstants constants = create_RainshaftConstants(qsmall, epsilon_qsat_fac, epsilon_self_coll, mur);
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
   double model_top = 2.e3;
