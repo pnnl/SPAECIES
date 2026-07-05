@@ -350,6 +350,7 @@ int main(int argc, char* argv[])
         writer.write_derived_vars(solution_dvars, icase_writer);
         writer.write_num_rhs_evals(solution.num_rhs_evals, icase_writer);
         writer.write_walltime_ms(walltime_ms.count(), icase_writer);
+        writer.write_boundary_conditions(constants, icase_writer);
       } else {
         throw(error_flag);
       }
