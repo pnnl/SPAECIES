@@ -91,7 +91,7 @@ std::vector<double> RainshaftGrid::calc_dz(RainshaftConstants constants,
   return dz;
 }
 
-RainshaftGrid make_e3sm_like_grid(RainshaftConstants constants,
+RainshaftGrid make_e3sm_like_grid(const RainshaftConstants& constants,
                                   double model_top, double srf_pres,
                                   double srf_temp, double lapse_rate) {
   // Convert e3sm_ilev to meters.
