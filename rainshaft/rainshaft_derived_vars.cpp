@@ -1,6 +1,5 @@
 #include "rainshaft_derived_vars.hpp"
 #include <cstddef>
-#include <cmath>
 #include <stdexcept>
 #include <numeric>
 
@@ -54,14 +53,13 @@ std::vector<double> calc_lambdar(const RainshaftConstants& constants,
   VarConst nr = state.get_variable("nr").value();
   VarConst qr = state.get_variable("qr").value();
   for (std::size_t il = 0; il != grid.nlev; ++il) {
-    double lambda_cubed;
+    double lambdar_value;
     if (regularize) {
-      lambda_cubed = constants.pi * constants.rhow * (nr[il] + constants.qsmall * (1.e8))
-        / (qr[il] + constants.qsmall);
+      lambdar_value = calc_lambdar(constants.pi, constants.rhow, constants.mur, nr[il], qr[il], constants.qsmall);
     } else {
-      lambda_cubed = constants.pi * constants.rhow * nr[il] / qr[il];
+      lambdar_value = calc_lambdar(constants.pi, constants.rhow, constants.mur, nr[il], qr[il]);
     }
-    lambdar[il] = std::cbrt(lambda_cubed);
+    lambdar[il] = lambdar_value;
   }
   return lambdar;
 }

@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file, processes;
   std::size_t order, icase_in;
-  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics;
+  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics, use_zero_mur;
   double qsmall, epsilon_qsat_fac, epsilon_self_coll;
 
 	po::options_description desc("Allowed options");
@@ -96,12 +96,13 @@ int main(int argc, char* argv[])
     ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")
     ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(1.e-10), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
     ("epsilon_self_coll", po::value(&epsilon_self_coll)->default_value(0.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
+    ("use_zero_mur", po::value(&use_zero_mur)->default_value(0), "use zero for rain shape parameter mu (legacy value)")
   ;
 
   // Load from command line to check for input file
   po::variables_map vm{};
   po::store(parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);  
+  po::notify(vm);
 
   // Load from settings file if available
   if (vm.count("i")) {
@@ -111,13 +112,13 @@ int main(int argc, char* argv[])
     std::ifstream settings_file("settings_filtered.ini");
     vm = po::variables_map();
     po::store(po::parse_config_file(settings_file, desc), vm);
-    po::notify(vm); 
+    po::notify(vm);
     std::filesystem::remove("settings_filtered.ini");
   } else {
     std::cout << "Setting parameters from command line arguments..." << std::endl;
   }
   std::cout << "---------------------------------------------------" << std::endl;
-  
+
   // Setup dependencies
   option_dependency<std::string>(vm, "case_idx", "ic_file");    // specifying a particular case_idx requires input E3SM data file
 
@@ -146,12 +147,13 @@ int main(int argc, char* argv[])
   if (dt_partition_2 < 0.0) {
     dt_partition_2 = abs(dt_partition_2) * dt;
   }
- 
+
   // Set up model constants.
   // SPS: Choose rho_top in a more principled way?
+  const double mur = use_zero_mur ? 0.0 : 1.0;
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
-                               0.62197, qsmall, 9.80616, 1.e-5, 5.e-3,
+                               0.62197, qsmall, 9.80616, 1.e-5, 5.e-3, mur,
                                0.988919555598356, 1.e3, 1.e-4, epsilon_qsat_fac, epsilon_self_coll};
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
@@ -273,7 +275,7 @@ int main(int argc, char* argv[])
 
     // Nudging to initial condition.
     std::shared_ptr<Nudging> nudge;
-    
+
     std::vector<const RainshaftProcess *> partition_2_process_vec{}, all_process_vec{};
 
     if (processes == "rain_with_nudging") {
@@ -308,7 +310,7 @@ int main(int argc, char* argv[])
       }
     }
 
-    SizeLimiters size_limiters(constants, 10.e-6, 5.e-3, 0.);
+    SizeLimiters size_limiters(constants, 10.e-6, 5.e-3);
 
     // List of integrators that need to remain allocated for use by original scheme.
     std::vector<std::shared_ptr<RainshaftIntegrator>> backing_integrators;
@@ -327,8 +329,8 @@ int main(int argc, char* argv[])
       } else if (method_type == "forcing") {
         return std::make_unique<ForcingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, dt_partition_1, dt_partition_2, cfl_substep, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "original") {
-        // Borrowed from original P3 settings, minimum diameter is 10 micron and maximum is 5 millimeter, mu = 0.
-        SizeLimiters size_limiters(constants, 10.e-6, 5.e-3, 0.);
+        // Borrowed from original P3 settings, minimum diameter is 10 micron and maximum is 5 millimeter.
+        SizeLimiters size_limiters(constants, 10.e-6, 5.e-3);
         std::shared_ptr<ExplicitIntegrator> local_intg = std::make_shared<ExplicitIntegrator>(constants, grid, size_limiters, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, 1, rel_tol, false, regularize_lambdar);
         backing_integrators.emplace_back(local_intg);
         std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(constants, size_limiters, *local_intg);
@@ -349,7 +351,7 @@ int main(int argc, char* argv[])
       int error_flag;
       RainshaftSolution solution = intg->integrate(initial_time, final_time, initial_state, error_flag);
       auto after_sol = high_resolution_clock::now();
-  
+
       // Time taken for solution.
       duration<double, std::milli> walltime_ms = after_sol - before_sol;
       std::cout << "Case " << icase << ", Time: " << walltime_ms.count() << std::endl;
