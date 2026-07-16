@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 
   // create rainshaft processes
   RainshaftConstants constants = create_RainshaftConstants(defaults::qsmall,
-    defaults::epsilon_qsat_fac, defaults::epsilon_self_coll);
+    defaults::epsilon_qsat_fac, defaults::epsilon_self_coll, defaults::use_zero_mur);
   SaturationFormulae sat_form(constants);
   Evaporation evap(constants, sat_form, defaults::use_lookup, false,
                    defaults::regularize_qsat, std::nullopt);

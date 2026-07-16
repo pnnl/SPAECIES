@@ -30,6 +30,7 @@ namespace defaults
   const double regularize_lambdar = true;
   const double regularize_qsat = true;
   const double use_lookup = false;
+  const int use_zero_mur = 0;
 };
 
 RainshaftConstants create_RainshaftConstants(const double qsmall,

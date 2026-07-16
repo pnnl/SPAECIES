@@ -75,9 +75,9 @@ int main(int argc, char* argv[])
     ("regularize_lambdar", po::value(&regularize_lambdar)->default_value(defaults::regularize_lambdar), "boolean flag for lambdar regularization")
     ("qsmall", po::value(&qsmall)->default_value(defaults::qsmall), "smallest permissible non-zero value of qr")
     ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")
-    ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(defaults::epislon_qsat_fac), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
+    ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(defaults::epsilon_qsat_fac), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
     ("epsilon_self_coll", po::value(&epsilon_self_coll)->default_value(defaults::epsilon_self_coll), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
-    ("use_zero_mur", po::value(&use_zero_mur)->default_value(0), "use zero for rain shape parameter mu (legacy value)")
+    ("use_zero_mur", po::value(&use_zero_mur)->default_value(defaults::use_zero_mur), "use zero for rain shape parameter mu (legacy value)")
   ;
 
   // Load from command line to check for input file
