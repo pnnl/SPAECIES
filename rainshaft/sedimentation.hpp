@@ -217,28 +217,6 @@ public:
 
   const bool use_numerical_integration;
 
-private:
-
-  // Particle velocity lookup tables.
-  // This is currently hard-coded to P3 settings, i.e. it contains 20 entries
-  // for values every 10 microns between 5 and 195 micron, and 280 entries for
-  // values every 30 microns between 195 and 8595 micron.
-  std::optional<LookupLinear> v0_table;
-  std::optional<LookupLinear> v3_table;
-
-  template <bool WithGrad = false>
-  static Speeds<WithGrad, 1> rain_fall_speeds(const RainshaftConstants &constants,
-                                           const double lambdar,
-                                           const bool use_numerical_integration)
-  {
-    if (use_numerical_integration) {
-      return rain_fall_speeds_numerical<WithGrad>(constants, lambdar);
-    } else {
-      return rain_fall_speeds_gamma<WithGrad>(constants, lambdar);
-    }
-  }
-
-
   // What would the speeds for a given lambdar be at standard temperature and
   // pressure?
   // This version ignores any lookup table, if present, and always returns fall
@@ -295,6 +273,27 @@ private:
               {v3, {(constants.mur+4) * (v3-v4)/lambdar}}};
     } else {
       return {v0, v3};
+    }
+  }
+
+private:
+
+  // Particle velocity lookup tables.
+  // This is currently hard-coded to P3 settings, i.e. it contains 20 entries
+  // for values every 10 microns between 5 and 195 micron, and 280 entries for
+  // values every 30 microns between 195 and 8595 micron.
+  std::optional<LookupLinear> v0_table;
+  std::optional<LookupLinear> v3_table;
+
+  template <bool WithGrad = false>
+  static Speeds<WithGrad, 1> rain_fall_speeds(const RainshaftConstants &constants,
+                                           const double lambdar,
+                                           const bool use_numerical_integration)
+  {
+    if (use_numerical_integration) {
+      return rain_fall_speeds_numerical<WithGrad>(constants, lambdar);
+    } else {
+      return rain_fall_speeds_gamma<WithGrad>(constants, lambdar);
     }
   }
 

@@ -47,10 +47,13 @@ class NetcdfReader
 public:
   NetcdfReader(const std::string& file_name) : file(file_name) {}
   std::tuple<std::size_t, std::size_t> read_num_cases_and_levs() const;
-  std::vector<double> read_grid(const std::size_t case_idx) const;
+  RainshaftGrid read_grid_pressure(const std::size_t case_idx) const;
+  std::vector<double> read_grid_height(const std::size_t case_idx, const std::size_t time_idx) const;
   void read_boundary_conditions(const std::size_t case_idx, RainshaftConstants &constants) const;
   void read_state(const std::size_t case_idx, const std::size_t time_idx, State &initial_state) const;
 };
+
+double calc_max_characteristic_speed(const RainshaftConstants& constants, const double lambdar);
 
 
 int main(int argc, char* argv[])
@@ -103,7 +106,8 @@ int main(int argc, char* argv[])
   {
 
     reader.read_boundary_conditions(icase, constants);
-    RainshaftGrid grid = reader.read_grid(icase);
+    const std::vector<double> z = reader.read_grid_height(icase, time_idx);
+    RainshaftGrid grid = reader.read_grid_pressure(icase);
     reader.read_state(icase, time_idx, state);
     RainshaftDerivedVars dvars(constants, grid, state, defaults::regularize_lambdar);
 
@@ -113,20 +117,23 @@ int main(int argc, char* argv[])
 
     double evaporation_rate = 0.0;
     double self_coll_rate = 0.0;
-    double sedimentation_accurate_rate = 0.0;
+
+    double sedimentation_accuracy_rate = 0.0;
     double sedimentation_stability_rate = 0.0;
+
     for (std::size_t ilev = 0; ilev != grid.nlev; ilev++)
     {
       evaporation_rate = std::max(evaporation_rate,
         qr[ilev] / (evap_tend.get_variable("qr_tend").value()[ilev] + epsilon));
       self_coll_rate = std::max(self_coll_rate,
         nr[ilev] / (self_coll_tend.get_variable("nr_tend").value()[ilev] + epsilon));
-      
-      
-
-      }
+      const double sigma = calc_max_characteristic_speed(constants, dvars.lambdar[ilev]);
+      sedimentation_stability_rate = std::max(sedimentation_stability_rate,
+        sigma / (z[ilev] - z[ilev+1]));
+    }
     std::cout << "Evaporation: " << evaporation_rate << std::endl;
     std::cout << "Self-collection: " << self_coll_rate << std::endl;
+    std::cout << "Sedimentation (stability): " << sedimentation_stability_rate << std::endl;
   }
 
   return 0;
@@ -173,17 +180,30 @@ std::tuple<std::size_t, std::size_t> NetcdfReader::read_num_cases_and_levs() con
   return {num_cases, num_levs};
 }
 
-std::vector<double> NetcdfReader::read_grid(const std::size_t case_idx) const
+std::vector<double> NetcdfReader::read_grid_height(const std::size_t case_idx, const std::size_t time_idx) const
 {
   const int ilev_id = file.get_dim_id("ilev");
   const int z_int_id = file.get_var_id("z_int");
   std::size_t num_ilevs;
   nc_inq_dimlen(file.get_file_id(), ilev_id, &num_ilevs);
-  std::size_t starts[2] = {case_idx, 0};
-  std::size_t counts[2] = {1, num_ilevs};
+  std::size_t starts[3] = {case_idx, time_idx, 0};
+  std::size_t counts[3] = {1, 1, num_ilevs};
   std::vector<double> z_int(num_ilevs);
   nc_get_vara_double(file.get_file_id(), z_int_id, starts, counts, z_int.data());
-  return std::move(z_int);
+  return z_int;
+}
+
+RainshaftGrid NetcdfReader::read_grid_pressure(const std::size_t case_idx) const
+{
+  const int ilev_id = file.get_dim_id("ilev");
+  const int p_int_id = file.get_var_id("p_int");
+  std::size_t num_ilevs;
+  nc_inq_dimlen(file.get_file_id(), ilev_id, &num_ilevs);
+  std::size_t starts[2] = {case_idx, 0};
+  std::size_t counts[2] = {1, num_ilevs};
+  std::vector<double> p_int(num_ilevs);
+  nc_get_vara_double(file.get_file_id(), p_int_id, starts, counts, p_int.data());
+  return RainshaftGrid(p_int);
 }
 
 void NetcdfReader::read_boundary_conditions(const std::size_t case_idx, RainshaftConstants &constants) const
@@ -215,4 +235,19 @@ void NetcdfReader::read_state(const std::size_t case_idx, const std::size_t time
   nc_get_vara_double(file.get_file_id(), q_id, starts, counts, &q[0]);
   nc_get_vara_double(file.get_file_id(), nr_id, starts, counts, &nr[0]);
   nc_get_vara_double(file.get_file_id(), qr_id, starts, counts, &qr[0]);
+}
+
+double calc_max_characteristic_speed(const RainshaftConstants& constants, const double lambdar)
+{
+  const auto [vnr_info, vqr_info] =
+    Sedimentation::rain_fall_speeds_gamma<true>(constants, lambdar);
+  const double vnr = get_val(vnr_info);
+  const double dvnr_dlam = get_grad(vnr_info)[0];
+  const double vqr = get_val(vqr_info);
+  const double dvqr_dlam = get_grad(vqr_info)[0];
+  const double vnr_term = vnr + dvnr_dlam * lambdar/3.0;
+  const double vqr_term = vqr - dvqr_dlam * lambdar/3.0;
+  const double b = -(vnr_term + vqr_term);
+  const double c = vnr_term*vqr_term + dvnr_dlam*dvqr_dlam*std::pow(lambdar/3.0,2);
+  return 0.5*(-b + std::sqrt(b*b - 4.0*c));
 }
