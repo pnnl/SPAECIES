@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <numeric>
 #include <optional>
+#include <type_traits>
 #include <boost/program_options.hpp>
 
 #include "libspaecies/spaecies.hpp"
@@ -38,6 +39,8 @@ public:
   int get_file_id() const { return file_id; }
   int get_dim_id(const std::string& dim_name) const;
   int get_var_id(const std::string& var_name) const;
+  template <typename T>
+  T get_var_val(const std::string& var_name, const std::size_t idx) const;
 };
 
 // variant NetcdfReader class modified for output of NetcdfWriter class
@@ -46,7 +49,7 @@ class NetcdfReader
   NetcdfFile file;
 public:
   NetcdfReader(const std::string& file_name) : file(file_name) {}
-  std::tuple<std::size_t, std::size_t> read_num_cases_and_levs() const;
+  std::size_t read_num_cases() const;
   RainshaftGrid read_grid_pressure(const std::size_t case_idx) const;
   std::vector<double> read_grid_height(const std::size_t case_idx, const std::size_t time_idx) const;
   void read_boundary_conditions(const std::size_t case_idx, RainshaftConstants &constants) const;
@@ -64,75 +67,106 @@ int main(int argc, char* argv[])
   namespace po = boost::program_options;
   std::string input_file;
   std::size_t time_idx;
+  bool use_zero_mur;
+  int case_idx;
   po::options_description desc("Allowed options");
   desc.add_options()
     ("help", "produce help message")
     ("input,i", po::value(&input_file)->required(), "input netCDF file")
     ("time_idx,ti", po::value(&time_idx)->default_value(0), "time index")
+    ("use_zero_mur", po::value(&use_zero_mur)->default_value(defaults::use_zero_mur), "use zero for rain shape parameter mu (legacy value)")
+    ("case_idx", po::value(&case_idx)->default_value(-1), "(optional) specific case to analyze (otherwise all cases are analyzed).")
   ;
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
+	if (vm.count("help"))
+	{
+		std::cout << desc << "\n";
+		return 1;
+	}
   po::notify(vm);
 
   const NetcdfReader reader(input_file);
-  std::size_t num_cases, num_levs;
-  std::tie(num_cases, num_levs) = reader.read_num_cases_and_levs();
+  std::size_t num_cases = reader.read_num_cases();
 
   // create rainshaft processes
+  const double mur = use_zero_mur ? 0.0 : 1.0;
   RainshaftConstants constants = create_RainshaftConstants(defaults::qsmall,
-    defaults::epsilon_qsat_fac, defaults::epsilon_self_coll, defaults::use_zero_mur);
+    defaults::epsilon_qsat_fac, defaults::epsilon_self_coll, mur);
   SaturationFormulae sat_form(constants);
   Evaporation evap(constants, sat_form, defaults::use_lookup, false,
                    defaults::regularize_qsat, std::nullopt);
   SelfCollision self_coll(defaults::regularize_lambdar);
   Sedimentation sed(constants, defaults::use_lookup, false);
 
-  // create state and tendency objects
-  spaecies::Domain dom;
-  spaecies::DimensionPtr lev_dim = dom.add_dimension("level", num_levs);
-  VarDescList state_descs = get_prognostic_variables(dom, lev_dim);
-  State state(state_descs);
-  VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
-  Tendency evap_tend(tend_descs), self_coll_tend(tend_descs), sed_tend(tend_descs);
-
-  // create helper views
-  spaecies::ContiguousVariableView<const double> T = state.get_variable("T").value();
-  spaecies::ContiguousVariableView<const double> q = state.get_variable("q").value();
-  spaecies::ContiguousVariableView<const double> nr = state.get_variable("nr").value();
-  spaecies::ContiguousVariableView<const double> qr = state.get_variable("qr").value();
-
   // compute process rates for each case in input file
-  for (std::size_t icase=0; icase < num_cases; icase++)
+  std::size_t case_start = 0;
+  if (case_idx >= 0)
   {
-
+    case_start = (std::size_t) case_idx;
+    num_cases = 1;
+  }
+  for (std::size_t icase=case_start; icase < case_start + num_cases; icase++)
+  {
+    // read in grid and boundary condition information for current case
     reader.read_boundary_conditions(icase, constants);
     const std::vector<double> z = reader.read_grid_height(icase, time_idx);
     RainshaftGrid grid = reader.read_grid_pressure(icase);
+
+    // create state and tendency objects
+    spaecies::Domain dom;
+    spaecies::DimensionPtr lev_dim = dom.add_dimension("level", grid.nlev);
+    VarDescList state_descs = get_prognostic_variables(dom, lev_dim);
+    State state(state_descs);
+    VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
+    Tendency evap_tend(tend_descs), self_coll_tend(tend_descs), sed_tend(tend_descs);
+
+    // read in state and compute derived variables and tendencies
     reader.read_state(icase, time_idx, state);
     RainshaftDerivedVars dvars(constants, grid, state, defaults::regularize_lambdar);
-
     evap.calc_tend(constants, grid, state, dvars, evap_tend);
     self_coll.calc_tend(constants, grid, state, dvars, self_coll_tend);
     sed.calc_tend(constants, grid, state, dvars, sed_tend);
 
+    // create helper views
+    spaecies::ContiguousVariableView<const double> T = state.get_variable("T").value();
+    spaecies::ContiguousVariableView<const double> q = state.get_variable("q").value();
+    spaecies::ContiguousVariableView<const double> nr = state.get_variable("nr").value();
+    spaecies::ContiguousVariableView<const double> qr = state.get_variable("qr").value();
+    spaecies::ContiguousVariableView<const double> Sqr = evap_tend.get_variable("qr_tend").value();
+    spaecies::ContiguousVariableView<const double> Srsc = self_coll_tend.get_variable("nr_tend").value();
+
+    // compute rates
     double evaporation_rate = 0.0;
     double self_coll_rate = 0.0;
-
     double sedimentation_accuracy_rate = 0.0;
     double sedimentation_stability_rate = 0.0;
-
     for (std::size_t ilev = 0; ilev != grid.nlev; ilev++)
     {
-      evaporation_rate = std::max(evaporation_rate,
-        qr[ilev] / (evap_tend.get_variable("qr_tend").value()[ilev] + epsilon));
-      self_coll_rate = std::max(self_coll_rate,
-        nr[ilev] / (self_coll_tend.get_variable("nr_tend").value()[ilev] + epsilon));
+      if (qr[ilev] > epsilon)
+      {
+        evaporation_rate = std::max(evaporation_rate, std::abs(Sqr[ilev]) / qr[ilev]);
+      }
+      if (nr[ilev] > epsilon)
+      {
+        self_coll_rate = std::max(self_coll_rate, std::abs(Srsc[ilev]) / nr[ilev]);
+      }
       const double sigma = calc_max_characteristic_speed(constants, dvars.lambdar[ilev]);
+      if (0 < ilev && ilev < grid.nlev && qr[ilev] > epsilon)
+      {
+        sedimentation_accuracy_rate = std::max(sedimentation_accuracy_rate, sigma /
+          std::sqrt( qr[ilev] /
+            (std::abs(((qr[ilev-1] - qr[ilev]) / (z[ilev-1] - z[ilev]) -
+                       (qr[ilev] - qr[ilev+1]) / (z[ilev] - z[ilev+1])) /
+                      (0.5*(z[ilev-1] - z[ilev+1]))) + epsilon)
+                   ));
+      }
       sedimentation_stability_rate = std::max(sedimentation_stability_rate,
         sigma / (z[ilev] - z[ilev+1]));
     }
     std::cout << "Evaporation: " << evaporation_rate << std::endl;
     std::cout << "Self-collection: " << self_coll_rate << std::endl;
+    std::cout << "Sedimentation (accuracy): " << sedimentation_accuracy_rate << std::endl;
     std::cout << "Sedimentation (stability): " << sedimentation_stability_rate << std::endl;
   }
 
@@ -170,24 +204,33 @@ int NetcdfFile::get_var_id(const std::string& var_name) const
   return var_id;
 }
 
-std::tuple<std::size_t, std::size_t> NetcdfReader::read_num_cases_and_levs() const
+template <typename T>
+T NetcdfFile::get_var_val(const std::string& var_name, const std::size_t idx) const
+{
+  T value;
+  const int var_id = get_var_id(var_name);
+  if constexpr (std::is_integral_v<T>)
+    nc_get_var1_int(file_id, var_id, &idx, &value);
+  else
+    static_assert(false, "Unsupported type");
+
+  return value;
+}
+
+std::size_t NetcdfReader::read_num_cases() const
 {
   const int case_id = file.get_dim_id("case");
-  const int lev_id = file.get_dim_id("lev");
-  std::size_t num_cases, num_levs;
+  std::size_t num_cases;
   nc_inq_dimlen(file.get_file_id(), case_id, &num_cases);
-  nc_inq_dimlen(file.get_file_id(), lev_id, &num_levs);
-  return {num_cases, num_levs};
+  return num_cases;
 }
 
 std::vector<double> NetcdfReader::read_grid_height(const std::size_t case_idx, const std::size_t time_idx) const
 {
-  const int ilev_id = file.get_dim_id("ilev");
+  const int num_ilevs = file.get_var_val<int>("nlev", case_idx) + 1;
   const int z_int_id = file.get_var_id("z_int");
-  std::size_t num_ilevs;
-  nc_inq_dimlen(file.get_file_id(), ilev_id, &num_ilevs);
   std::size_t starts[3] = {case_idx, time_idx, 0};
-  std::size_t counts[3] = {1, 1, num_ilevs};
+  std::size_t counts[3] = {1, 1, (std::size_t) num_ilevs};
   std::vector<double> z_int(num_ilevs);
   nc_get_vara_double(file.get_file_id(), z_int_id, starts, counts, z_int.data());
   return z_int;
@@ -195,12 +238,10 @@ std::vector<double> NetcdfReader::read_grid_height(const std::size_t case_idx, c
 
 RainshaftGrid NetcdfReader::read_grid_pressure(const std::size_t case_idx) const
 {
-  const int ilev_id = file.get_dim_id("ilev");
+  const int num_ilevs = file.get_var_val<int>("nlev", case_idx) + 1;
   const int p_int_id = file.get_var_id("p_int");
-  std::size_t num_ilevs;
-  nc_inq_dimlen(file.get_file_id(), ilev_id, &num_ilevs);
-  std::size_t starts[2] = {case_idx, 0};
-  std::size_t counts[2] = {1, num_ilevs};
+  const std::size_t starts[2] = {case_idx, 0};
+  const std::size_t counts[2] = {1, (std::size_t) (num_ilevs)};
   std::vector<double> p_int(num_ilevs);
   nc_get_vara_double(file.get_file_id(), p_int_id, starts, counts, p_int.data());
   return RainshaftGrid(p_int);
@@ -218,15 +259,13 @@ void NetcdfReader::read_boundary_conditions(const std::size_t case_idx, Rainshaf
 
 void NetcdfReader::read_state(const std::size_t case_idx, const std::size_t time_idx, State &state) const
 {
-  const int lev_id = file.get_dim_id("lev");
+  const int num_levs = file.get_var_val<int>("nlev", case_idx);
   const int T_id = file.get_var_id("T");
   const int q_id = file.get_var_id("q");
   const int nr_id = file.get_var_id("nr");
   const int qr_id = file.get_var_id("qr");
-  std::size_t num_levs;
-  nc_inq_dimlen(file.get_file_id(), lev_id, &num_levs);
   std::size_t starts[3] = {case_idx, time_idx, 0};
-  std::size_t counts[3] = {1, 1, num_levs};
+  std::size_t counts[3] = {1, 1, (std::size_t) num_levs};
   spaecies::ContiguousVariableView<double> T = state.get_variable("T").value();
   spaecies::ContiguousVariableView<double> q = state.get_variable("q").value();
   spaecies::ContiguousVariableView<double> nr = state.get_variable("nr").value();
