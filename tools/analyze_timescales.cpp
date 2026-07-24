@@ -8,6 +8,7 @@
 #include <optional>
 #include <type_traits>
 #include <boost/program_options.hpp>
+#include <matplot/matplot.h>
 
 #include "libspaecies/spaecies.hpp"
 #include "rainshaft/evaporation.hpp"
@@ -106,6 +107,10 @@ int main(int argc, char* argv[])
     case_start = (std::size_t) case_idx;
     num_cases = 1;
   }
+  std::vector<double> evaporation_rates(num_cases);
+  std::vector<double> self_coll_rates(num_cases);
+  std::vector<double> sedimentation_accuracy_rates(num_cases);
+  std::vector<double> sedimentation_stability_rates(num_cases);
   for (std::size_t icase=case_start; icase < case_start + num_cases; icase++)
   {
     // read in grid and boundary condition information for current case
@@ -164,11 +169,30 @@ int main(int argc, char* argv[])
       sedimentation_stability_rate = std::max(sedimentation_stability_rate,
         sigma / (z[ilev] - z[ilev+1]));
     }
-    std::cout << "Evaporation: " << evaporation_rate << std::endl;
-    std::cout << "Self-collection: " << self_coll_rate << std::endl;
-    std::cout << "Sedimentation (accuracy): " << sedimentation_accuracy_rate << std::endl;
-    std::cout << "Sedimentation (stability): " << sedimentation_stability_rate << std::endl;
+    const std::size_t index = icase - case_start;
+    evaporation_rates[index] = evaporation_rate;
+    self_coll_rates[index] = self_coll_rate;
+    sedimentation_accuracy_rates[index] = sedimentation_accuracy_rate;
+    sedimentation_stability_rates[index] = sedimentation_stability_rate;
   }
+
+  matplot::line_handle plot;
+  matplot::hold(matplot::on);
+  //matplot::line_handle plot = matplot::plot(evaporation_rates, "o");
+  //plot->display_name("evaporation rate");
+  //plot = matplot::plot(self_coll_rates, "o");
+  //plot->display_name("self collection rate");
+  plot = matplot::plot(sedimentation_accuracy_rates, "o");
+  plot->display_name("sedimentation accuracy rate");
+  plot = matplot::plot(sedimentation_stability_rates, "o");
+  plot->display_name("sedimentation stability rate");
+  matplot::hold(matplot::off);
+
+  matplot::xlabel("case number");
+  matplot::ylabel("process rate / inverse timescale (1/s)");
+  matplot::legend();
+
+  matplot::show();
 
   return 0;
 }
