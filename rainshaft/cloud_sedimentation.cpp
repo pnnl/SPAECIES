@@ -5,6 +5,8 @@
 using boost::math::tgamma, boost::math::tgamma_lower;
 using std::pow, std::sqrt, std::cbrt, std::exp;
 
+#include "cloud_size_parameters.hpp"
+
 CloudSedimentation::CloudSedimentation()
 {}
 
@@ -22,27 +24,6 @@ double CloudSedimentation::calc_moment_tend(const double dz,
 {
   const double air_mass_per_area = dz * rho_dry;
   return (flux_top - flux_bot) / air_mass_per_area;
-}
-
-double CloudSedimentation::calc_muc(double nc, double rho_dry) const
-{
-  // Convert nc to #/cm^3.
-  double nc_cgs = std::max(nc, 1.e-16) * 1.e-6 * rho_dry; // NSMALL=10^-16 from EAMxx
-  double denom_fac = 0.0005714 * nc_cgs + 0.2714;
-  double muc = (1. / (denom_fac*denom_fac)) - 1.;
-  // Output limited to the range [2, 15].
-  return std::min(std::max(2., muc), 15.);
-}
-
-double CloudSedimentation::calc_lambdac(const RainshaftConstants& constants,
-                                        double nc, double qc, double muc) const
-{
-  if (qc == 0.) {
-    // Default value when no mass present.
-    return 0.;
-  }
-  double muc_poly = constants.pi * constants.rhow * (muc + 3.) * (muc + 2.) * (muc + 1.) / 6.;
-  return std::cbrt(muc_poly * nc / qc);
 }
 
 // For a given size distribution+temperature, what are the cloud number and mass fall speeds?
@@ -122,7 +103,7 @@ void CloudSedimentation::calc_tend_jac(const RainshaftConstants &constants,
 
 std::set<std::string> CloudSedimentation::get_required_vars() const
 {
-  return {"t", "nc", "qc"};
+  return {"T", "nc", "qc"};
 }
 
 std::set<std::string> CloudSedimentation::get_optional_vars() const

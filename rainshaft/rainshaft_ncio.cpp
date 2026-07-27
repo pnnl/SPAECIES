@@ -2,7 +2,8 @@
 #include <cstddef>
 #include <vector>
 
-NetcdfReader::NetcdfReader(const std::string& file_name) : is_open(true) {
+NetcdfReader::NetcdfReader(const std::string& file_name, bool variable_height)
+  : variable_height(variable_height), is_open(true) {
   // SPS: Should throw error if this fails, probably also allow the file mode
   // argument to be adjusted.
   nc_open(file_name.c_str(), NC_NOWRITE, &fid);
@@ -27,21 +28,34 @@ std::tuple<std::size_t, std::size_t> NetcdfReader::read_num_cases_and_max_levs()
 }
 
 RainshaftGrid NetcdfReader::read_grid(std::size_t case_idx) {
-  int nlevid, psid, pdelid;
-  nc_inq_varid(fid, "nlev_samp", &nlevid);
+  int psid, pdelid;
   nc_inq_varid(fid, "surface_pressure", &psid);
   nc_inq_varid(fid, "pdel", &pdelid);
-  int nlev;
-  nc_get_var1_int(fid, nlevid, &case_idx, &nlev);
-  std::size_t starts[2] = {case_idx, 0};
-  std::size_t counts[2] = {1, (std::size_t) nlev};
-  std::vector<double> pdel(nlev);
+  std::size_t top_lev, lev_size;
+  if (variable_height) {
+    top_lev = 1;
+    int nlevid, nlev;
+    nc_inq_varid(fid, "nlev_samp", &nlevid);
+    nc_get_var1_int(fid, nlevid, &case_idx, &nlev);
+    lev_size = (std::size_t) (nlev - 1);
+  } else {
+    top_lev = 0;
+    int nlevid;
+    std::size_t nlev;
+    nc_inq_dimid(fid, "nlev", &nlevid);
+    nc_inq_dimlen(fid, nlevid, &nlev);
+    lev_size = nlev;
+  }
+  std::size_t starts[2] = {case_idx, top_lev};
+  std::size_t counts[2] = {1, lev_size};
+  std::vector<double> pdel(lev_size);
   nc_get_vara_double(fid, pdelid, starts, counts, pdel.data());
-  // Dimension is nlev because we discard the top (cloud-base) level.
-  std::vector<double> p_int(nlev);
-  nc_get_var1_double(fid, psid, &case_idx, &p_int[nlev-1]);
-  for (std::size_t i = nlev-1; i != 0; --i) {
-    p_int[i-1] = p_int[i] - pdel[i];
+  // Bump up size by 1 for variable defined at interfaces.
+  std::vector<double> p_int(lev_size+1);
+  // Set bottom level first, then use pdel to work up to the top.
+  nc_get_var1_double(fid, psid, &case_idx, &p_int[lev_size]);
+  for (std::size_t i = lev_size; i != 0; --i) {
+    p_int[i-1] = p_int[i] - pdel[i-1];
   }
   return RainshaftGrid(p_int);
 }
@@ -49,38 +63,61 @@ RainshaftGrid NetcdfReader::read_grid(std::size_t case_idx) {
 void NetcdfReader::read_boundary_conditions(std::size_t case_idx,
                                             RainshaftConstants &constants) {
   // Get state at cloud base.
-  int rainfracid, pmidid, tid, qid, ncid, qcid, nrid, qrid;
-  nc_inq_varid(fid, "rainfrac", &rainfracid);
+  int pmidid, tid, qid;
   nc_inq_varid(fid, "pmid", &pmidid);
   nc_inq_varid(fid, "t", &tid);
   nc_inq_varid(fid, "q", &qid);
-  nc_inq_varid(fid, "nc", &ncid);
-  nc_inq_varid(fid, "qc", &qcid);
-  nc_inq_varid(fid, "nr", &nrid);
-  nc_inq_varid(fid, "qr", &qrid);
-  double rainfrac, pmid, t, q, nc, qc, nr, qr;
+  double pmid, t, q;
   std::size_t loc[2] = {case_idx, 0};
-  nc_get_var1_double(fid, rainfracid, loc, &rainfrac);
   nc_get_var1_double(fid, pmidid, loc, &pmid);
   nc_get_var1_double(fid, tid, loc, &t);
   nc_get_var1_double(fid, qid, loc, &q);
-  nc_get_var1_double(fid, ncid, loc, &nc);
-  nc_get_var1_double(fid, qcid, loc, &qc);
-  nc_get_var1_double(fid, nrid, loc, &nr);
-  nc_get_var1_double(fid, qrid, loc, &qr);
   constants.rho_top = rho_dry_from_ideal_gas_law(constants.rdry, constants.epsilon_h2o,
                                                  pmid, t, q);
-  // Below assumes that the cloud fraction is 1.
-  constants.nc_top = nc;
-  constants.qc_top = qc;
+  // If not using the variable-height rainshaft model, then `rho` at the upper boundary
+  // probably is never used, but we set `rho_top` anyway to the value at the topmost
+  // grid cell (since it is easy and it's possible some future revision could use it).
+  // However, the upper boundary condition should be zero-flux, so we set the
+  // hydrometeor values to 0 in this case regardless of file values.
+  if (!variable_height) {
+    constants.nc_top = 0.;
+    constants.qc_top = 0.;
+    constants.nr_top = 0.;
+    constants.qr_top = 0.;
+    return;
+  }
+  // For variable-height rainshaft, the top level defines the upper boundary condition
+  // for sedimentation of hydrometeors.
+  int cloudfracid, rainfracid, ncid, qcid, nrid, qrid;
+  double cloudfrac, rainfrac, nc, qc, nr, qr;
+  // Convert nc/qc at the top to in-cloud values.
+  nc_inq_varid(fid, "cloudfrac", &cloudfracid);
+  nc_inq_varid(fid, "nc", &ncid);
+  nc_inq_varid(fid, "qc", &qcid);
+  nc_get_var1_double(fid, cloudfracid, loc, &cloudfrac);
+  nc_get_var1_double(fid, ncid, loc, &nc);
+  nc_get_var1_double(fid, qcid, loc, &qc);
+  if (cloudfrac > 1.e-2) {
+    constants.nc_top = nc / cloudfrac;
+    constants.qc_top = qc / cloudfrac;
+  } else {
+    constants.nc_top = 0.;
+    constants.qc_top = 0.;
+  }
   // Convert nr/qr at the top to in-cloud values.
+  nc_inq_varid(fid, "rainfrac", &rainfracid);
+  nc_inq_varid(fid, "nr", &nrid);
+  nc_inq_varid(fid, "qr", &qrid);
+  nc_get_var1_double(fid, rainfracid, loc, &rainfrac);
+  nc_get_var1_double(fid, nrid, loc, &nr);
+  nc_get_var1_double(fid, qrid, loc, &qr);
   constants.nr_top = nr / rainfrac;
   constants.qr_top = qr / rainfrac;
 }
 
 void NetcdfReader::read_initial_conditions(std::size_t case_idx, State &initial_state) {
-  int nlevid, rainfracid, tid, qid, ncid, qcid, nrid, qrid;
-  nc_inq_varid(fid, "nlev_samp", &nlevid);
+  int cloudfracid, rainfracid, tid, qid, ncid, qcid, nrid, qrid;
+  nc_inq_varid(fid, "cloudfrac", &cloudfracid);
   nc_inq_varid(fid, "rainfrac", &rainfracid);
   nc_inq_varid(fid, "t", &tid);
   nc_inq_varid(fid, "q", &qid);
@@ -88,11 +125,29 @@ void NetcdfReader::read_initial_conditions(std::size_t case_idx, State &initial_
   nc_inq_varid(fid, "qc", &qcid);
   nc_inq_varid(fid, "nr", &nrid);
   nc_inq_varid(fid, "qr", &qrid);
-  int nlev;
-  nc_get_var1_int(fid, nlevid, &case_idx, &nlev);
-  std::vector<double> rainfrac(nlev-1);
-  std::size_t starts[2] = {case_idx, 1};
-  std::size_t counts[2] = {1, (std::size_t) nlev-1};
+  std::size_t top_lev, lev_size;
+  // Size of arrays with a level dimension is one smaller in the variable-height case,
+  // since in that case the top level is used for the upper boundary condition and is
+  // not in the SPAECIES model's domain.
+  if (variable_height) {
+    top_lev = 1;
+    int nlevid, nlev;
+    nc_inq_varid(fid, "nlev_samp", &nlevid);
+    nc_get_var1_int(fid, nlevid, &case_idx, &nlev);
+    lev_size = (std::size_t) (nlev - 1);
+  } else {
+    top_lev = 0;
+    int nlevid;
+    std::size_t nlev;
+    nc_inq_dimid(fid, "nlev", &nlevid);
+    nc_inq_dimlen(fid, nlevid, &nlev);
+    lev_size = nlev;
+  }
+  std::vector<double> cloudfrac(lev_size);
+  std::vector<double> rainfrac(lev_size);
+  std::size_t starts[2] = {case_idx, top_lev};
+  std::size_t counts[2] = {1, (std::size_t) lev_size};
+  nc_get_vara_double(fid, cloudfracid, starts, counts, cloudfrac.data());
   nc_get_vara_double(fid, rainfracid, starts, counts, rainfrac.data());
   VarMut t = initial_state.get_variable("T").value();
   VarMut q = initial_state.get_variable("q").value();
@@ -105,21 +160,35 @@ void NetcdfReader::read_initial_conditions(std::size_t case_idx, State &initial_
   // Check if optional fields need to be set.
   std::optional<VarMut> maybe_nc = initial_state.get_variable("nc");
   if (maybe_nc) {
-    nc_get_vara_double(fid, ncid, starts, counts, &(maybe_nc.value())[0]);
+    nc_get_vara_double(fid, ncid, starts, counts, &(*maybe_nc)[0]);
+    for (int i = 0; i != lev_size; ++i) {
+      if (cloudfrac[i] > 1.e-2) {
+        (*maybe_nc)[i] /= cloudfrac[i];
+      } else {
+        (*maybe_nc)[i] = 0.;
+      }
+    }
   }
   std::optional<VarMut> maybe_qc = initial_state.get_variable("qc");
   if (maybe_qc) {
-    nc_get_vara_double(fid, qcid, starts, counts, &(maybe_qc.value())[0]);
+    nc_get_vara_double(fid, qcid, starts, counts, &(*maybe_qc)[0]);
+    for (int i = 0; i != lev_size; ++i) {
+      if (cloudfrac[i] > 1.e-2) {
+        (*maybe_qc)[i] /= cloudfrac[i];
+      } else {
+        (*maybe_qc)[i] = 0.;
+      }
+    }
   }
   // Convert to in-cloud values.
-  for (int i = 0; i != nlev - 1; ++i) {
-    // Cloud fraction not implemented, but rain fraction is.
+  for (int i = 0; i != lev_size; ++i) {
     nr[i] /= rainfrac[i];
     qr[i] /= rainfrac[i];
   }
 }
 
-NetcdfWriter::NetcdfWriter(const std::string& file_name, std::size_t num_cases, std::size_t max_levs) {
+NetcdfWriter::NetcdfWriter(const std::string& file_name, std::size_t num_cases, std::size_t max_levs,
+                           bool variable_height) : variable_height(variable_height){
   // SPS: Should throw error if this fails, probably also allow the file mode
   // argument to be adjusted.
   nc_create(file_name.c_str(), NC_CLOBBER|NC_NETCDF4, &fid);
@@ -143,9 +212,13 @@ void NetcdfWriter::write_grid(const RainshaftGrid& grid, std::size_t case_idx) {
   nc_inq_dimid(fid, "ilev", &ilevid);
   // Define variables.
   int status;
-  status = nc_inq_varid(fid, "nlev", &nlevid);
-  if (status == NC_ENOTVAR) {
-    nc_def_var(fid, "nlev", NC_INT, 1, &caseid, &nlevid);
+  // Output number of levels only if this can actually vary between cases.
+  // (Otherwise the "lev" dimension gives level number for all columns.)
+  if (variable_height) {
+    status = nc_inq_varid(fid, "nlev", &nlevid);
+    if (status == NC_ENOTVAR) {
+      nc_def_var(fid, "nlev", NC_INT, 1, &caseid, &nlevid);
+    }
   }
   status = nc_inq_varid(fid, "p_int", &p_intid);
   if (status == NC_ENOTVAR) {
@@ -158,8 +231,11 @@ void NetcdfWriter::write_grid(const RainshaftGrid& grid, std::size_t case_idx) {
     nc_def_var(fid, "p_mid", NC_DOUBLE, 2, p_mid_dimids, &p_midid);
   }
   // Write variables.
-  int nlev_int = grid.nlev;
-  nc_put_var1_int(fid, nlevid, &case_idx, &nlev_int);
+  if (variable_height) {
+    // Convert from std::size_t for writing to netCDF.
+    int nlev_to_write = (int) grid.nlev;
+    nc_put_var1_int(fid, nlevid, &case_idx, &nlev_to_write);
+  }
   std::size_t starts[2] = {case_idx, 0};
   std::size_t interface_counts[2] = {1, grid.nlev+1};
   std::size_t counts[2] = {1, grid.nlev};
@@ -292,6 +368,15 @@ void NetcdfWriter::write_walltime_ms(double walltime_ms, std::size_t case_idx) {
   nc_put_var1_double(fid, walltime_msid, &case_idx, &walltime_ms);
 }
 
+// Utility for writing metadata strings to an NC_STRING variable.
+void NetcdfWriter::write_string(int outstringid, std::string outstring) {
+  // Logic to deal with the NC_STRING interface expecting char**.
+  char* temp = new char[outstring.length()+1];
+  std::strcpy(temp, outstring.c_str());
+  nc_put_var(fid, outstringid, &temp);
+  delete[] temp;
+}
+
 void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, double dt_partition_2, double rel_tol,
                                   bool postprocess, bool use_lookup, std::string method_type, int steps_per_output,
                                   std::string initial_condition_file, int num_cases, int icase_in, double final_time,
@@ -326,12 +411,7 @@ void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, d
 
   // type of integrator
   nc_def_var(fid, "method_type", NC_STRING, 0, NULL, &method_typeid);
-  { // Logic to deal with the NC_STRING interface expecting char**.
-    char* temp = new char[method_type.length()+1];
-    std::strcpy(temp, method_type.c_str());
-    nc_put_var(fid, method_typeid, &temp);
-    delete[] temp;
-  }
+  write_string(method_typeid, method_type);
 
   // frequency of solution states
   nc_def_var(fid, "steps_per_output", NC_INT, 0, NULL, &steps_per_outputid);
@@ -339,12 +419,7 @@ void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, d
 
   // initial condition file
   nc_def_var(fid, "initial_condition_file", NC_STRING, 0, NULL, &initial_condition_fileid);
-  { // Logic to deal with the NC_STRING interface expecting char**.
-    char* temp = new char[initial_condition_file.length()+1];
-    std::strcpy(temp, initial_condition_file.c_str());
-    nc_put_var(fid, initial_condition_fileid, &temp);
-    delete[] temp;
-  }
+  write_string(initial_condition_fileid, initial_condition_file);
 
   // number of cases simulated in this file
   nc_def_var(fid, "num_cases", NC_INT, 0, NULL, &num_casesid);
@@ -360,5 +435,5 @@ void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, d
 
   // nudging flag
   nc_def_var(fid, "processes", NC_STRING, 0, NULL, &processesid);
-  nc_put_var(fid, processesid, &processes);
+  write_string(processesid, processes);
 }

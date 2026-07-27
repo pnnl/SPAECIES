@@ -20,10 +20,6 @@ private:
                           const double flux_bot,
                           const double flux_top) const;
 
-  double calc_muc(double nc, double rho_dry) const;
-
-  double calc_lambdac(const RainshaftConstants& constants, double nc, double qc, double muc) const;
-
 public:
 
   CloudSedimentation();

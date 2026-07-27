@@ -34,7 +34,7 @@ double RainSedimentation::calc_max_step(const RainshaftConstants &constants,
                                     const RainshaftDerivedVars& dvars,
                                     double cfl) const
 {
-  double lambdar_top = calc_lambdar(constants.pi, constants.rhow, constants.mur,
+  double lambdar_top = constants.qr_top == 0. ? 0. : calc_lambdar(constants.pi, constants.rhow, constants.mur,
                                     constants.nr_top, constants.qr_top);
   const auto [v0, v3] = rain_fall_speeds(constants, dvars.rho_dry[0],
                                       lambdar_top);
@@ -45,7 +45,12 @@ double RainSedimentation::calc_max_step(const RainshaftConstants &constants,
     spatial_frequency = std::max(spatial_frequency, v3 / dvars.dz[il]);
   }
 
-  return cfl / spatial_frequency;
+  // A bit of a hack; if no rain present, return 1 hour as max time step.
+  if (spatial_frequency == 0.) {
+    return 3600.;
+  } else {
+    return cfl / spatial_frequency;
+  }
 }
 
 void RainSedimentation::calc_tend(const RainshaftConstants &constants,
@@ -54,7 +59,7 @@ void RainSedimentation::calc_tend(const RainshaftConstants &constants,
                               const RainshaftDerivedVars &dvars,
                               Tendency& tend) const
 {
-  const double lambdar_top = calc_lambdar(constants.pi, constants.rhow, constants.mur, constants.nr_top, constants.qr_top);
+  const double lambdar_top = constants.qr_top == 0. ? 0. : calc_lambdar(constants.pi, constants.rhow, constants.mur, constants.nr_top, constants.qr_top);
   auto [v0_prev, v3_prev] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
   double nr_prev = constants.nr_top;
   double qr_prev = constants.qr_top;
@@ -88,7 +93,7 @@ void RainSedimentation::calc_tend_jac(const RainshaftConstants &constants,
                                   const RainshaftDerivedVars &dvars,
                                   Matrix jac) const
 {
-  const double lambdar_top = calc_lambdar(constants.pi, constants.rhow, constants.mur, constants.nr_top, constants.qr_top);
+  const double lambdar_top = constants.qr_top == 0. ? 0. : calc_lambdar(constants.pi, constants.rhow, constants.mur, constants.nr_top, constants.qr_top);
   auto [v0_prev, v3_prev] = rain_fall_speeds<true>(constants, {constants.rho_top, {0., 0.}}, {lambdar_top, {0., 0.}});
   double nr_prev = constants.nr_top;
   double qr_prev = constants.qr_top;

@@ -2,6 +2,7 @@
 #include "accretion.hpp"
 #include "autoconversion.hpp"
 #include "cloud_sedimentation.hpp"
+#include "cloud_size_parameters.hpp"
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
 #include "fixed_substep_integrator.hpp"
@@ -75,7 +76,7 @@ int main(int argc, char* argv[])
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file, processes;
   std::size_t order, icase_in;
-  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics, use_zero_mur;
+  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics, use_zero_mur, limit_initial_nc, variable_height;
   double qsmall, epsilon_qsat_fac, epsilon_self_coll;
 
 	po::options_description desc("Allowed options");
@@ -104,7 +105,9 @@ int main(int argc, char* argv[])
     ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")
     ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(1.e-10), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
     ("epsilon_self_coll", po::value(&epsilon_self_coll)->default_value(0.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
-    ("use_zero_mur", po::value(&use_zero_mur)->default_value(0), "use zero for rain shape parameter mu (legacy value)")
+    ("use_zero_mur", po::value(&use_zero_mur)->default_value(false), "use zero for rain shape parameter mu (legacy value)")
+    ("limit_initial_nc", po::value(&limit_initial_nc)->default_value(true), "boolean flag to apply P3 size limiter to initial nc value")
+    ("variable_height", po::value(&variable_height)->default_value(false), "boolean flag to allow different columns to have different heights for the rainshaft model")
   ;
 
   // Load from command line to check for input file
@@ -190,7 +193,7 @@ int main(int argc, char* argv[])
     num_cases = 1;
     max_levs = default_grid.nlev;
   } else {
-    reader = NetcdfReader(initial_condition);
+    reader = NetcdfReader(initial_condition, variable_height);
     std::tuple<std::size_t, std::size_t> cases_levs = reader->read_num_cases_and_max_levs();
     max_cases = std::get<0>(cases_levs);
 
@@ -214,10 +217,13 @@ int main(int argc, char* argv[])
         throw std::invalid_argument("Requested non-existent case_idx in file.");
       }
     }
-    // Remove cloud base from levels.
-    max_levs = std::get<1>(cases_levs) - 1;
+    // Read level number and remove cloud base level for variable height cases.
+    max_levs = std::get<1>(cases_levs);
+    if (variable_height) {
+      --max_levs;
+    }
   }
-  NetcdfWriter writer(output_file, num_cases, max_levs);
+  NetcdfWriter writer(output_file, num_cases, max_levs, variable_height);
 
   // Setup list of cases to run
   std::vector<std::size_t> cases_to_run(num_cases);
@@ -289,6 +295,9 @@ int main(int argc, char* argv[])
       }
     } else {
       reader->read_initial_conditions(icase, initial_state);
+    }
+    if (limit_initial_nc) {
+      limit_nc(constants, grid, initial_state);
     }
     RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state, regularize_lambdar);
 
