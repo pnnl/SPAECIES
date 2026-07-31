@@ -1,9 +1,11 @@
 #!/bin/bash
 
-IC_FILE="/home/dong9/SPAECIES-input-data/random_rainshaft_samples_12mo.nc"
-RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft_noP3limiter"
-RAINSHAFT_DIR="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft"
-SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/fixed_step"
+RAINSHAFT_EXE_NAME="rainshaft_noP3limiter"
+SAVE_SUBDIR="fixed_step"
+SETTINGS_NAME="workprecision_fixedstep"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common_paths.sh"
 
 # simulation length
 FINAL_TIME=300
@@ -44,7 +46,7 @@ EPSILON_SELF_COLLS=(0.0)
 # type of integration (options: explicit, imex, mri)
 INTEGRATION_TYPES=("original") # "explicit" "implicit" "imex")
 
-cd ${RAINSHAFT_DIR}
+cd "${RAINSHAFT_DIR}"
 
 for kk in $(seq 0 $((${#INTEGRATION_TYPES[@]} - 1)))
 do
@@ -90,7 +92,7 @@ do
                     printf "qsmall = ${QSMALLS[ii]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "epsilon_qsat_fac = ${EPSILON_QSAT_FACS[j]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
-                    ${RAINSHAFT_EXE} --i "settings_${SETTINGS_NAME}.ini"
+                    "${RAINSHAFT_EXE}" --i "settings_${SETTINGS_NAME}.ini"
                 done
             done
         done
@@ -141,7 +143,7 @@ do
                             printf "epsilon_qsat_fac = ${EPSILON_QSAT_FACS[j]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                             printf "epsilon_self_coll = ${EPSILON_SELF_COLLS[jj]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
-                            ${RAINSHAFT_EXE} --i "settings_${SETTINGS_NAME}.ini"
+                            "${RAINSHAFT_EXE}" --i "settings_${SETTINGS_NAME}.ini"
                         done
                     done
                 done

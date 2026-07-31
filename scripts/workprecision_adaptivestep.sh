@@ -1,9 +1,11 @@
 #!/bin/bash
 
-IC_FILE="/home/dong9/SPAECIES-input-data/random_rainshaft_samples_12mo.nc"
-RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft"
-RAINSHAFT_DIR="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft"
-SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/adaptive_step"
+RAINSHAFT_EXE_NAME="rainshaft"
+SAVE_SUBDIR="adaptive_step"
+SETTINGS_NAME="workprecision_adaptivestep"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common_paths.sh"
 
 # simulation length
 FINAL_TIME=300
@@ -13,7 +15,7 @@ TIMESTEP=0.0
 RELTOLS=(1e-3 1e-4 1e-5 1e-6 1e-7 1e-8 1e-9 1e-10 1e-11)
 
 # order of method
-ORDERS=(2 3)
+ORDERS=(2)
 
 # toggle nudging
 NUDGING_FLAG="false"
@@ -45,7 +47,7 @@ QSMALLS=(1e-18)
 # type of integration (options: explicit, imex, mri)
 INTEGRATION_TYPES=("imex" "mri")
 
-cd ${RAINSHAFT_DIR}
+cd "${RAINSHAFT_DIR}"
 
 for kk in $(seq 0 $((${#INTEGRATION_TYPES[@]} - 1)))
 do
@@ -95,7 +97,7 @@ do
                     printf "qsmall = ${QSMALLS[ii]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "epsilon_qsat_fac = ${EPSILON_QSAT_FACS[j]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
-                    ${RAINSHAFT_EXE} --i "settings_${SETTINGS_NAME}.ini"
+                    "${RAINSHAFT_EXE}" --i "settings_${SETTINGS_NAME}.ini"
                 done
             done
         done
