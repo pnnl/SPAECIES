@@ -157,17 +157,19 @@ int main(int argc, char* argv[])
         self_coll_rate = std::max(self_coll_rate, std::abs(Srsc[ilev]) / nr[ilev]);
       }
       const double sigma = calc_max_characteristic_speed(constants, dvars.lambdar[ilev]);
-      if (0 < ilev && ilev < grid.nlev && qr[ilev] > epsilon)
+      if (0 < ilev && ilev < grid.nlev-1 && qr[ilev] > epsilon)
       {
-        sedimentation_accuracy_rate = std::max(sedimentation_accuracy_rate, sigma /
-          std::sqrt( qr[ilev] /
-            (std::abs(((qr[ilev-1] - qr[ilev]) / (z[ilev-1] - z[ilev]) -
-                       (qr[ilev] - qr[ilev+1]) / (z[ilev] - z[ilev+1])) /
-                      (0.5*(z[ilev-1] - z[ilev+1]))) + epsilon)
-                   ));
+        const double length_scale = std::sqrt( qr[ilev] /
+            (std::abs(((qr[ilev-1] - qr[ilev]) / (0.5*(z[ilev-1] - z[ilev+1])) -
+                       (qr[ilev] - qr[ilev+1]) / (0.5*(z[ilev] - z[ilev+2]))) /
+                      (z[ilev] - z[ilev+1])) + epsilon)
+                   );
+        sedimentation_accuracy_rate = std::max(sedimentation_accuracy_rate,
+          sigma / length_scale);
       }
+      const double length_scale = z[ilev] - z[ilev+1];
       sedimentation_stability_rate = std::max(sedimentation_stability_rate,
-        sigma / (z[ilev] - z[ilev+1]));
+        sigma / length_scale);
     }
     const std::size_t index = icase - case_start;
     evaporation_rates[index] = evaporation_rate;
@@ -178,13 +180,13 @@ int main(int argc, char* argv[])
 
   matplot::line_handle plot;
   matplot::hold(matplot::on);
-  //matplot::line_handle plot = matplot::plot(evaporation_rates, "o");
+  //plot = matplot::plot(evaporation_rates, "o");
   //plot->display_name("evaporation rate");
   //plot = matplot::plot(self_coll_rates, "o");
   //plot->display_name("self collection rate");
-  plot = matplot::plot(sedimentation_accuracy_rates, "o");
+  plot = matplot::semilogy(sedimentation_accuracy_rates, "o");
   plot->display_name("sedimentation accuracy rate");
-  plot = matplot::plot(sedimentation_stability_rates, "o");
+  plot = matplot::semilogy(sedimentation_stability_rates, "o");
   plot->display_name("sedimentation stability rate");
   matplot::hold(matplot::off);
 
