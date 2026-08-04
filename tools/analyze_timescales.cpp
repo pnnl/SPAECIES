@@ -98,7 +98,6 @@ int main(int argc, char* argv[])
   Evaporation evap(constants, sat_form, defaults::use_lookup, false,
                    defaults::regularize_qsat, std::nullopt);
   SelfCollision self_coll(defaults::regularize_lambdar);
-  Sedimentation sed(constants, defaults::use_lookup, false);
 
   // compute process rates for each case in input file
   std::size_t case_start = 0;
@@ -124,14 +123,20 @@ int main(int argc, char* argv[])
     VarDescList state_descs = get_prognostic_variables(dom, lev_dim);
     State state(state_descs);
     VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
-    Tendency evap_tend(tend_descs), self_coll_tend(tend_descs), sed_tend(tend_descs);
+    Tendency evap_tend(tend_descs), self_coll_tend(tend_descs);
+
+    // set relevant evaporation and self-collection tendencies to zero
+    for (std::size_t ilev=0; ilev != grid.nlev; ilev++)
+    {
+      evap_tend.get_variable("qr_tend").value()[ilev] = 0.0;
+      self_coll_tend.get_variable("nr_tend").value()[ilev] = 0.0;
+    }
 
     // read in state and compute derived variables and tendencies
     reader.read_state(icase, time_idx, state);
     RainshaftDerivedVars dvars(constants, grid, state, defaults::regularize_lambdar);
     evap.calc_tend(constants, grid, state, dvars, evap_tend);
     self_coll.calc_tend(constants, grid, state, dvars, self_coll_tend);
-    sed.calc_tend(constants, grid, state, dvars, sed_tend);
 
     // create helper views
     spaecies::ContiguousVariableView<const double> T = state.get_variable("T").value();
@@ -178,21 +183,16 @@ int main(int argc, char* argv[])
     sedimentation_stability_rates[index] = sedimentation_stability_rate;
   }
 
-  matplot::line_handle plot;
   matplot::hold(matplot::on);
-  //plot = matplot::plot(evaporation_rates, "o");
-  //plot->display_name("evaporation rate");
-  //plot = matplot::plot(self_coll_rates, "o");
-  //plot->display_name("self collection rate");
-  plot = matplot::semilogy(sedimentation_accuracy_rates, "o");
-  plot->display_name("sedimentation accuracy rate");
-  plot = matplot::semilogy(sedimentation_stability_rates, "o");
-  plot->display_name("sedimentation stability rate");
+  matplot::semilogy(evaporation_rates, "+")->display_name("evap. rate");
+  matplot::semilogy(self_coll_rates, "+")->display_name("self coll. rate");
+  matplot::semilogy(sedimentation_accuracy_rates, "+")->display_name("sed. accuracy rate");
+  matplot::semilogy(sedimentation_stability_rates, "x")->display_name("sed. stability rate");
   matplot::hold(matplot::off);
 
   matplot::xlabel("case number");
   matplot::ylabel("process rate / inverse timescale (1/s)");
-  matplot::legend();
+  matplot::legend()->location(matplot::legend::general_alignment::bottomright);
 
   matplot::show();
 
