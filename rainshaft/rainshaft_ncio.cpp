@@ -284,7 +284,7 @@ void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, d
   // method order
   nc_def_var(ncid, "method_order", NC_INT, 0, NULL, &orderid);
   nc_put_var_int(ncid, orderid, &order);
-  
+
   // coupling time step
   nc_def_var(ncid, "dt", NC_DOUBLE, 0, NULL, &dtid);
   nc_put_var_double(ncid, dtid, &dt);
@@ -342,4 +342,30 @@ void NetcdfWriter::write_metadata(int order, double dt, double dt_partition_1, d
   // nudging flag
   nc_def_var(ncid, "processes", NC_STRING, 0, NULL, &processesid);
   nc_put_var(ncid, processesid, &processes);
+}
+
+void NetcdfWriter::write_boundary_conditions(const RainshaftConstants &constants,
+                                             std::size_t case_idx)
+{
+  int status, caseid, rho_topid, qr_topid, nr_topid;
+  // CJV (copied from SPS): Need to check errors from all these as well.
+  // SPS (copied from SPS): Add variable metadata to all these too.
+  nc_inq_dimid(ncid, "case", &caseid);
+  // Define boundary condition variables.
+  status = nc_inq_varid(ncid, "rho_top", &rho_topid);
+  if (status == NC_ENOTVAR) {
+    nc_def_var(ncid, "rho_top", NC_DOUBLE, 1, &caseid, &rho_topid);
+  }
+  status = nc_inq_varid(ncid, "qr_top", &qr_topid);
+  if (status == NC_ENOTVAR) {
+    nc_def_var(ncid, "qr_top", NC_DOUBLE, 1, &caseid, &qr_topid);
+  }
+  status = nc_inq_varid(ncid, "nr_top", &nr_topid);
+  if (status == NC_ENOTVAR) {
+    nc_def_var(ncid, "nr_top", NC_DOUBLE, 1, &caseid, &nr_topid);
+  }
+  // Write variables.
+  nc_put_var1_double(ncid, rho_topid, &case_idx, &constants.rho_top);
+  nc_put_var1_double(ncid, qr_topid, &case_idx, &constants.qr_top);
+  nc_put_var1_double(ncid, nr_topid, &case_idx, &constants.nr_top);
 }

@@ -37,3 +37,26 @@ target_link_libraries(rainshaft
 target_include_directories(rainshaft PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+# CJV: can consider always creating the rainshaft_common object library (before
+# the rainshaft executable) and having the rainshaft executable link against it
+# to avoid recompiling the common source files when tools are enabled
+if (BUILD_TOOLS)
+  add_library(rainshaft_common OBJECT
+    evaporation.cpp
+    lookup_linear.cpp
+    rainshaft_derived_vars.cpp
+    rainshaft_grid.cpp
+    rainshaft_tend_descs.cpp
+    saturation.cpp
+    sedimentation.cpp
+    self_collision.cpp
+  )
+  target_include_directories(rainshaft_common PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+  )
+  target_link_libraries(rainshaft_common
+    SUNDIALS::arkode
+    spaecies
+  )
+endif()

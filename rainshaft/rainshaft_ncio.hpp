@@ -57,7 +57,7 @@ protected:
 };
 
 class NetcdfWriter {
-  
+
 public:
 
   // Constructed from file name.
@@ -85,6 +85,10 @@ public:
                       bool postprocess, bool use_lookup, std::string method_type, int steps_per_output,
                       std::string initial_condition_file, int num_cases, int icase_in, double final_time,
                       std::string processes);
+
+  // Write boundary conditions to file.
+  void write_boundary_conditions(const RainshaftConstants &constants, std::size_t case_idx);
+
 protected:
 
   // NetCDF file id

@@ -15,7 +15,7 @@ public:
   // Calculate z level widths using virtual temperature.
   std::vector<double> calc_dz(RainshaftConstants constants,
                               std::vector<double> t_v) const;
-  
+
 
   // Number of cell interfaces
   const std::size_t nlev;
@@ -27,7 +27,7 @@ public:
 
 };
 
-RainshaftGrid make_e3sm_like_grid(RainshaftConstants constants,
+RainshaftGrid make_e3sm_like_grid(const RainshaftConstants& constants,
                                   double model_top, double srf_pres,
                                   double srf_temp, double lapse_rate);
 
