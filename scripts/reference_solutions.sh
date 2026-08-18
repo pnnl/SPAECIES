@@ -20,8 +20,8 @@ ORDERS=(3)
 # qsmalls 
 QSMALLS=(1e-14 1e-13 1e-12 1e-11 1e-10 1e-9 1e-8 1e-7 1e-6 1e-5)
 
-# toggle nudging
-NUDGING_FLAG="false"
+# process set to run
+PROCESSES="all"
 
 # number of runs to do for averaging. processing more than 1 run is currently not supported.
 NUMRUNS=1
@@ -40,6 +40,9 @@ POSTPROCESS="false"
 
 # toggle lookup tables
 LOOKUP_FLAG="false"
+
+# toggle legacy rain shape parameter
+USE_ZERO_MUR="false"
 
 # toggle q_sat_dry regularization
 REGULARIZE_QSAT="true"
@@ -80,6 +83,7 @@ do
                     printf "rel_tol     = ${RELTOLS[i]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "postprocess = ${POSTPROCESS}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "use_lookup  = ${LOOKUP_FLAG}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+                    printf "use_zero_mur = ${USE_ZERO_MUR}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
                     printf "\n# [Save settings]\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "steps    = ${STEPS_PER_OUTPUT}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
@@ -91,7 +95,7 @@ do
                     printf "case_idx  = ${CASE_IDX}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
                     printf "\n# [Process settings]\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
-                    printf "nudging = ${NUDGING_FLAG}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+                    printf "processes = ${PROCESSES}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "regularize_qsat = ${REGULARIZE_QSAT}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "regularize_lambdar = ${REGULARIZE_LAMBDAR}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "qsmall = ${QSMALLS[j]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
