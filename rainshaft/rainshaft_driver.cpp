@@ -52,7 +52,9 @@ namespace {
 
     spaecies::VarDescPtr evap_nr_desc = dom.add_var_desc("evap_nr", spaecies::Float64Type, {lev_dim}, "1/kg");
     spaecies::VarDescPtr evap_qr_desc = dom.add_var_desc("evap_qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    return {evap_nr_desc, evap_qr_desc};
+    spaecies::VarDescPtr sed_nr_flux_desc = dom.add_var_desc("sed_nr_flux", spaecies::Float64Type, {}, "1/m^2");
+    spaecies::VarDescPtr sed_qr_flux_desc = dom.add_var_desc("sed_qr_flux", spaecies::Float64Type, {}, "kg/m^2");
+    return {evap_nr_desc, evap_qr_desc, sed_nr_flux_desc, sed_qr_flux_desc};
   }
 }
 
@@ -182,7 +184,7 @@ int main(int argc, char* argv[])
     num_cases = 1;
     max_levs = default_grid.nlev;
   } else {
-    reader = NetcdfReader(initial_condition);
+    reader.emplace(initial_condition);
     std::tuple<std::size_t, std::size_t> cases_levs = reader->read_num_cases_and_max_levs();
     max_cases = std::get<0>(cases_levs);
 
@@ -256,7 +258,7 @@ int main(int argc, char* argv[])
     std::fill_n(&abs_tol.get_variable("nr").value()[0], nlev, 1.e-9);
     std::fill_n(&abs_tol.get_variable("qr").value()[0], nlev, 1.e-17);
     for (spaecies::VarDescPtr p : diagnostic_descs) {
-      std::fill_n(&abs_tol.get_variable(p->name).value()[0], nlev, 1);
+      std::fill_n(&abs_tol.get_variable(p->name).value()[0], p->size(), 1.);
     }
     State initial_state(state_descs);
 
@@ -270,6 +272,9 @@ int main(int argc, char* argv[])
       }
     } else {
       reader->read_initial_conditions(icase, initial_state);
+    }
+    for (spaecies::VarDescPtr p : diagnostic_descs) {
+      std::fill_n(&initial_state.get_variable(p->name).value()[0], p->size(), 0.);
     }
     RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state, regularize_lambdar);
 
