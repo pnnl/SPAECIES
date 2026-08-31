@@ -150,7 +150,6 @@ void NetcdfWriter::write_grid(const RainshaftGrid& grid, std::size_t case_idx) {
 
 void NetcdfWriter::write_states(const std::vector<StateConst>& arrays, std::size_t case_idx) {
   int caseid, levid, timeid;
-  std::size_t nlev = arrays[0].get_variable("T").value().size();
   std::size_t ntimes = arrays.size();
   // SPS: Need to check errors from all these as well.
   // SPS: Add variable metadata to all these too.
@@ -165,9 +164,9 @@ void NetcdfWriter::write_states(const std::vector<StateConst>& arrays, std::size
     nc_def_dim(ncid, "time", ntimes, &timeid);
   }
   // Define variables.
-  // SPS: Should be more flexible about dimensions here.
-  int var_dimids[3] = {caseid, timeid, levid};
-  std::vector<std::string> varnames;
+  int scalar_dimids[2] = {caseid, timeid};
+  int level_dimids[3] = {caseid, timeid, levid};
+  std::vector<spaecies::VarDescPtr> var_descs;
   std::vector<int> varids;
   // SPS: Need to check that all arrays have the same variables, or come up with
   // a new type for time series of arrays.
@@ -176,24 +175,31 @@ void NetcdfWriter::write_states(const std::vector<StateConst>& arrays, std::size
     std::string name = var_desc->name;
     status = nc_inq_varid(ncid, name.c_str(), &varid);
     if (status == NC_ENOTVAR) {
-      nc_def_var(ncid, name.c_str(), NC_DOUBLE, 3, var_dimids, &varid);
+      const bool is_scalar = var_desc->dimensions.empty();
+      nc_def_var(ncid, name.c_str(), NC_DOUBLE, is_scalar ? 2 : 3,
+                 is_scalar ? scalar_dimids : level_dimids, &varid);
     }
-    varnames.push_back(name);
+    var_descs.push_back(var_desc);
     varids.push_back(varid);
   }
 
   // Write variables.
   for (std::size_t i = 0; i != ntimes; ++i) {
-    std::size_t starts[3] = {case_idx, i, 0};
-    std::size_t counts[3] = {1, 1, nlev};
     for (std::size_t j = 0; j != varids.size(); ++j) {
       // SPS: Would be more efficient/simple if we could request data using an
       // integer id from the VariableArrayView, rather than using string lookups.
       // SPS: Note also the implicit assumption that the variable data is
       // contiguous.
-      auto var = arrays[i].get_variable(varnames[j]).value();
-      nc_put_vara_double(ncid, varids[j], starts, counts,
-                         &var[0]);
+      auto var = arrays[i].get_variable(var_descs[j]->name).value();
+      if (var_descs[j]->dimensions.empty()) {
+        std::size_t starts[2] = {case_idx, i};
+        std::size_t counts[2] = {1, 1};
+        nc_put_vara_double(ncid, varids[j], starts, counts, &var[0]);
+      } else {
+        std::size_t starts[3] = {case_idx, i, 0};
+        std::size_t counts[3] = {1, 1, var.size()};
+        nc_put_vara_double(ncid, varids[j], starts, counts, &var[0]);
+      }
     }
   }
 }
