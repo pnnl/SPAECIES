@@ -52,8 +52,9 @@ namespace {
 
     spaecies::VarDescPtr evap_nr_desc = dom.add_var_desc("evap_nr", spaecies::Float64Type, {lev_dim}, "1/kg");
     spaecies::VarDescPtr evap_qr_desc = dom.add_var_desc("evap_qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
+    spaecies::VarDescPtr sed_nr_flux_desc = dom.add_var_desc("sed_nr_flux", spaecies::Float64Type, {}, "1/m^2");
     spaecies::VarDescPtr sed_qr_flux_desc = dom.add_var_desc("sed_qr_flux", spaecies::Float64Type, {}, "kg/m^2");
-    return {evap_nr_desc, evap_qr_desc, sed_qr_flux_desc};
+    return {evap_nr_desc, evap_qr_desc, sed_nr_flux_desc, sed_qr_flux_desc};
   }
 }
 
