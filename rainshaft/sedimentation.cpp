@@ -67,11 +67,17 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
   VarMut nr_tend = *tend.get_variable("nr_tend");
   VarMut qr_tend = *tend.get_variable("qr_tend");
 
+  std::optional<VarMut> sed_qr_flux = tend.get_variable("sed_qr_flux");
+
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
     const auto [v0, v3] = rain_fall_speeds(constants, dvars.rho_dry[il], dvars.lambdar[il]);
     const double nr_flux = calc_nr_flux(nr[il], dvars.rho_dry[il], v0);
     const double qr_flux = calc_qr_flux(qr[il], dvars.rho_dry[il], v3);
+
+    if (il == 0 && sed_qr_flux) {
+      (*sed_qr_flux)[0] = qr_flux;
+    }
 
     nr_tend[il] += calc_nr_tend(dvars.dz[il], dvars.rho_dry[il], nr_flux, nr_flux_prev);
     qr_tend[il] += calc_qr_tend(dvars.dz[il], dvars.rho_dry[il], qr_flux, qr_flux_prev);
