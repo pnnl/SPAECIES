@@ -183,7 +183,7 @@ int main(int argc, char* argv[])
     num_cases = 1;
     max_levs = default_grid.nlev;
   } else {
-    reader = NetcdfReader(initial_condition);
+    reader.emplace(initial_condition);
     std::tuple<std::size_t, std::size_t> cases_levs = reader->read_num_cases_and_max_levs();
     max_cases = std::get<0>(cases_levs);
 
