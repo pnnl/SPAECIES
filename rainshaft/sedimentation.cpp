@@ -172,5 +172,5 @@ std::set<std::string> Sedimentation::get_required_vars() const
 
 std::set<std::string> Sedimentation::get_optional_vars() const
 {
-  return {};
+  return {"sed_nr_flux", "sed_qr_flux"};
 }
