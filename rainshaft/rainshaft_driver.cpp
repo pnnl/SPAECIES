@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file, processes;
   std::size_t order, icase_in;
-  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics, use_zero_mur, limit_initial_nc, variable_height;
+  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics, use_zero_mur, limit_initial_nc, limit_initial_nr, variable_height;
   double qsmall, epsilon_qsat_fac, epsilon_self_coll;
 
 	po::options_description desc("Allowed options");
@@ -107,6 +107,7 @@ int main(int argc, char* argv[])
     ("epsilon_self_coll", po::value(&epsilon_self_coll)->default_value(0.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
     ("use_zero_mur", po::value(&use_zero_mur)->default_value(false), "use zero for rain shape parameter mu (legacy value)")
     ("limit_initial_nc", po::value(&limit_initial_nc)->default_value(true), "boolean flag to apply P3 size limiter to initial nc value")
+    ("limit_initial_nr", po::value(&limit_initial_nr)->default_value(true), "boolean flag to apply P3 size limiter to initial nr value")
     ("variable_height", po::value(&variable_height)->default_value(false), "boolean flag to allow different columns to have different heights for the rainshaft model")
   ;
 
@@ -299,6 +300,14 @@ int main(int argc, char* argv[])
     if (limit_initial_nc) {
       limit_nc(constants, grid, initial_state);
     }
+    SizeLimiters size_limiters(constants, 10.e-6, 5.e-3);
+    if (limit_initial_nr) {
+      VarMut nr = *initial_state.get_variable("nr");
+      VarConst qr = *initial_state.get_variable("qr");
+      for (std::size_t i = 0; i != nlev; ++i) {
+        nr[i] = size_limiters.limited_nr(nr[i], qr[i]);
+      }
+    }
     RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state, regularize_lambdar);
 
     // Nudging to initial condition.
@@ -343,8 +352,6 @@ int main(int argc, char* argv[])
         throw std::logic_error("Missing the required variable " + v);
       }
     }
-
-    SizeLimiters size_limiters(constants, 10.e-6, 5.e-3);
 
     // List of integrators that need to remain allocated for use by original scheme.
     std::vector<std::shared_ptr<RainshaftIntegrator>> backing_integrators;
