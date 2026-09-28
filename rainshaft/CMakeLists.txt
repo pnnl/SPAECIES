@@ -1,4 +1,8 @@
 add_executable(rainshaft
+  accretion.cpp
+  autoconversion.cpp
+  cloud_sedimentation.cpp
+  cloud_size_parameters.cpp
   evaporation.cpp
   explicit_integrator.cpp
   imex_integrator.cpp
@@ -11,6 +15,7 @@ add_executable(rainshaft
   nudging.cpp
   nvector_serial_diagnostic.cpp
   parsing_utilities.cpp
+  rain_sedimentation.cpp
   rainshaft_driver.cpp
   rainshaft_derived_vars.cpp
   rainshaft_grid.cpp
@@ -21,7 +26,6 @@ add_executable(rainshaft
   rainshaft_tend_descs.cpp
   saturation.cpp
   sed_cfl_integrator.cpp
-  sedimentation.cpp
   self_collision.cpp
   sequential_split_integrator.cpp
   size_limiters.cpp
@@ -32,7 +36,6 @@ target_link_libraries(rainshaft
   SUNDIALS::sunlinsollapackdense
   Boost::boost
   Boost::program_options
-  stdc++fs
   spaecies)
 target_include_directories(rainshaft PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}

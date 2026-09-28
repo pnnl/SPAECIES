@@ -2,7 +2,7 @@
 #define OPERATOR_SPLITTING_INTEGRATOR_HPP
 
 #include "sundials_integrator.hpp"
-#include "sedimentation.hpp"
+#include "rain_sedimentation.hpp"
 
 class OperatorSplittingIntegrator : public SundialsIntegrator<2>
 {
@@ -19,7 +19,7 @@ public:
   OperatorSplittingIntegrator(const RainshaftConstants &constants,
                               const RainshaftGrid &grid,
                               const SizeLimiters &size_limiters,
-                              const Sedimentation *const process_partition_1,
+                              const RainSedimentation *const process_partition_1,
                               const RainshaftProcess *const process_partition_2,
                               const VarDescList &state_descs,
                               const VarDescList &tend_descs,

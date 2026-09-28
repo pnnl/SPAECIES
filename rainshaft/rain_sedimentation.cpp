@@ -1,10 +1,10 @@
-#include "sedimentation.hpp"
+#include "rain_sedimentation.hpp"
 #include <cstddef>
 #include <cmath>
 #include <boost/math/special_functions/gamma.hpp>
 using boost::math::tgamma, boost::math::tgamma_lower;
 using std::pow, std::sqrt, std::cbrt, std::exp;
-std::optional<LookupLinear> Sedimentation::create_lookup(const RainshaftConstants &constants,
+std::optional<LookupLinear> RainSedimentation::create_lookup(const RainshaftConstants &constants,
                                       const bool use_v_table,
                                       const bool create_v0,
                                       const bool use_numerical_integration)
@@ -22,19 +22,19 @@ std::optional<LookupLinear> Sedimentation::create_lookup(const RainshaftConstant
   }
 }
 
-Sedimentation::Sedimentation(const RainshaftConstants &constants, bool use_v_table,
+RainSedimentation::RainSedimentation(const RainshaftConstants &constants, bool use_v_table,
                              bool use_numerical_integration)
     : use_numerical_integration(use_numerical_integration),
       v0_table(create_lookup(constants, use_v_table, true, use_numerical_integration)),
       v3_table(create_lookup(constants, use_v_table, false, use_numerical_integration))
 {}
 
-double Sedimentation::calc_max_step(const RainshaftConstants &constants,
+double RainSedimentation::calc_max_step(const RainshaftConstants &constants,
                                     const RainshaftGrid &grid,
                                     const RainshaftDerivedVars& dvars,
                                     double cfl) const
 {
-  double lambdar_top = calc_lambdar(constants.pi, constants.rhow, constants.mur,
+  double lambdar_top = constants.qr_top == 0. ? 0. : calc_lambdar(constants.pi, constants.rhow, constants.mur,
                                     constants.nr_top, constants.qr_top);
   const auto [v0, v3] = rain_fall_speeds(constants, dvars.rho_dry[0],
                                       lambdar_top);
@@ -45,16 +45,21 @@ double Sedimentation::calc_max_step(const RainshaftConstants &constants,
     spatial_frequency = std::max(spatial_frequency, v3 / dvars.dz[il]);
   }
 
-  return cfl / spatial_frequency;
+  // A bit of a hack; if no rain present, return 1 hour as max time step.
+  if (spatial_frequency == 0.) {
+    return 3600.;
+  } else {
+    return cfl / spatial_frequency;
+  }
 }
 
-void Sedimentation::calc_tend(const RainshaftConstants &constants,
+void RainSedimentation::calc_tend(const RainshaftConstants &constants,
                               const RainshaftGrid &grid,
                               const StateConst &state,
                               const RainshaftDerivedVars &dvars,
                               Tendency& tend) const
 {
-  const double lambdar_top = calc_lambdar(constants.pi, constants.rhow, constants.mur, constants.nr_top, constants.qr_top);
+  const double lambdar_top = constants.qr_top == 0. ? 0. : calc_lambdar(constants.pi, constants.rhow, constants.mur, constants.nr_top, constants.qr_top);
   auto [v0_prev, v3_prev] = rain_fall_speeds(constants, constants.rho_top, lambdar_top);
   double nr_prev = constants.nr_top;
   double qr_prev = constants.qr_top;
@@ -82,13 +87,13 @@ void Sedimentation::calc_tend(const RainshaftConstants &constants,
   }
 }
 
-void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
+void RainSedimentation::calc_tend_jac(const RainshaftConstants &constants,
                                   const RainshaftGrid &grid,
                                   const StateConst& state,
                                   const RainshaftDerivedVars &dvars,
                                   Matrix jac) const
 {
-  const double lambdar_top = calc_lambdar(constants.pi, constants.rhow, constants.mur, constants.nr_top, constants.qr_top);
+  const double lambdar_top = constants.qr_top == 0. ? 0. : calc_lambdar(constants.pi, constants.rhow, constants.mur, constants.nr_top, constants.qr_top);
   auto [v0_prev, v3_prev] = rain_fall_speeds<true>(constants, {constants.rho_top, {0., 0.}}, {lambdar_top, {0., 0.}});
   double nr_prev = constants.nr_top;
   double qr_prev = constants.qr_top;
@@ -153,12 +158,12 @@ void Sedimentation::calc_tend_jac(const RainshaftConstants &constants,
   }
 }
 
-std::set<std::string> Sedimentation::get_required_vars() const
+std::set<std::string> RainSedimentation::get_required_vars() const
 {
   return {"T", "q", "nr", "qr"};
 }
 
-std::set<std::string> Sedimentation::get_optional_vars() const
+std::set<std::string> RainSedimentation::get_optional_vars() const
 {
   return {};
 }

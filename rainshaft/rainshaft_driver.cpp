@@ -1,4 +1,8 @@
 #include "spaecies.hpp"
+#include "accretion.hpp"
+#include "autoconversion.hpp"
+#include "cloud_sedimentation.hpp"
+#include "cloud_size_parameters.hpp"
 #include "evaporation.hpp"
 #include "explicit_integrator.hpp"
 #include "fixed_substep_integrator.hpp"
@@ -16,7 +20,7 @@
 #include "rainshaft_sum_process.hpp"
 #include "saturation.hpp"
 #include "sed_cfl_integrator.hpp"
-#include "sedimentation.hpp"
+#include "rain_sedimentation.hpp"
 #include "self_collision.hpp"
 #include "sequential_split_integrator.hpp"
 #include "size_limiters.hpp"
@@ -37,12 +41,17 @@
 namespace po = boost::program_options;
 
 namespace {
-  VarDescList get_prognostic_variables(spaecies::Domain dom, spaecies::DimensionPtr lev_dim) {
-    spaecies::VarDescPtr t_desc = dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K");
-    spaecies::VarDescPtr q_desc = dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    spaecies::VarDescPtr nr_desc = dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg");
-    spaecies::VarDescPtr qr_desc = dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    return {t_desc, q_desc, nr_desc, qr_desc};
+  VarDescList get_prognostic_variables(spaecies::Domain dom, spaecies::DimensionPtr lev_dim, bool prognose_cloud_liquid) {
+    VarDescList prognosed{};
+    prognosed.push_back(dom.add_var_desc("T", spaecies::Float64Type, {lev_dim}, "K"));
+    prognosed.push_back(dom.add_var_desc("q", spaecies::Float64Type, {lev_dim}, "kg/kg"));
+    if (prognose_cloud_liquid) {
+      prognosed.push_back(dom.add_var_desc("nc", spaecies::Float64Type, {lev_dim}, "1/kg"));
+      prognosed.push_back(dom.add_var_desc("qc", spaecies::Float64Type, {lev_dim}, "kg/kg"));
+    }
+    prognosed.push_back(dom.add_var_desc("nr", spaecies::Float64Type, {lev_dim}, "1/kg"));
+    prognosed.push_back(dom.add_var_desc("qr", spaecies::Float64Type, {lev_dim}, "kg/kg"));
+    return prognosed;
   }
 
   VarDescList get_diagnostic_variables(spaecies::Domain dom, spaecies::DimensionPtr lev_dim, const bool budget_diagnostics) {
@@ -67,14 +76,14 @@ int main(int argc, char* argv[])
   int steps_per_output, num_cases;
   std::string input_file, output_file, method_type, initial_condition, initial_condition_file, processes;
   std::size_t order, icase_in;
-  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics, use_zero_mur;
+  bool cfl_substep, postprocess, use_lookup, regularize_qsat, regularize_lambdar, budget_diagnostics, use_zero_mur, limit_initial_nc, limit_initial_nr, variable_height;
   double qsmall, epsilon_qsat_fac, epsilon_self_coll;
 
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		("help", "produce help message")
     ("i", po::value(&input_file), "(optional) input file for command line arguments")
-    ("processes", po::value(&processes)->default_value("all"), "which processes to enable (e.g. all, rain, rain_with_nudging)")
+    ("processes", po::value(&processes)->default_value("all"), "which processes to enable (i.e. all, rain, rain_with_nudging, all_liquid)")
     ("budget_diagnostics", po::value(&budget_diagnostics)->default_value(false), "include additional budget diagnostics in output")
 		("order", po::value(&order)->default_value(2), "order of method")
 		("dt", po::value(&dt)->default_value(0.1), "step size. if integration type is set to MRI/splitting/forcing, this argument is the outer time step size")
@@ -96,7 +105,10 @@ int main(int argc, char* argv[])
     ("filename", po::value(&output_file)->default_value("rainshaft.nc"), "savefile name")
     ("epsilon_qsat_fac", po::value(&epsilon_qsat_fac)->default_value(1.e-10), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
     ("epsilon_self_coll", po::value(&epsilon_self_coll)->default_value(0.0), "fraction of q_sat_dry to use as regularization parameter, e.g. epsilon_qsat = q_sat_dry * epsilon_qsat_fac")
-    ("use_zero_mur", po::value(&use_zero_mur)->default_value(0), "use zero for rain shape parameter mu (legacy value)")
+    ("use_zero_mur", po::value(&use_zero_mur)->default_value(false), "use zero for rain shape parameter mu (legacy value)")
+    ("limit_initial_nc", po::value(&limit_initial_nc)->default_value(true), "boolean flag to apply P3 size limiter to initial nc value")
+    ("limit_initial_nr", po::value(&limit_initial_nr)->default_value(true), "boolean flag to apply P3 size limiter to initial nr value")
+    ("variable_height", po::value(&variable_height)->default_value(false), "boolean flag to allow different columns to have different heights for the rainshaft model")
   ;
 
   // Load from command line to check for input file
@@ -154,7 +166,7 @@ int main(int argc, char* argv[])
   RainshaftConstants constants{3.14159265358979323846,
                                287.04, 1.00464e3, 461.50, 997., 2.501e6,
                                0.62197, qsmall, 9.80616, 1.e-5, 5.e-3, mur,
-                               0.988919555598356, 1.e3, 1.e-4, epsilon_qsat_fac, epsilon_self_coll};
+                               0.988919555598356, 1.23e8, 1.e-3, 1.e3, 1.e-4, epsilon_qsat_fac, epsilon_self_coll};
   // Approximate model top in meters.
   // (The grid maker will actually use the next higher-altitude E3SM level.)
   double model_top = 2.e3;
@@ -182,7 +194,7 @@ int main(int argc, char* argv[])
     num_cases = 1;
     max_levs = default_grid.nlev;
   } else {
-    reader = NetcdfReader(initial_condition);
+    reader = NetcdfReader(initial_condition, variable_height);
     std::tuple<std::size_t, std::size_t> cases_levs = reader->read_num_cases_and_max_levs();
     max_cases = std::get<0>(cases_levs);
 
@@ -206,10 +218,13 @@ int main(int argc, char* argv[])
         throw std::invalid_argument("Requested non-existent case_idx in file.");
       }
     }
-    // Remove cloud base from levels.
-    max_levs = std::get<1>(cases_levs) - 1;
+    // Read level number and remove cloud base level for variable height cases.
+    max_levs = std::get<1>(cases_levs);
+    if (variable_height) {
+      --max_levs;
+    }
   }
-  NetcdfWriter writer(output_file, num_cases, max_levs);
+  NetcdfWriter writer(output_file, num_cases, max_levs, variable_height);
 
   // Setup list of cases to run
   std::vector<std::size_t> cases_to_run(num_cases);
@@ -221,8 +236,14 @@ int main(int argc, char* argv[])
 
   // Physics types that won't vary between cases (declare here to avoid calculating the
   // lookup tables in the case loop).
-  // Sedimentation process.
-  Sedimentation sed(constants, use_lookup, false);
+  // Accretion
+  Accretion accr(150., 1.15, 1.15);
+  // Autoconversion
+  Autoconversion autocon(constants, 2700., -1.79, 2.47, 25.e-6);
+  // Cloud sedimentation process
+  CloudSedimentation cloud_sed;
+  // Rain sedimentation process.
+  RainSedimentation rain_sed(constants, use_lookup, false);
   // Self-collision processes.
   SelfCollision self_coll(regularize_lambdar);
   // Evaporation process.
@@ -245,14 +266,19 @@ int main(int argc, char* argv[])
 
     spaecies::Domain dom;
     spaecies::DimensionPtr lev_dim = dom.add_dimension("level", nlev);
+    bool prognose_cloud_liquid = (processes == "all_liquid") || (processes == "all");
     VarDescList diagnostic_descs = get_diagnostic_variables(dom, lev_dim, budget_diagnostics);
-    VarDescList state_descs = get_prognostic_variables(dom, lev_dim);
+    VarDescList state_descs = get_prognostic_variables(dom, lev_dim, prognose_cloud_liquid);
     state_descs.insert(state_descs.end(), diagnostic_descs.begin(), diagnostic_descs.end());
 
     VarDescList tend_descs = tend_descs_from_state_descs(dom, state_descs);
     State abs_tol(state_descs);
     std::fill_n(&abs_tol.get_variable("T").value()[0], nlev, 1.e-6);
     std::fill_n(&abs_tol.get_variable("q").value()[0], nlev, 1.e-8);
+    if (prognose_cloud_liquid) {
+      std::fill_n(&abs_tol.get_variable("nc").value()[0], nlev, 1.e-9);
+      std::fill_n(&abs_tol.get_variable("qc").value()[0], nlev, 1.e-17);
+    }
     std::fill_n(&abs_tol.get_variable("nr").value()[0], nlev, 1.e-9);
     std::fill_n(&abs_tol.get_variable("qr").value()[0], nlev, 1.e-17);
     for (spaecies::VarDescPtr p : diagnostic_descs) {
@@ -271,12 +297,23 @@ int main(int argc, char* argv[])
     } else {
       reader->read_initial_conditions(icase, initial_state);
     }
+    if (limit_initial_nc) {
+      limit_nc(constants, grid, initial_state);
+    }
+    SizeLimiters size_limiters(constants, 10.e-6, 5.e-3);
+    if (limit_initial_nr) {
+      VarMut nr = *initial_state.get_variable("nr");
+      VarConst qr = *initial_state.get_variable("qr");
+      for (std::size_t i = 0; i != nlev; ++i) {
+        nr[i] = size_limiters.limited_nr(nr[i], qr[i]);
+      }
+    }
     RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state, regularize_lambdar);
 
     // Nudging to initial condition.
     std::shared_ptr<Nudging> nudge;
 
-    std::vector<const RainshaftProcess *> partition_2_process_vec{}, all_process_vec{};
+    std::vector<const RainshaftProcess *> partition_1_process_vec{}, partition_2_process_vec{}, all_process_vec{};
 
     if (processes == "rain_with_nudging") {
       // SPS: Need some kind of span-like interface to avoid having to
@@ -287,17 +324,23 @@ int main(int argc, char* argv[])
       std::copy_n(&t[0], nlev, t_vec.begin());
       std::copy_n(&q[0], nlev, q_vec.begin());
       nudge = std::make_shared<Nudging>(nudge_time_scale, t_vec, q_vec);
+      partition_1_process_vec = {&rain_sed};
       partition_2_process_vec = {&evap, &*nudge, &self_coll};
-      all_process_vec = {&sed, &*nudge, &self_coll, &evap};
-    } else if (processes == "rain" || processes == "all") {
+      all_process_vec = {&rain_sed, &*nudge, &self_coll, &evap};
+    } else if (processes == "rain") {
+      partition_1_process_vec = {&rain_sed};
       partition_2_process_vec = {&evap, &self_coll};
-      all_process_vec = {&sed, &self_coll, &evap};
-    } else { // TODO: Add cloud processes
+      all_process_vec = {&rain_sed, &self_coll, &evap};
+    } else if (processes == "all_liquid" || processes == "all") {
+      partition_1_process_vec = {&rain_sed};
+      partition_2_process_vec = {&evap, &self_coll, &accr, &autocon, &cloud_sed};
+      all_process_vec = {&rain_sed, &self_coll, &evap, &accr, &autocon, &cloud_sed};
+    } else {
       throw std::invalid_argument("Unrecognized processes type");
     }
 
     SumProcess all_processes{all_process_vec};
-    const auto& partition_1_processes = sed;
+    SumProcess partition_1_processes{partition_1_process_vec};
     SumProcess partition_2_processes{partition_2_process_vec};
 
     for (const std::string &v : all_processes.get_required_vars()) {
@@ -309,8 +352,6 @@ int main(int argc, char* argv[])
         throw std::logic_error("Missing the required variable " + v);
       }
     }
-
-    SizeLimiters size_limiters(constants, 10.e-6, 5.e-3);
 
     // List of integrators that need to remain allocated for use by original scheme.
     std::vector<std::shared_ptr<RainshaftIntegrator>> backing_integrators;
@@ -325,9 +366,20 @@ int main(int argc, char* argv[])
       } else if (method_type == "mri") {
         return std::make_unique<MRIIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, nullptr, state_descs, tend_descs, abs_tol, dt_partition_1, dt, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "splitting") {
-        return std::make_unique<OperatorSplittingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, dt_partition_1, dt_partition_2, cfl_substep, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
+        // Note that we explicitly pass only rain_sed here rather than all partition 1 processes,
+        // because that is what OperatorSplittingIntegrator supports. To avoid accidentally misusing the
+        // integrator, make it a fatal error to use it with non-rain microphysics.
+        if (!(processes == "rain" || processes == "rain_with_nudging")) {
+          throw std::runtime_error("operator splitting integrator only supported for rain processes");
+        }
+        return std::make_unique<OperatorSplittingIntegrator>(constants, grid, size_limiters, &rain_sed, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, dt_partition_1, dt_partition_2, cfl_substep, order, rel_tol, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "forcing") {
-        return std::make_unique<ForcingIntegrator>(constants, grid, size_limiters, &partition_1_processes, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, dt_partition_1, dt_partition_2, cfl_substep, postprocess, regularize_lambdar, steps_per_output);
+        // Same issue with using ForcingIntegrator with non-rain processes as for OperatorSplittingIntegrator
+        // above.
+        if (!(processes == "rain" || processes == "rain_with_nudging")) {
+          throw std::runtime_error("forcing integrator only supported for rain processes");
+        }
+        return std::make_unique<ForcingIntegrator>(constants, grid, size_limiters, &rain_sed, &partition_2_processes, state_descs, tend_descs, abs_tol, dt, dt_partition_1, dt_partition_2, cfl_substep, postprocess, regularize_lambdar, steps_per_output);
       } else if (method_type == "original") {
         // Borrowed from original P3 settings, minimum diameter is 10 micron and maximum is 5 millimeter.
         SizeLimiters size_limiters(constants, 10.e-6, 5.e-3);
@@ -335,7 +387,7 @@ int main(int argc, char* argv[])
         backing_integrators.emplace_back(local_intg);
         std::shared_ptr<LimitingIntegrator> local_lim_intg = std::make_shared<LimitingIntegrator>(constants, size_limiters, *local_intg);
         backing_integrators.emplace_back(local_lim_intg);
-        std::shared_ptr<SedCflIntegrator> sed_intg = std::make_shared<SedCflIntegrator>(constants, grid, size_limiters, tend_descs, sed, regularize_lambdar);
+        std::shared_ptr<SedCflIntegrator> sed_intg = std::make_shared<SedCflIntegrator>(constants, grid, size_limiters, tend_descs, rain_sed, regularize_lambdar);
         backing_integrators.emplace_back(sed_intg);
         std::shared_ptr<SequentialSplitIntegrator> step_intg = std::make_shared<SequentialSplitIntegrator>(std::vector<const RainshaftIntegrator*>({&*local_lim_intg, &*sed_intg}));
         backing_integrators.emplace_back(step_intg);

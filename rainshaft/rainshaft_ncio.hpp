@@ -20,21 +20,21 @@ class NetcdfReader {
 public:
 
   // Constructed from file name.
-  NetcdfReader(const std::string& file_name);
+  NetcdfReader(const std::string& file_name, bool variable_height);
   // Destructor closes the file.
   ~NetcdfReader();
   // Other constructors as per the rule of 5.
   NetcdfReader(const NetcdfReader&) = delete;
   NetcdfReader& operator=(const NetcdfReader &) = delete;
-  NetcdfReader(NetcdfReader &&other) noexcept : is_open(true), ncid(other.ncid) {
+  NetcdfReader(NetcdfReader &&other) noexcept : is_open(true), fid(other.fid) {
     other.is_open = false;
-    other.ncid = -100;
+    other.fid = -100;
   }
   NetcdfReader& operator=(NetcdfReader &&other) {
     is_open = true;
-    ncid = other.ncid;
+    fid = other.fid;
     other.is_open = false;
-    other.ncid = -100;
+    other.fid = -100;
     return *this;
   }
 
@@ -52,7 +52,10 @@ protected:
   bool is_open;
 
   // NetCDF file id
-  int ncid;
+  int fid;
+
+  // Is the height of the column variable?
+  bool variable_height;
 
 };
 
@@ -61,7 +64,7 @@ class NetcdfWriter {
 public:
 
   // Constructed from file name.
-  NetcdfWriter(const std::string& file_name, std::size_t num_cases, std::size_t max_levs);
+  NetcdfWriter(const std::string& file_name, std::size_t num_cases, std::size_t max_levs, bool variable_height);
   // Destructor closes the file.
   ~NetcdfWriter();
 
@@ -88,7 +91,15 @@ public:
 protected:
 
   // NetCDF file id
-  int ncid;
+  int fid;
+
+  // Is the height of the column variable?
+  bool variable_height;
+
+private:
+
+  // Utility for writing metadata strings to an NC_STRING variable.
+  void write_string(int outstringid, std::string outstring);
 
 };
 

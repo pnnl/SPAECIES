@@ -2,7 +2,7 @@
 #define SED_CFL_INTEGRATOR_HPP
 
 #include "rainshaft_integrator.hpp"
-#include "sedimentation.hpp"
+#include "rain_sedimentation.hpp"
 #include "size_limiters.hpp"
 
 class SedCflIntegrator : public RainshaftIntegrator {
@@ -13,7 +13,7 @@ public:
                    const RainshaftGrid& grid,
                    const SizeLimiters& size_limiters,
                    const VarDescList& tend_descs,
-                   const Sedimentation& sedimentation,
+                   const RainSedimentation& sedimentation,
                    const bool regularize_lambdar);
 
   RainshaftSolution integrate(double initial_time,
@@ -31,7 +31,7 @@ private:
 
   const VarDescList tend_descs;
 
-  const Sedimentation &sed;
+  const RainSedimentation &sed;
 
   const bool regularize_lambdar;
 
