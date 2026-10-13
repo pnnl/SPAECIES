@@ -148,8 +148,11 @@ void NetcdfWriter::write_grid(const RainshaftGrid& grid, std::size_t case_idx) {
   nc_put_vara_double(ncid, p_midid, starts, counts, grid.p_mid.data());
 }
 
-void NetcdfWriter::write_states(const std::vector<StateConst>& arrays, std::size_t case_idx) {
-  int caseid, levid, timeid;
+void NetcdfWriter::write_states(const RainshaftSolution& solution,
+                                std::size_t case_idx) {
+  const auto& arrays = solution.states;
+  const auto& times = solution.times;
+  int caseid, levid, timeid, timevarid;
   std::size_t nlev = arrays[0].get_variable("T").value().size();
   std::size_t ntimes = arrays.size();
   // SPS: Need to check errors from all these as well.
@@ -162,7 +165,13 @@ void NetcdfWriter::write_states(const std::vector<StateConst>& arrays, std::size
   int status = nc_inq_dimid(ncid, "time", &timeid);
   if (status == NC_EBADDIM) {
     // Define time dimension.
-    nc_def_dim(ncid, "time", ntimes, &timeid);
+    nc_def_dim(ncid, "time", NC_UNLIMITED, &timeid);
+  }
+  // Output times can differ between cases when adaptive timestepping is used.
+  int time_dimids[2] = {caseid, timeid};
+  status = nc_inq_varid(ncid, "time", &timevarid);
+  if (status == NC_ENOTVAR) {
+    nc_def_var(ncid, "time", NC_DOUBLE, 2, time_dimids, &timevarid);
   }
   // Define variables.
   // SPS: Should be more flexible about dimensions here.
@@ -183,6 +192,9 @@ void NetcdfWriter::write_states(const std::vector<StateConst>& arrays, std::size
   }
 
   // Write variables.
+  std::size_t time_starts[2] = {case_idx, 0};
+  std::size_t time_counts[2] = {1, ntimes};
+  nc_put_vara_double(ncid, timevarid, time_starts, time_counts, times.data());
   for (std::size_t i = 0; i != ntimes; ++i) {
     std::size_t starts[3] = {case_idx, i, 0};
     std::size_t counts[3] = {1, 1, nlev};

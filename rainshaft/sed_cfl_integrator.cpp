@@ -48,5 +48,5 @@ RainshaftSolution SedCflIntegrator::integrate(double initial_time,
     time_remaining = final_time - current_time;
     ++it;
   }
-  return RainshaftSolution({temp_state}, num_rhs_evals);
+  return RainshaftSolution({temp_state}, {final_time}, num_rhs_evals);
 }
