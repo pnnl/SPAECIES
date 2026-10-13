@@ -43,5 +43,6 @@ RainshaftSolution LimitingIntegrator::integrate(double initial_time,
     // if more processes are added without adapting more of P3's limiter logic.
     q[i] = std::max(q[i], 0.);
   }
-  return RainshaftSolution({limited_state}, solution.num_rhs_evals);
+  return RainshaftSolution({limited_state}, {solution.times.back()},
+                           solution.num_rhs_evals);
 }

@@ -12,6 +12,7 @@ extern "C"
 
 #include "rainshaft_grid.hpp"
 #include "rainshaft_derived_vars.hpp"
+#include "rainshaft_solution.hpp"
 
 #include <tuple>
 
@@ -68,8 +69,8 @@ public:
   // Write RainshaftGrid information to file.
   void write_grid(const RainshaftGrid& grid, std::size_t case_idx);
 
-  // Write a series of States to file.
-  void write_states(const std::vector<StateConst>& arrays, std::size_t case_idx);
+  // Write a solution's states and output times to file.
+  void write_states(const RainshaftSolution& solution, std::size_t case_idx);
 
   // Write a series of RainshaftDerivedVars to file.
   void write_derived_vars(const std::vector<RainshaftDerivedVars>& dvars, std::size_t case_idx);
