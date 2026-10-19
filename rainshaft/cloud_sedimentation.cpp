@@ -65,6 +65,9 @@ void CloudSedimentation::calc_tend(const RainshaftConstants &constants,
   VarMut nc_tend = *tend.get_variable("nc_tend");
   VarMut qc_tend = *tend.get_variable("qc_tend");
 
+  std::optional<VarMut> sed_nc_flux = tend.get_variable("sed_nc_flux");
+  std::optional<VarMut> sed_qc_flux = tend.get_variable("sed_qc_flux");
+
   const double muc_top = calc_muc(constants.nc_top, constants.rho_top);
   const double lambdac_top = calc_lambdac(constants, constants.nc_top, constants.qc_top, muc_top);
 
@@ -83,6 +86,15 @@ void CloudSedimentation::calc_tend(const RainshaftConstants &constants,
     const auto [v0, v3] = cloud_fall_speeds(constants, t[il], lambdac, muc);
     const double nc_flux = calc_moment_flux(nc[il], dvars.rho_dry[il], v0);
     const double qc_flux = calc_moment_flux(qc[il], dvars.rho_dry[il], v3);
+
+    if (il == 0) {
+      if (sed_nc_flux) {
+        (*sed_nc_flux)[0] += nc_flux;
+      }
+      if (sed_qc_flux) {
+        (*sed_qc_flux)[0] += qc_flux;
+      }
+    }
     
     nc_tend[il] += calc_moment_tend(dvars.dz[il], dvars.rho_dry[il], nc_flux, nc_flux_prev);
     qc_tend[il] += calc_moment_tend(dvars.dz[il], dvars.rho_dry[il], qc_flux, qc_flux_prev);
@@ -108,5 +120,5 @@ std::set<std::string> CloudSedimentation::get_required_vars() const
 
 std::set<std::string> CloudSedimentation::get_optional_vars() const
 {
-  return {};
+  return {"sed_nc_flux", "sed_qc_flux"};;
 }
