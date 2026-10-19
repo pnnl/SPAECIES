@@ -61,7 +61,9 @@ namespace {
 
     spaecies::VarDescPtr evap_nr_desc = dom.add_var_desc("evap_nr", spaecies::Float64Type, {lev_dim}, "1/kg");
     spaecies::VarDescPtr evap_qr_desc = dom.add_var_desc("evap_qr", spaecies::Float64Type, {lev_dim}, "kg/kg");
-    return {evap_nr_desc, evap_qr_desc};
+    spaecies::VarDescPtr sed_nc_flux_desc = dom.add_var_desc("sed_nc_flux", spaecies::Float64Type, {}, "1/m^2");
+    spaecies::VarDescPtr sed_qc_flux_desc = dom.add_var_desc("sed_qc_flux", spaecies::Float64Type, {}, "kg/m^2");
+    return {evap_nr_desc, evap_qr_desc, sed_nc_flux_desc, sed_qc_flux_desc};
   }
 }
 
@@ -282,7 +284,7 @@ int main(int argc, char* argv[])
     std::fill_n(&abs_tol.get_variable("nr").value()[0], nlev, 1.e-9);
     std::fill_n(&abs_tol.get_variable("qr").value()[0], nlev, 1.e-17);
     for (spaecies::VarDescPtr p : diagnostic_descs) {
-      std::fill_n(&abs_tol.get_variable(p->name).value()[0], nlev, 1);
+      std::fill_n(&abs_tol.get_variable(p->name).value()[0], p->size(), 1);
     }
     State initial_state(state_descs);
 
@@ -307,6 +309,9 @@ int main(int argc, char* argv[])
       for (std::size_t i = 0; i != nlev; ++i) {
         nr[i] = size_limiters.limited_nr(nr[i], qr[i]);
       }
+    }
+    for (spaecies::VarDescPtr p : diagnostic_descs) {
+      std::fill_n(&initial_state.get_variable(p->name).value()[0], p->size(), 0.);
     }
     RainshaftDerivedVars initial_dvars = RainshaftDerivedVars(constants, grid, initial_state, regularize_lambdar);
 
