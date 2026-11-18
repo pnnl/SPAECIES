@@ -80,6 +80,8 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
   const std::size_t offset_q = *state.get_idx("q");
   const std::size_t offset_nr = *state.get_idx("nr");
   const std::size_t offset_qr = *state.get_idx("qr");
+  const auto offset_evap_nr = state.get_idx("evap_nr");
+  const auto offset_evap_qr = state.get_idx("evap_qr");
 
   for (std::size_t il = 0; il != grid.nlev; ++il)
   {
@@ -114,6 +116,21 @@ void Evaporation::calc_tend_jac(const RainshaftConstants &constants,
     jac(i_qr, i_q) -= q_evap_dq;
     jac(i_qr, i_nr) -= q_evap_dnr;
     jac(i_qr, i_qr) -= q_evap_dqr;
+
+    if (offset_evap_nr) {
+      const std::size_t i_evap_nr = *offset_evap_nr + il;
+      jac(i_evap_nr, i_t) -= n_evap_dT;
+      jac(i_evap_nr, i_q) -= n_evap_dq;
+      jac(i_evap_nr, i_nr) -= n_evap_dnr;
+      jac(i_evap_nr, i_qr) -= n_evap_dqr;
+    }
+    if (offset_evap_qr) {
+      const std::size_t i_evap_qr = *offset_evap_qr + il;
+      jac(i_evap_qr, i_t) -= q_evap_dT;
+      jac(i_evap_qr, i_q) -= q_evap_dq;
+      jac(i_evap_qr, i_nr) -= q_evap_dnr;
+      jac(i_evap_qr, i_qr) -= q_evap_dqr;
+    }
   }
 }
 

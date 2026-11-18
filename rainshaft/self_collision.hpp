@@ -57,8 +57,8 @@ private:
       if (breakup <= 1.0) {
         if constexpr (WithGrad) {
           return {breakup, {
-            2300. * breakup_exp_term * mean_mass_diam / (3. * (nr + constants.qsmall * (1.e8))),
-            -2300. * breakup_exp_term * mean_mass_diam / (3. * (qr + constants.qsmall))
+            -2300. * breakup_exp_term * mean_mass_diam_dnr,
+            -2300. * breakup_exp_term * mean_mass_diam_dqr
           }};
         } else {
           return breakup;
