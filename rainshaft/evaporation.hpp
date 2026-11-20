@@ -144,48 +144,20 @@ private:
     }
   }
 
-  // Calculation for weight used by exponential integrator of original method.
-  // Probably unnecessary to implement derivative for this, but done for consistency.
-  template <bool WithGrad = false>
-  RealOptGrad<WithGrad, 4> calc_dt_weight(const RealOptGrad<WithGrad, 4> tau_inv) const {
-    if (!dt.has_value()) {
-      // Weight is always 1 in this case.
-      if constexpr (WithGrad) {
-        return {1, {0, 0, 0, 0}};
-      } else {
-        return 1;
-      }
-    }
-    // From here on, dt has a value.
-    const double dtfac = dt.value() * get_val(tau_inv);
-    const double exp_dt = exp(-dtfac);
-    const double weight_numer = 1. - exp_dt;
-    const double weight = weight_numer / dtfac;
-
-    if constexpr (WithGrad) {
-      const double dweight_dtfac = (exp_dt * dtfac - weight_numer) / (dtfac*dtfac);
-      const double dweight_dinv = dt.value() * dweight_dtfac;
-      const auto [inv_dT, inv_dq, inv_dnr, inv_dqr] = get_grad(tau_inv);
-
-      return {weight, {
-        inv_dT * dweight_dinv, // Derivative with respect to t
-        inv_dq * dweight_dinv, // Derivative with respect to q
-        inv_dnr * dweight_dinv, // Derivative with respect to nr
-        inv_dqr * dweight_dinv // Derivative with respect to qr
-      }};
-    } else {
-      return weight;
-    }
-  }
-
   template <bool WithGrad = false>
   RealOptGrad<WithGrad, 4> calc_q_evap(const double q, const RealOptGrad<WithGrad, 1> q_sat_dry,
-                                       const RealOptGrad<WithGrad, 1> abl, const RealOptGrad<WithGrad, 4> tau_inv,
-                                       const RealOptGrad<WithGrad, 4> weight) const {
+                                       const RealOptGrad<WithGrad, 1> abl, const RealOptGrad<WithGrad, 4> tau_inv) const {
+    double effective_tau_inv = get_val(tau_inv);
+    double effective_tau_inv_grad = 1.;
+    if (dt.has_value()) {
+      // Combine the exponential weight with tau_inv before evaluating it.
+      // This expression and its derivative are nonsingular at tau_inv = 0.
+      const double exp_dt_minus_one = std::expm1(-dt.value() * get_val(tau_inv));
+      effective_tau_inv = -exp_dt_minus_one / dt.value();
+      effective_tau_inv_grad = 1. + exp_dt_minus_one;
+    }
     const double subsat = get_val(q_sat_dry) - q;
-    const double q_evap_num = subsat * get_val(tau_inv);
-    const double q_evap_unweighted = q_evap_num / get_val(abl);
-    const double q_evap = get_val(weight) * q_evap_unweighted;
+    const double q_evap = subsat * effective_tau_inv / get_val(abl);
     if (dt.has_value()) {
       const double limited_q_evap = subsat / (get_val(abl) * dt.value());
       if (q_evap > limited_q_evap) {
@@ -208,16 +180,12 @@ private:
       const auto [tau_inv_dT, tau_inv_dq, tau_inv_dnr, tau_inv_dqr] = get_grad(tau_inv);
       const auto [abl_dT] = get_grad(abl);
       const auto [q_sat_dry_dT] = get_grad(q_sat_dry);
-      const auto [weight_dT, weight_dq, weight_dnr, weight_dqr] = get_grad(weight);
       return {q_evap, {
-          get_val(weight) * ((subsat * (tau_inv_dT - get_val(tau_inv) * abl_dT / get_val(abl)) + get_val(tau_inv) * q_sat_dry_dT) / get_val(abl))
-          + weight_dT * q_evap_unweighted,
-          get_val(weight) * ((subsat * tau_inv_dq - get_val(tau_inv)) / get_val(abl))
-          + weight_dq * q_evap_unweighted,
-          get_val(weight) * (subsat * tau_inv_dnr / get_val(abl))
-          + weight_dnr * q_evap_unweighted,
-          get_val(weight) * (subsat * tau_inv_dqr / get_val(abl))
-          + weight_dqr * q_evap_unweighted
+          (subsat * (effective_tau_inv_grad * tau_inv_dT - effective_tau_inv * abl_dT / get_val(abl))
+            + effective_tau_inv * q_sat_dry_dT) / get_val(abl),
+          (subsat * effective_tau_inv_grad * tau_inv_dq - effective_tau_inv) / get_val(abl),
+          subsat * effective_tau_inv_grad * tau_inv_dnr / get_val(abl),
+          subsat * effective_tau_inv_grad * tau_inv_dqr / get_val(abl)
       }};
     } else {
       return q_evap;
@@ -330,8 +298,7 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
       const RealOptGrad<WithGrad, 1> abl = calc_abl<WithGrad>(constants, t, q_sat_dry);
       const RealOptGrad<WithGrad, 1> v_evap = calc_v_evap<WithGrad>(constants, get_val(lambdar));
       const RealOptGrad<WithGrad, 4> tau_inv = calc_tau_inv<WithGrad>(constants, nr, diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
-      const RealOptGrad<WithGrad, 4> weight = calc_dt_weight<WithGrad>(tau_inv);
-      const RealOptGrad<WithGrad, 4> q_evap = calc_q_evap<WithGrad>(q, q_sat_dry, abl, tau_inv, weight);
+      const RealOptGrad<WithGrad, 4> q_evap = calc_q_evap<WithGrad>(q, q_sat_dry, abl, tau_inv);
       const RealOptGrad<WithGrad, 4> n_evap = calc_n_evap<WithGrad>(nr, qr, q_evap);
       const RealOptGrad<WithGrad, 4> t_evap = calc_T_evap<WithGrad>(constants, q_evap);
 
@@ -348,8 +315,7 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
         const RealOptGrad<WithGrad, 1> abl = calc_abl<WithGrad>(constants, t, q_sat_dry);
         const RealOptGrad<WithGrad, 1> v_evap = calc_v_evap<WithGrad>(constants, get_val(lambdar));
         const RealOptGrad<WithGrad, 4> tau_inv = calc_tau_inv<WithGrad>(constants, nr, diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
-        const RealOptGrad<WithGrad, 4> weight = calc_dt_weight<WithGrad>(tau_inv);
-        const RealOptGrad<WithGrad, 4> q_evap = calc_q_evap<WithGrad>(q, q_sat_dry, abl, tau_inv, weight);
+        const RealOptGrad<WithGrad, 4> q_evap = calc_q_evap<WithGrad>(q, q_sat_dry, abl, tau_inv);
         const RealOptGrad<WithGrad, 4> n_evap = calc_n_evap<WithGrad>(nr + constants.qsmall * 1.e8, qr + constants.qsmall, q_evap);
         const RealOptGrad<WithGrad, 4> t_evap = calc_T_evap<WithGrad>(constants, q_evap);
 
@@ -362,8 +328,7 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
         const RealOptGrad<WithGrad, 1> abl = calc_abl<WithGrad>(constants, t, q_sat_dry);
         const RealOptGrad<WithGrad, 1> v_evap = calc_v_evap<WithGrad>(constants, get_val(lambdar));
         const RealOptGrad<WithGrad, 4> tau_inv = calc_tau_inv<WithGrad>(constants, nr, diffusivity, rho_dry, visc_over_rho, schmidt_num, v_evap, lambdar);
-        const RealOptGrad<WithGrad, 4> weight = calc_dt_weight<WithGrad>(tau_inv);
-        const RealOptGrad<WithGrad, 4> q_evap = calc_q_evap<WithGrad>(q, q_sat_dry, abl, tau_inv, weight);
+        const RealOptGrad<WithGrad, 4> q_evap = calc_q_evap<WithGrad>(q, q_sat_dry, abl, tau_inv);
 
         const double delta = (q - get_val(q_sat_dry)) / epsilon_qsat;
         const double poly_reg = 35.0 * pow(delta, 4) + 84.0 * pow(delta, 5) + 70.0 * pow(delta, 6) + 20.0 * pow(delta, 7);
@@ -372,9 +337,12 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
           // q_evap, the regularization for n_evap and t_evap is just the regularization for q_evap scaled by
           // the same factor
           const double dpoly_reg = 140.0 * pow(delta, 3) + 420.0 * pow(delta, 4) + 420.0 * pow(delta, 5) + 140.0 * pow(delta, 6);
+          // epsilon_qsat depends on temperature through q_sat_dry.
+          const double delta_dT = -q * get_grad(q_sat_dry)[0] / (epsilon_qsat * get_val(q_sat_dry));
+          const double delta_dq = 1. / epsilon_qsat;
           const RealOptGrad<WithGrad, 4> q_evap_reg = {get_val(q_evap) * poly_reg,
-                                                       {get_grad(q_evap)[0] * poly_reg + get_val(q_evap) * dpoly_reg * -get_grad(q_sat_dry)[0],
-                                                        get_grad(q_evap)[1] * poly_reg + get_val(q_evap) * dpoly_reg,
+                                                       {get_grad(q_evap)[0] * poly_reg + get_val(q_evap) * dpoly_reg * delta_dT,
+                                                        get_grad(q_evap)[1] * poly_reg + get_val(q_evap) * dpoly_reg * delta_dq,
                                                         get_grad(q_evap)[2] * poly_reg,
                                                         get_grad(q_evap)[3] * poly_reg}};
           const double nr_over_qr = (nr + constants.qsmall * (1.e8)) / (qr + constants.qsmall);
@@ -483,7 +451,7 @@ private:
     if constexpr (WithGrad) {
       const double Vevap2 = Vevapi(2);
 
-      return {Vevap1, {((constants.mur+1)*Vevap1 - Vevap2)}};
+      return {Vevap1, {((constants.mur+1)*Vevap1 - Vevap2) / lambdar}};
     } else {
       return Vevap1;
     }
