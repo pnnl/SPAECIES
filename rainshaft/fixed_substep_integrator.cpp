@@ -26,7 +26,7 @@ RainshaftSolution FixedSubstepIntegrator::integrate(double initial_time,
     partial_step_size = time_interval - (num_full_steps * dt);
   }
    // empty state
-  RainshaftSolution solution({initial_state}, 0);
+  RainshaftSolution solution({initial_state}, {initial_time}, 0);
   int num_rhs_evals = 0;
   double current_time = initial_time;
   for (std::size_t it = 0; it != num_full_steps; ++it) {

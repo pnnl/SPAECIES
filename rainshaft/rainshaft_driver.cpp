@@ -364,7 +364,7 @@ int main(int argc, char* argv[])
       }
       if (error_flag > 0) {
         writer.write_grid(grid, icase_writer);
-        writer.write_states(solution.states, icase_writer);
+        writer.write_states(solution, icase_writer);
         std::vector<RainshaftDerivedVars> solution_dvars;
         solution_dvars.reserve(solution.states.size());
         for (StateConst state : solution.states) {

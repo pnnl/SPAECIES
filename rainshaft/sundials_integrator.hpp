@@ -147,6 +147,7 @@ protected:
                            C countFun,
                            O outputFun,
                            void *mem,
+                           const double initial_time,
                            const double final_time,
                            const N_Vector y,
                            const Mode normal,
@@ -154,13 +155,15 @@ protected:
                            int& error_flag) const
   {
     std::vector<StateConst> states;
-    sunrealtype tret = -std::numeric_limits<sunrealtype>::infinity();
+    std::vector<double> times;
+    sunrealtype tret = initial_time;
     if (steps_per_output > 0)
     {
       for (int i = 0; tret < final_time; i++)
       {
         if (i % steps_per_output == 0) {
           states.emplace_back(n_vector_to_state(y, user_data.state_descs).deep_copy());
+          times.emplace_back(tret);
           outputFun();
         }
         error_flag = evolveFun(mem, final_time, y, &tret, one_step);
@@ -172,9 +175,10 @@ protected:
     }
 
     states.emplace_back(n_vector_to_state(y, user_data.state_descs).deep_copy());
+    times.emplace_back(tret);
     outputFun();
 
-    return RainshaftSolution(std::move(states), countFun());
+    return RainshaftSolution(std::move(states), std::move(times), countFun());
   }
 
   static int postprocess_positive(sunrealtype, N_Vector y, void* user_data) {

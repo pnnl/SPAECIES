@@ -11,14 +11,18 @@ public:
 
   // Constructor from state arrays.
   RainshaftSolution(const std::vector<StateConst>& states,
+                    const std::vector<double>& times,
                     int num_rhs_evals_in);
 
   // Move constructor from state arrays.
-  RainshaftSolution(const std::vector<StateConst>&& states,
+  RainshaftSolution(std::vector<StateConst>&& states,
+                    std::vector<double>&& times,
                     int num_rhs_evals_in);
 
   // State vector.
   std::vector<StateConst> states;
+  // Output time corresponding to each state.
+  std::vector<double> times;
   // Number of evaluations of RHS function.
   int num_rhs_evals;
 

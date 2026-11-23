@@ -90,6 +90,7 @@ RainshaftSolution IMEXIntegrator::integrate(double initial_time,
         fclose(file);
       },
       arkode_mem,
+      initial_time,
       final_time,
       y,
       ARK_NORMAL,
