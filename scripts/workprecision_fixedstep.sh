@@ -1,9 +1,11 @@
 #!/bin/bash
 
-IC_FILE="/home/dong9/SPAECIES-input-data/random_rainshaft_samples_12mo.nc"
-RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft_noP3limiter"
-RAINSHAFT_DIR="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft"
-SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/fixed_step"
+RAINSHAFT_EXE_NAME="rainshaft"
+SAVE_SUBDIR="fixed_step"
+SETTINGS_NAME="workprecision_fixedstep"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common_paths.sh"
 
 # simulation length
 FINAL_TIME=300
@@ -16,8 +18,8 @@ RELTOL=1.e-13
 # order of method
 ORDERS=(1)
 
-# toggle nudging
-NUDGING_FLAG="false"
+# process set to run
+PROCESSES="all"
 
 # how many time steps to save data for
 STEPS_PER_OUTPUT=-1
@@ -34,6 +36,9 @@ POSTPROCESS="false"
 # toggle lookup tables
 LOOKUP_FLAG="true"
 
+# toggle legacy rain shape parameter
+USE_ZERO_MUR="true"
+
 # toggle q_sat_dry regularization
 REGULARIZE_QSAT="true"
 REGULARIZE_LAMBDAR="true"
@@ -44,7 +49,7 @@ EPSILON_SELF_COLLS=(0.0)
 # type of integration (options: explicit, imex, mri)
 INTEGRATION_TYPES=("original") # "explicit" "implicit" "imex")
 
-cd ${RAINSHAFT_DIR}
+cd "${RAINSHAFT_DIR}"
 
 for kk in $(seq 0 $((${#INTEGRATION_TYPES[@]} - 1)))
 do
@@ -73,6 +78,7 @@ do
                     printf "rel_tol     = ${RELTOL}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "postprocess = ${POSTPROCESS}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "use_lookup  = ${LOOKUP_FLAG}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+                    printf "use_zero_mur = ${USE_ZERO_MUR}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
                     printf "\n# [Save settings]\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "steps    = ${STEPS_PER_OUTPUT}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
@@ -84,13 +90,13 @@ do
                     printf "case_idx  = ${CASE_IDX}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
                     printf "\n# [Process settings]\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
-                    printf "nudging = ${NUDGING_FLAG}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+                    printf "processes = ${PROCESSES}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "regularize_qsat = ${REGULARIZE_QSAT}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "regularize_lambdar = ${REGULARIZE_LAMBDAR}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "qsmall = ${QSMALLS[ii]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                     printf "epsilon_qsat_fac = ${EPSILON_QSAT_FACS[j]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
-                    ${RAINSHAFT_EXE} --i "settings_${SETTINGS_NAME}.ini"
+                    "${RAINSHAFT_EXE}" --i "settings_${SETTINGS_NAME}.ini"
                 done
             done
         done
@@ -123,6 +129,7 @@ do
                             printf "rel_tol     = ${RELTOL}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                             printf "postprocess = ${POSTPROCESS}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                             printf "use_lookup  = ${LOOKUP_FLAG}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+                            printf "use_zero_mur = ${USE_ZERO_MUR}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
                             printf "\n# [Save settings]\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                             printf "steps    = ${STEPS_PER_OUTPUT}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
@@ -134,14 +141,14 @@ do
                             printf "case_idx  = ${CASE_IDX}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
                             printf "\n# [Process settings]\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
-                            printf "nudging = ${NUDGING_FLAG}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+                            printf "processes = ${PROCESSES}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                             printf "regularize_qsat = ${REGULARIZE_QSAT}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                             printf "regularize_lambdar = ${REGULARIZE_LAMBDAR}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                             printf "qsmall = ${QSMALLS[ii]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                             printf "epsilon_qsat_fac = ${EPSILON_QSAT_FACS[j]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
                             printf "epsilon_self_coll = ${EPSILON_SELF_COLLS[jj]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
-                            ${RAINSHAFT_EXE} --i "settings_${SETTINGS_NAME}.ini"
+                            "${RAINSHAFT_EXE}" --i "settings_${SETTINGS_NAME}.ini"
                         done
                     done
                 done

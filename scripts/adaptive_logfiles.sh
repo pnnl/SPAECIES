@@ -1,9 +1,10 @@
 #!/bin/bash
 
-IC_FILE="/home/dong9/SPAECIES-input-data/random_rainshaft_samples_12mo.nc"
-RAINSHAFT_EXE="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft/rainshaft_sedonly_logging"
-RAINSHAFT_DIR="/home/dong9/SPAECIES-settings-for-paper/build/rainshaft"
-SAVE_DIR="/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/logfiles/adaptive_sedonly"
+RAINSHAFT_EXE_NAME="rainshaft_sedonly_logging"
+SAVE_SUBDIR="logfiles/adaptive_sedonly"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/common_paths.sh"
 
 # simulation length
 FINAL_TIME=1000
@@ -14,8 +15,8 @@ RELTOL=(1.e-1 1.e-3 1.e-5 1.e-7)
 # order of method
 ORDERS=2
 
-# toggle nudging
-NUDGING_FLAG="false"
+# process set to run
+PROCESSES="all"
 
 # number of runs to do for averaging. processing more than 1 run is currently not supported.
 NUMRUNS=1
@@ -34,6 +35,9 @@ POSTPROCESS="false"
 
 # toggle lookup tables
 LOOKUP_FLAG="false"
+
+# toggle legacy rain shape parameter
+USE_ZERO_MUR="false"
 
 # toggle q_sat_dry regularization
 REGULARIZE_QSAT="true"
@@ -54,10 +58,11 @@ do
     do
         OUTPUT_FILE="${RAINSHAFT_DIR}/rainshaft.nc"
 
-        export SUNLOGGER_ERROR_FILENAME=/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/logfiles/adaptive_sedonly/icase${k}_reltol${RELTOL[i]}.log
-        export SUNLOGGER_WARNING_FILENAME=/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/logfiles/adaptive_sedonly/icase${k}_reltol${RELTOL[i]}.log
-        export SUNLOGGER_INFO_FILENAME=/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/logfiles/adaptive_sedonly/icase${k}_reltol${RELTOL[i]}.log
-        export SUNLOGGER_DEBUG_FILENAME=/home/dong9/postprocessing-SPAECIES/results/final-runs-nov7/logfiles/adaptive_sedonly/icase${k}_reltol${RELTOL[i]}.log
+        LOG_FILE="${SAVE_DIR}/icase${k}_reltol${RELTOL[i]}.log"
+        export SUNLOGGER_ERROR_FILENAME="${LOG_FILE}"
+        export SUNLOGGER_WARNING_FILENAME="${LOG_FILE}"
+        export SUNLOGGER_INFO_FILENAME="${LOG_FILE}"
+        export SUNLOGGER_DEBUG_FILENAME="${LOG_FILE}"
 
         printf "# [Integrator settings]\n" > "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
         printf "order       = ${ORDERS}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
@@ -69,6 +74,7 @@ do
         printf "rel_tol     = ${RELTOL[i]}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
         printf "postprocess = ${POSTPROCESS}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
         printf "use_lookup  = ${LOOKUP_FLAG}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+        printf "use_zero_mur = ${USE_ZERO_MUR}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
         printf "\n# [Save settings]\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
         printf "steps    = ${STEPS_PER_OUTPUT}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
@@ -80,13 +86,13 @@ do
         printf "case_idx  = ${k}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
         printf "\n# [Process settings]\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
-        printf "nudging = ${NUDGING_FLAG}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
+        printf "processes = ${PROCESSES}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
         printf "regularize_qsat = ${REGULARIZE_QSAT}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
         printf "regularize_lambdar = ${REGULARIZE_LAMBDAR}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
         printf "qsmall = ${QSMALL}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
         printf "epsilon_qsat_fac = ${EPSILON_QSAT_FAC}\n" >> "${RAINSHAFT_DIR}/settings_${SETTINGS_NAME}.ini"
 
-        ${RAINSHAFT_EXE} --i "settings_${SETTINGS_NAME}.ini"
+        "${RAINSHAFT_EXE}" --i "settings_${SETTINGS_NAME}.ini"
         # ./rainshaft --order ${ORDERS[k]} --dt ${TIMESTEPS[i]} --type $INTEGRATION_TYPE --simname $SIMULATION_NAME
     done
 done
