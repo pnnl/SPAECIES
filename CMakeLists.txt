@@ -8,6 +8,7 @@ if( "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}" )
 endif()
 
 option(BUILD_TESTING "Enable testing." OFF)
+option(BUILD_TOOLS "Build tools." OFF)
 
 project(SPAECIES LANGUAGES CXX VERSION 0.0.1)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
@@ -65,3 +66,7 @@ endif()
 
 add_subdirectory(libspaecies)
 add_subdirectory(rainshaft)
+
+if (BUILD_TOOLS)
+  add_subdirectory(tools)
+endif()
