@@ -371,9 +371,11 @@ std::array<RealOptGrad<WithGrad, 4>, 3> calc_evap(const RainshaftConstants& cons
           // q_evap, the regularization for n_evap and t_evap is just the regularization for q_evap scaled by
           // the same factor
           const double dpoly_reg = 140.0 * pow(delta, 3) + 420.0 * pow(delta, 4) + 420.0 * pow(delta, 5) + 140.0 * pow(delta, 6);
+          const double delta_dT = -q * get_grad(q_sat_dry)[0] / (epsilon_qsat * get_val(q_sat_dry));
+          const double delta_dq = 1.0 / epsilon_qsat;
           const RealOptGrad<WithGrad, 4> q_evap_reg = {get_val(q_evap) * poly_reg,
-                                                       {get_grad(q_evap)[0] * poly_reg + get_val(q_evap) * dpoly_reg * -get_grad(q_sat_dry)[0], 
-                                                        get_grad(q_evap)[1] * poly_reg + get_val(q_evap) * dpoly_reg, 
+                                                       {get_grad(q_evap)[0] * poly_reg + get_val(q_evap) * dpoly_reg * delta_dT,
+                                                        get_grad(q_evap)[1] * poly_reg + get_val(q_evap) * dpoly_reg * delta_dq,
                                                         get_grad(q_evap)[2] * poly_reg, 
                                                         get_grad(q_evap)[3] * poly_reg}};
           const double nr_over_qr = (nr + constants.qsmall * (1.e8)) / (qr + constants.qsmall);
